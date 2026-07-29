@@ -1,0 +1,45 @@
+using Dapper;
+using Microsoft.AspNetCore.Mvc;
+using System.Data;
+
+public record NewProduct(string name, int category_id, int stock, decimal price);
+
+[ApiController]
+[Route("api/products")]
+public class ProductsController : ControllerBase
+{
+    private readonly IDbConnection _db;
+    public ProductsController(IDbConnection db) => _db = db;
+    
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        var sql = @"
+            SELECT p.id, p.name, c.name AS category, p.stock, p.price, p.created_at
+            FROM products p
+            JOIN categories c ON c.id = p.category_id
+            ORDER BY p.id";
+        var rows = await _db.QueryAsync(sql);
+        return Ok(rows);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] NewProduct p)
+    {
+        var sql=@"
+            INSERT INTO products (name, category_id, stock, price)
+            VALUES (@name, @category_id, @stock, @price)
+            RETURNING id";
+            var id = await _db.ExecuteScalarAsync<int>(sql, p);
+            return Ok(new { id });
+        
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var affected = await _db.ExecuteAsync(
+            "DELETE FROM products WHERE id = @id", new { id });
+        return affected > 0 ? Ok() : NotFound();
+    }
+}
