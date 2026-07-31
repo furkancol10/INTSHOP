@@ -29,7 +29,8 @@
       localStorage.setItem('token', token);
       localStorage.setItem('role', role);
       localStorage.setItem('username', currentUser);
-      await loadAll();
+      if (role === 'Bayi') await loadMyStock();
+      else await loadAll();
     } catch (e) {
       loginError = e instanceof Error ? e.message : String(e);
     }
@@ -73,7 +74,10 @@
     try {
       const res = await fetch(`${API}/api/products`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': token
+         },
         body: JSON.stringify({
           name,
           category_id: Number(categoryId),
@@ -91,7 +95,10 @@
 
   async function deleteProduct(id) {
     try {
-      const res = await fetch(`${API}/api/products/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API}/api/products/${id}`, { 
+        method: 'DELETE',
+        headers: { 'Authorization': token }
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await loadAll();
     } catch (e) {
@@ -99,7 +106,46 @@
     }
   }
 
-  onMount(() => { if (token) loadAll(); });
+  //bayi oturumu
+  let myStock = $state([]);
+
+  async function loadMyStock() {
+    try {
+      const res = await fetch(`${API}/api/my-stock`, {
+        headers: { 'Authorization': token }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      myStock = await res.json();
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }finally {
+      loading = false;
+    }
+
+  }
+
+  async function movement(productId, change) {
+    try {
+      const res = await fetch(`${API}/api/my-stock/movement`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': token },
+        body: JSON.stringify({ product_id: productId, change })
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || `HTTP ${res.status}`);
+      }
+      await loadMyStock();
+    }catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  onMount(() => { 
+    if (!token) return;
+    if(role === 'Bayi') loadMyStock();
+    else loadAll();
+   });
 </script>
 
 <main>
@@ -116,6 +162,30 @@
       <h1>Stok Paneli</h1>
       <span>{currentUser} ({role}) <button onclick={logout}>Çıkış</button></span>
     </div>
+
+  {#if role === 'Bayi'}
+    <h2>Stok Yönetimi</h2>
+    <table>
+      <thead>
+        <tr><th>Ürün</th><th>Kategori</th><th>Stok</th><th>Giriş / Çıkış</th></tr>
+      </thead>
+      <tbody>
+        {#each myStock as p}
+          <tr class:dusuk={p.stock < 10}>
+            <td>{p.name}</td>
+            <td>{p.category}</td>
+            <td>{p.stock}</td>
+            <td>
+              <button onclick={() => movement(p.product_id, 10)}>+10</button>
+              <button onclick={() => movement(p.product_id, 1)}>+1</button>
+              <button onclick={() => movement(p.product_id, -1)}>-1</button>
+              <button onclick={() => movement(p.product_id, -10)}>-10</button>
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  {/if}
 
   {#if role == "Admin"}
     <div class="form">
