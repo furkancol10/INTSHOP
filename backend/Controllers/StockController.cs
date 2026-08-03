@@ -73,4 +73,26 @@ public class StockController : ControllerBase
         return Ok(new {product_id = req.product_id, newStock, change = req.change});
         
     }
+
+    [HttpGet("my-stock/history")]
+    public async Task<IActionResult> History()
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var user = await GetUser(token);
+        if (user is null) return Unauthorized("Giriş Gerekli!");
+        if (user.Value.role != "Bayi") return StatusCode(403, "Sadece bayiler");
+
+        var sql = @"
+            SELECT
+                DATE(created_at) AS tarih,
+                COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity ELSE 0 END), 0) AS giris,
+                COALESCE(SUM(CASE WHEN quantity < 0 THEN -quantity ELSE 0 END), 0) AS cikis
+            FROM stock_movements
+            WHERE dealer_id = @dealerId
+            GROUP BY DATE(created_at)
+            ORDER BY tarih";
+        
+        var rows = await _db.QueryAsync(sql, new { dealerId = user.Value.id });
+        return Ok(rows);
+    }
 }

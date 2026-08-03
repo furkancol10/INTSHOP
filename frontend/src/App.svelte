@@ -52,6 +52,8 @@
   let stock = $state(0);
   let price = $state(0);
 
+  let miktarlar = $state({});
+
   async function loadAll() {
     loading = true; error = '';
     try {
@@ -135,6 +137,7 @@
         const msg = await res.text();
         throw new Error(msg || `HTTP ${res.status}`);
       }
+      miktarlar[productId] = '';
       await loadMyStock();
     }catch (e) {
       error = e instanceof Error ? e.message : String(e);
@@ -176,10 +179,9 @@
             <td>{p.category}</td>
             <td>{p.stock}</td>
             <td>
-              <button onclick={() => movement(p.product_id, 10)}>+10</button>
-              <button onclick={() => movement(p.product_id, 1)}>+1</button>
-              <button onclick={() => movement(p.product_id, -1)}>-1</button>
-              <button onclick={() => movement(p.product_id, -10)}>-10</button>
+              <input type="number" placeholder="Miktar" bind:value={miktarlar[p.product_id]} />
+              <button onclick={() => movement(p.product_id, Number(miktarlar[p.product_id] || 0))}>Giriş</button>
+              <button onclick={() => movement(p.product_id, -Number(miktarlar[p.product_id] || 0))}>Çıkış</button>
             </td>
           </tr>
         {/each}
