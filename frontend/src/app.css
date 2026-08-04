@@ -96,3 +96,45 @@ h1, h2 {
   font-size: .85rem;
   margin: 0;
 }
+
+/* ---- Dashboard ekranı ---- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .75rem 1.5rem;
+  background: lightseagreen;
+  color: whitesmoke;
+}
+.toolbar button {
+  padding: .5rem 1rem;
+  background: transparent;
+  color: whitesmoke;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .95rem;
+}
+.toolbar button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: whitesmoke;
+}
+.toolbar button:active {
+  background: blue;
+  color: whitesmoke;
+}
+.toolbar-spacer {
+  flex: 1;
+}
+.toolbar-user {
+  color: whitesmoke;
+  font-size: .9rem;
+  margin-right: .5rem;
+}
+.cikis-btn {
+  background: coral !important;
+  color: white !important;
+}
+.sekme-icerik {
+  padding: 1.5rem;
+}
