@@ -1,5 +1,7 @@
 <script>
   import { onMount } from 'svelte';
+  import { Chart, registerables } from 'chart.js';
+  Chart.register(...registerables);
 
   const API = import.meta.env.VITE_API_URL ?? 'http://localhost:5081';
 
@@ -29,7 +31,7 @@
       localStorage.setItem('token', token);
       localStorage.setItem('role', role);
       localStorage.setItem('username', currentUser);
-      if (role === 'Bayi') await loadMyStock();
+      if (role === 'Bayi') { await loadMyStock(); await loadHistory();}
       else await loadAll();
     } catch (e) {
       loginError = e instanceof Error ? e.message : String(e);
@@ -53,6 +55,10 @@
   let price = $state(0);
 
   let miktarlar = $state({});
+  let history = $state([]);
+
+  let chartCanvas = $state(null);
+  let chartInstance = null;
 
   async function loadAll() {
     loading = true; error = '';
@@ -139,14 +145,57 @@
       }
       miktarlar[productId] = '';
       await loadMyStock();
+      await loadHistory();
     }catch (e) {
       error = e instanceof Error ? e.message : String(e);
     }
   }
 
+  async function loadHistory() {
+    try {
+      const res = await fetch(`${API}/api/my-stock/history`, {
+        headers: { 'Authorization': token }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      history = await res.json();
+      setTimeout(drawChart, 0);
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  function drawChart() {
+    if (!chartCanvas || !history.length) return;
+
+    if(chartInstance) chartInstance.destroy();
+
+    chartInstance = new Chart(chartCanvas, {
+      type: 'bar',
+      data: {
+        labels: history.map(h=> new Date(h.tarih).toLocaleDateString('tr-TR')),
+        datasets: [
+          {
+            label: 'Giriş',
+            data: history.map(h => h.giris),
+            backgroundColor: '#22a722'
+          },
+          {
+            label: 'Çıkış',
+            data: history.map(h => h.cikis),
+            backgroundColor: '#c00'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: { y: { beginAtZero: true } }
+      }
+    });
+  }
+
   onMount(() => { 
     if (!token) return;
-    if(role === 'Bayi') loadMyStock();
+    if(role === 'Bayi') {loadMyStock(); loadHistory();}
     else loadAll();
    });
 </script>
@@ -179,14 +228,47 @@
             <td>{p.category}</td>
             <td>{p.stock}</td>
             <td>
-              <input type="number" placeholder="Miktar" bind:value={miktarlar[p.product_id]} />
-              <button onclick={() => movement(p.product_id, Number(miktarlar[p.product_id] || 0))}>Giriş</button>
-              <button onclick={() => movement(p.product_id, -Number(miktarlar[p.product_id] || 0))}>Çıkış</button>
+              <input type="number" min="1" placeholder="Miktar" bind:value={miktarlar[p.product_id]} style="width: 80px;"/>
+              <button onclick={() => movement(p.product_id, Math.abs(Number(miktarlar[p.product_id]) || 0))}>Giriş</button>
+              <button onclick={() => movement(p.product_id, -Math.abs(Number(miktarlar[p.product_id]) || 0))}>Çıkış</button>
             </td>
           </tr>
         {/each}
       </tbody>
     </table>
+    
+    <div style="display: flex; gap:2rem; align-items: flex-start; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 200px;">
+        <h2>Giriş / Çıkış Geçmişi</h2>
+        {#if history.length}
+          <table>
+            <thead>
+              <tr><th>Tarih</th><th>Giriş</th><th>Çıkış</th></tr>
+            </thead>
+            <tbody>
+              {#each history as h}
+                <tr>
+                  <td>{new Date(h.tarih).toLocaleDateString('tr-TR')}</td>
+                  <td style="color: greenyellow;">+{h.giris}</td>
+                 <td style="color: #c00;">-{h.cikis}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {:else}
+      <p>Henüz giriş / çıkış yapılmamış.</p>
+      {/if}
+      </div>
+      <div style="flex: 1; min-width: 350px;">
+        <h2>Giriş / Çıkış Grafiği</h2>
+        {#if history.length}
+          <div style="max-width: 600px;">
+            <canvas bind:this={chartCanvas}></canvas>
+          </div>
+        {/if}
+      </div>
+    </div>
+
   {/if}
 
   {#if role == "Admin"}
