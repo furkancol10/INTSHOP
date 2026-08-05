@@ -9,19 +9,23 @@ public class AuthController : ControllerBase
     private readonly IDbConnection _db;
     public AuthController(IDbConnection db) => _db = db;
 
-    public record RegisterReq(string username, string password, string role);
+    public record RegisterReq(string username, string password, string role, string? address, string? phone);
     public record LoginReq(string username, string password);
 
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterReq req)
     {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Admin") return StatusCode(403, "Sadece Admin kullanıcı ekleyebilir!");
+
         var hash = BCrypt.Net.BCrypt.HashPassword(req.password);
         try
         {
             var id = await _db.ExecuteScalarAsync<int>(
-                @"INSERT INTO users (username, password_hash, role)
-                  VALUES (@username, @hash, @role) RETURNING id",
-                new { req.username, hash, req.role });
+                @"INSERT INTO users (username, password_hash, role, address, phone)
+                  VALUES (@username, @hash, @role, @address, @phone) RETURNING id",
+                new { req.username, hash, req.role, req.address, req.phone });
             return Ok(new { id, req.username, req.role });
         }
         catch

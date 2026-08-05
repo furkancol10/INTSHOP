@@ -37,11 +37,33 @@
   let loginPass = $state("");
   let loginError = $state("");
 
+  //Kullanıcı ekleme
+  let modalAcik = $state(false);
+  let yeniKullanici = $state({
+    username: "",
+    password: "",
+    role: "",
+    address: "",
+    phone: "",
+  });
+
   //bayi oturumu
   let myStock = $state([]);
+  let dealers = $state([]);
 
   //admin oturumu
   let movements = $state([]);
+
+  //Kullanıcı oturumu
+  let users = $state([]);
+
+  //Ana sayfa
+  let mainPage = $state(1);
+  const pageSize = 10;
+  let movementPage = $derived(
+    movements.slice((mainPage - 1) * pageSize, mainPage * pageSize),
+  );
+  let totalPages = $derived(Math.ceil(movements.length / pageSize));
 
   async function login() {
     loginError = "";
@@ -62,7 +84,12 @@
       if (role === "Bayi") {
         await loadMyStock();
         await loadHistory();
-      } else { await loadAll(); await loadMovements(); }
+      } else {
+        await loadAll();
+        await loadMovements();
+        await loadDealers();
+        await loadUsers();
+      }
     } catch (e) {
       loginError = e instanceof Error ? e.message : String(e);
     }
@@ -90,6 +117,30 @@
       error = e instanceof Error ? e.message : String(e);
     } finally {
       loading = false;
+    }
+  }
+
+  async function loadDealers() {
+    try {
+      const res = await fetch(`${API}/api/dealers`, {
+        headers: { Authorization: token },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      dealers = await res.json();
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  async function loadUsers() {
+    try {
+      const res = await fetch(`${API}/api/users`, {
+        headers: { Authorization: token },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      users = await res.json();
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
     }
   }
 
@@ -152,7 +203,7 @@
 
   async function loadMovements() {
     try {
-      const res = await fetch(`${API}/api/my-stock/movements`, {
+      const res = await fetch(`${API}/api/movements`, {
         headers: { Authorization: token },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -160,7 +211,6 @@
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     }
-    
   }
 
   async function movement(productId, change) {
@@ -226,12 +276,43 @@
     });
   }
 
+  async function kullaniciekle() {
+    try {
+      const res = await fetch(`${APİ}/api/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: token },
+        body: JSON.stringify(yeniKullanici),
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || `HTTP ${res.status}`);
+      }
+      yeniKullanici = {
+        username: "",
+        password: "",
+        role: "Kullanici",
+        address: "",
+        phone: "",
+      };
+      modalAcik = false;
+      await loadUsers();
+      await loadDealers();
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
   onMount(() => {
     if (!token) return;
     if (role === "Bayi") {
       loadMyStock();
       loadHistory();
-    } else { loadAll(); loadMovements(); }
+    } else {
+      loadAll();
+      loadMovements();
+      loadDealers();
+      loadUsers();
+    }
   });
 </script>
 
@@ -279,10 +360,7 @@
       </div>
     </div>
   {:else}
-    <div class="topbar">
-      <h1>Stok Paneli</h1>
-      
-    </div>
+    <div class="topbar"></div>
 
     {#if role === "Bayi"}
       <h2>Stok Yönetimi</h2>
@@ -362,25 +440,82 @@
       </div>
     {/if}
 
-    {#if role == 'Admin'}
+    {#if role == "Admin"}
       <div class="toolbar">
-        <button class:aktif={aktifSekme === 'bayiler'} onclick={() => aktifSekme = 'bayiler'}>Bayiler</button>
-        <button class:aktif={aktifSekme === 'urunler'} onclick={() => aktifSekme = 'urunler'}>Ürünler</button>
-        <button class:aktif={aktifSekme === 'indirim'} onclick={() => aktifSekme = 'indirim'}>İndirim</button>
-        <button class:aktif={aktifSekme === 'kullanicilar'} onclick={() => aktifSekme = 'kullanicilar'}>Kullanıcılar</button>
+        <button class="toolbar-baslik" onclick={() => (aktifSekme = "hareketler")}>Stok Paneli</button>
+        <button
+          class:aktif={aktifSekme === "dealers"}
+          onclick={() => (aktifSekme = "dealers")}>Bayiler</button
+        >
+        <button
+          class:aktif={aktifSekme === "urunler"}
+          onclick={() => (aktifSekme = "urunler")}>Ürünler</button
+        >
+        <button
+          class:aktif={aktifSekme === "indirim"}
+          onclick={() => (aktifSekme = "indirim")}>İndirim</button
+        >
+        <button
+          class:aktif={aktifSekme === "users"}
+          onclick={() => (aktifSekme = "users")}>Kullanıcılar</button
+        >
         <span class="toolbar-spacer"></span>
         <span class="toolbar-user">{currentUser}</span>
         <button class="cikis-btn" onclick={logout}>Çıkış</button>
       </div>
 
       <div class="sekme-icerik">
-        {#if aktifSekme === 'urunler'}
+        {#if aktifSekme === "hareketler"}
+          <h2>Bayi hareketleri</h2>
+          {#if movements.length}
+            <div class="tablo-cerceve">
+              <table>
+                <thead>
+                  <tr
+                    ><th>Bayi</th><th>Ürün</th><th>İşlem</th><th>Miktar</th><th
+                      >Tarih</th
+                    ></tr
+                  >
+                </thead>
+                <tbody>
+                  {#each movementPage as m}
+                    <tr>
+                      <td>{m.bayi}</td>
+                      <td>{m.urun}</td>
+                      <td style="color: {m.quantity > 0 ? 'green' : '#c00'}">
+                        {m.quantity > 0 ? "Giriş" : "Çıkış"}
+                      </td>
+                      <td>{Math.abs(m.quantity)}</td>
+                      <td>{new Date(m.created_at).toLocaleString("tr-TR")}</td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+
+            <div class="pagination">
+              <button
+                onclick={() => (mainPage = mainPage - 1)}
+                disabled={mainPage === 1}>Önceki</button
+              >
+              <span>Sayfa {mainPage} / {totalPages}</span>
+              <button
+                onclick={() => (mainPage = mainPage + 1)}
+                disabled={mainPage === totalPages}>Sonraki</button
+              >
+            </div>
+          {:else}
+            <p>Henüz hareket yok.</p>
+          {/if}
+        {:else if aktifSekme === "urunler"}
           <h2>Ürünler</h2>
           {#if products.length}
             <table>
               <thead>
                 <tr>
-                  <th>ID</th><th>Ürün</th><th>Kategori</th><th>Stok</th><th>Fiyat</th>
+                  <th>ID</th><th>Ürün</th><th>Kategori</th><th>Stok</th><th
+                    >Fiyat</th
+                  ><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -391,57 +526,112 @@
                     <td>{p.category}</td>
                     <td>{p.stock}</td>
                     <td>{p.price} ₺</td>
-                    <td><button class="sil" onclick={() => deleteProduct(p.id)}>Sil</button></td>
+                    <td
+                      ><button class="sil" onclick={() => deleteProduct(p.id)}
+                        >Sil</button
+                      ></td
+                    >
                   </tr>
                 {/each}
               </tbody>
             </table>
           {/if}
-          {:else if aktifSekme === 'bayiler'}
-            <h2>Bayiler</h2>
-            <!-- Bayiler tab content -->
-          {:else if aktifSekme === 'indirim'}
-            <h2>İndirim</h2>
-            <!-- İndirim tab content -->
-          {:else if aktifSekme === 'kullanicilar'}
-            <h2>Kullanıcılar</h2>
-            <!-- Kullanıcılar tab content -->
+        {:else if aktifSekme === "dealers"}
+          <h2>Bayiler</h2>
+          {#if dealers.length}
+            <div class="tablo-cerceve">
+              <table>
+                <thead>
+                  <tr
+                    ><th>ID</th><th>Bayi Adı</th><th>Adres</th><th>Telefon</th
+                    ></tr
+                  >
+                </thead>
+                <tbody>
+                  {#each dealers as d}
+                    <tr>
+                      <td>{d.id}</td>
+                      <td>{d.username}</td>
+                      <td>{d.address ?? "-"}</td>
+                      <td>{d.phone ?? "-"}</td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          {:else}
+            <p>Henüz bayi yok.</p>
           {/if}
+        {:else if aktifSekme === "indirim"}
+          <h2>İndirim</h2>
+          <p>Bu bölüm yakında eklenecek.</p>
+        {:else if aktifSekme === "users"}
+          <h2>Kullanıcılar</h2>
+          <button class="ekle-btn" onclick={() => (modalAcik = true)}>
+            + Yeni Kullanıcı</button
+          >
+
+          {#if users.length}
+            <div class="tablo-cerceve">
+              <table>
+                <thead>
+                  <tr><th>ID</th><th>Kullanıcı</th><th>Rol</th></tr>
+                </thead>
+                <tbody>
+                  {#each users as u}
+                    <tr>
+                      <td>{u.id}</td>
+                      <td>{u.username}</td>
+                      <td>{u.role}</td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          {:else}
+            <p>Henüz kullanıcı yok.</p>
+          {/if}
+        {/if}
       </div>
     {/if}
 
     {#if error}<p class="error">{error}</p>
     {/if}
     {#if loading}<p>Yükleniyor... Lütfen Bekleyiniz...</p>{/if}
+  {/if}
 
-    {#if products.length}
-      <p>{products.length} ürün</p>
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th><th>Ürün</th><th>Kategori</th><th>Stok</th><th>Fiyat</th>
-            {#if role == "Admin"}<th></th>{/if}
-          </tr>
-        </thead>
-        <tbody>
-          {#each products as p}
-            <tr class:dusuk={p.stock < 10}>
-              <td>{p.id}</td>
-              <td>{p.name}</td>
-              <td>{p.category}</td>
-              <td>{p.stock}</td>
-              <td>{p.price} ₺</td>
-              {#if role === "Admin"}
-                <td
-                  ><button class="sil" onclick={() => deleteProduct(p.id)}
-                    >Sil</button
-                  ></td
-                >
-              {/if}
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-    {/if}
+  {#if modalAcik}
+      
+    <div
+        class="modal-arkaplan"
+        onclick={() => modalAcik = false}
+        onkeydown={(e) => e.key === 'Escape' && (modalAcik = false)}
+        role="button"
+        tabindex="0"
+      >
+      <div class="modal" onclick={(e) => e.stopPropagation()} role="presentation">
+        <h3>Yeni Kullanıcı</h3>
+        <input
+          placeholder="Kullanıcı Adı"
+          bind:value={yeniKullanici.username}
+        />
+        <input
+          type="password"
+          placeholder="Şifre"
+          bind:value={yeniKullanici.password}
+        />
+        <input placeholder="Adres" bind:value={yeniKullanici.address} />
+        <input placeholder="Telefon" bind:value={yeniKullanici.phone} />          
+        <select bind:value={yeniKullanici.role}>
+          <option value="Kullanici">Kullanıcı</option>
+          <option value="Bayi">Bayi</option>
+          <option value="Admin">Admin</option>
+        </select>        
+        <div class="modal-butonlar">
+          <button class="iptal-btn" onclick={() => (modalAcik = false)}>İptal</button>
+          <button class="ekle-btn" onclick={kullaniciEkle}>Ekle</button>
+        </div>
+      </div>
+    </div>
   {/if}
 </main>

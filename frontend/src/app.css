@@ -106,6 +106,24 @@ h1, h2 {
   background: lightseagreen;
   color: whitesmoke;
 }
+.toolbar-baslik {
+  background: none;
+  font-weight: 700;
+  font-size: 1.2rem;
+  font-family: inherit;
+  color: whitesmoke;
+  cursor: pointer;
+  margin-right: 1.5rem;
+  padding: .4rem .7rem;
+  border: none;
+  border-radius: 8px;
+  letter-spacing: .5px;
+  transition: background .2s ease, transform .1s;
+}
+.toolbar-baslik:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: scale(1.05);
+}
 .toolbar button {
   padding: .5rem 1rem;
   background: transparent;
@@ -137,4 +155,95 @@ h1, h2 {
 }
 .sekme-icerik {
   padding: 1.5rem;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.pagination button {
+  padding: .5rem 1rem;
+  background: lightseagreen;
+  color: whitesmoke;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.pagination button:disabled {
+  background: #ccc;
+  opacity: .4;
+  cursor: not-allowed;
+}
+.tablo-cerceve {
+  min-height: 280px;
+  overflow-x: auto;
+  overflow-y: auto;
+  border: 1px solid whitesmoke;
+  border-radius: 8px;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+table th,
+table td {
+  border: 1px solid whitesmoke;
+  padding: .5rem .75rem;
+  text-align: center;
+}
+table thead th {
+  background: wheat;
+  font-weight: 600;
+}
+table tbody tr:nth-child(even) {
+  background: whitesmoke;
+}
+.modal-arkaplan {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+  box-shadow: 0 8px 32px rgba(255, 255, 255, 0.2);
+}
+.modal h3 { margin: 0 0 .5rem; }
+.modal-input, .modal select {
+  padding: .6rem;
+  border: 1px solid lightgray;
+  border-radius: 6px;
+  font-size: .8rem;
+}
+.modal-butonlar {
+  display: flex;
+  gap: .5rem;
+  justify-content: flex-end;
+  margin-top: .5rem ;
+}
+.ekle-btn {
+  background: lightseagreen;
+  color: white;
+  border: none;
+  padding: .5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.iptal-btn {
+  background: white;
+  border: none;
+  padding: .5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
 }
