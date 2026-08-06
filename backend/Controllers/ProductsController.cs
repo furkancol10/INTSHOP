@@ -50,4 +50,21 @@ public class ProductsController : ControllerBase
             "DELETE FROM products WHERE id = @id", new { id });
         return affected > 0 ? Ok() : NotFound();
     }
+
+    public record UpdateProduct(string name, int category_id, decimal price);
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateProduct p)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if(role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok!");
+
+        var affected = await _db.ExecuteAsync(
+            @"UPDATE products SET name = @name, category_id = @category_id, price = @price
+              WHERE id = @id",
+            new { id, p.name, p.category_id, p.price });
+
+        return affected > 0 ? Ok() : NotFound();
+    }
 }

@@ -47,6 +47,11 @@
     phone: "",
   });
 
+  //Ürün Ekleme
+  let urunModalAcik = $state(false);
+  let duzenlenenId = $state(false);
+  let urunForm = $state({ name: "", category_id: "", price: "" });
+
   //bayi oturumu
   let myStock = $state([]);
   let dealers = $state([]);
@@ -139,6 +144,48 @@
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       users = await res.json();
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  function urunEkleAc() {
+    duzenlenenId = null;
+    urunForm = { name: "", category_id: "", price: "" };
+    urunModalAcik = true;
+  }
+
+  function urunDuzenleAc(p) {
+    duzenlenenId = p.id;
+    urunForm = {
+      name: p.name,
+      category_id: p.category_id ?? "",
+      price: p.price,
+    };
+    urunModalAcik = true;
+  }
+
+  async function urunKaydet() {
+    const url = duzenlenenId
+      ? `${API}/api/products/${duzenlenenId}`
+      : `${API}/api/products`;
+    const method = duzenlenenId ? "PUT" : "POST";
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json", Authorization: token },
+        body: JSON.stringify({
+          name: urunForm.name,
+          category_id: Number(urunForm.category_id),
+          price: Number(urunForm.price),
+        }),
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || `HTTP ${res.status}`);
+      }
+      urunModalAcik = false;
+      await loadAll();
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     }
@@ -442,7 +489,10 @@
 
     {#if role == "Admin"}
       <div class="toolbar">
-        <button class="toolbar-baslik" onclick={() => (aktifSekme = "hareketler")}>Stok Paneli</button>
+        <button
+          class="toolbar-baslik"
+          onclick={() => (aktifSekme = "hareketler")}>Stok Paneli</button
+        >
         <button
           class:aktif={aktifSekme === "dealers"}
           onclick={() => (aktifSekme = "dealers")}>Bayiler</button
@@ -509,32 +559,40 @@
           {/if}
         {:else if aktifSekme === "urunler"}
           <h2>Ürünler</h2>
+          <button class="ekle-btn" onclick={urunEkleAc}>+ Yeni Ürün</button>
+
           {#if products.length}
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th><th>Ürün</th><th>Kategori</th><th>Stok</th><th
-                    >Fiyat</th
-                  ><th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {#each products as p}
-                  <tr class:dusuk={p.stock < 10}>
-                    <td>{p.id}</td>
-                    <td>{p.name}</td>
-                    <td>{p.category}</td>
-                    <td>{p.stock}</td>
-                    <td>{p.price} ₺</td>
-                    <td
-                      ><button class="sil" onclick={() => deleteProduct(p.id)}
-                        >Sil</button
-                      ></td
-                    >
+            <div class="tablo-cerceve">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th><th>Ürün</th><th>Kategori</th><th>Stok</th><th
+                      >Fiyat</th
+                    ><th></th>
                   </tr>
-                {/each}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {#each products as p}
+                    <tr class:dusuk={p.stock < 10}>
+                      <td>{p.id}</td>
+                      <td>{p.name}</td>
+                      <td>{p.category}</td>
+                      <td>{p.stock}</td>
+                      <td>{p.price} ₺</td>
+                      <td>
+                        <button
+                          class="duzenle-btn"
+                          onclick={() => urunDuzenleAc(p)}>Düzenle</button
+                        >
+                        <button class="sil" onclick={() => deleteProduct(p.id)}
+                          >Sil</button
+                        ></td
+                      >
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
           {/if}
         {:else if aktifSekme === "dealers"}
           <h2>Bayiler</h2>
@@ -601,15 +659,18 @@
   {/if}
 
   {#if modalAcik}
-      
     <div
-        class="modal-arkaplan"
-        onclick={() => modalAcik = false}
-        onkeydown={(e) => e.key === 'Escape' && (modalAcik = false)}
-        role="button"
-        tabindex="0"
+      class="modal-arkaplan"
+      onclick={() => (modalAcik = false)}
+      onkeydown={(e) => e.key === "Escape" && (modalAcik = false)}
+      role="button"
+      tabindex="0"
+    >
+      <div
+        class="modal"
+        onclick={(e) => e.stopPropagation()}
+        role="presentation"
       >
-      <div class="modal" onclick={(e) => e.stopPropagation()} role="presentation">
         <h3>Yeni Kullanıcı</h3>
         <input
           placeholder="Kullanıcı Adı"
@@ -621,15 +682,71 @@
           bind:value={yeniKullanici.password}
         />
         <input placeholder="Adres" bind:value={yeniKullanici.address} />
-        <input placeholder="Telefon" bind:value={yeniKullanici.phone} />          
+        <input placeholder="Telefon" bind:value={yeniKullanici.phone} />
         <select bind:value={yeniKullanici.role}>
           <option value="Kullanici">Kullanıcı</option>
           <option value="Bayi">Bayi</option>
           <option value="Admin">Admin</option>
-        </select>        
+        </select>
         <div class="modal-butonlar">
-          <button class="iptal-btn" onclick={() => (modalAcik = false)}>İptal</button>
+          <button class="iptal-btn" onclick={() => (modalAcik = false)}
+            >İptal</button
+          >
           <button class="ekle-btn" onclick={kullaniciEkle}>Ekle</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+  <!--
+  Ürün Ekleme Modalı
+  -->
+  {#if urunModalAcik}
+    <div
+      class="modal-arkaplan"
+      onclick={() => (urunModalAcik = false)}
+      onkeydown={(e) => e.key === "Escape" && (urunModalAcik = false)}
+      role="button"
+      tabindex="0"
+    >
+      <div
+        class="buyuk-modal"
+        onclick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        <h2>{duzenlenenId ? "Ürün Düzenle" : "Yeni Ürün"}</h2>
+
+        <label
+          >Ürün Adı
+          <input bind:value={urunForm.name} placeholder="Ürün adı" />
+        </label>
+
+        <label
+          >Kategori
+          <select bind:value={urunForm.category_id}>
+            <option value="">Kategori seç</option>
+            {#each categories as c}
+              <option value={c.id}>{c.name}</option>
+            {/each}
+          </select>
+        </label>
+
+        <label
+          >Fiyat (₺)
+          <input
+            type="number"
+            step="0.01"
+            bind:value={urunForm.price}
+            placeholder="0.00"
+          />
+        </label>
+
+        <div class="modal-butonlar">
+          <button class="iptal-btn" onclick={() => (urunModalAcik = false)}
+            >İptal</button
+          >
+          <button class="ekle-btn" onclick={urunKaydet}
+            >{duzenlenenId ? "Kaydet" : "Ekle"}</button
+          >
         </div>
       </div>
     </div>
