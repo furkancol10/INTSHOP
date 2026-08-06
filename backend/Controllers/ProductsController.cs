@@ -15,7 +15,7 @@ public class ProductsController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var sql = @"
-            SELECT p.id, p.name, c.name AS category, p.stock, p.price, p.created_at
+            SELECT p.id, p.name, p.category_id, c.name AS category, p.stock, p.price, p.created_at
             FROM products p
             JOIN categories c ON c.id = p.category_id
             ORDER BY p.id";

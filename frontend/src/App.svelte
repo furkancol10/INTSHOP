@@ -89,7 +89,7 @@
       if (role === "Bayi") {
         await loadMyStock();
         await loadHistory();
-      } else {
+      } else if (role == "Admin") {
         await loadAll();
         await loadMovements();
         await loadDealers();
@@ -104,7 +104,15 @@
     token = "";
     role = "";
     currentUser = "";
+    aktifSekme = "anasayfa";
+    products = [];
+    movements = [];
+    myStock = [];
+    history = [];
+    dealers = [];
+    users = [];
     localStorage.clear();
+    location.reload();
   }
 
   async function loadAll() {
@@ -351,10 +359,18 @@
 
   onMount(() => {
     if (!token) return;
+    console.log(
+      "onMount role:",
+      role,
+      "→ aktifSekme olacak:",
+      role === "Admin" ? "hareketler" : "anasayfa",
+    );
     if (role === "Bayi") {
+      aktifSekme = "anasayfa";
       loadMyStock();
       loadHistory();
-    } else {
+    } else if (role === "Admin") {
+      aktifSekme = "hareketler";
       loadAll();
       loadMovements();
       loadDealers();
@@ -407,92 +423,15 @@
       </div>
     </div>
   {:else}
-    <div class="topbar"></div>
-
-    {#if role === "Bayi"}
-      <h2>Stok Yönetimi</h2>
-      <table>
-        <thead>
-          <tr
-            ><th>Ürün</th><th>Kategori</th><th>Stok</th><th>Giriş / Çıkış</th
-            ></tr
-          >
-        </thead>
-        <tbody>
-          {#each myStock as p}
-            <tr class:dusuk={p.stock < 10}>
-              <td>{p.name}</td>
-              <td>{p.category}</td>
-              <td>{p.stock}</td>
-              <td>
-                <input
-                  type="number"
-                  min="1"
-                  placeholder="Miktar"
-                  bind:value={miktarlar[p.product_id]}
-                  style="width: 80px;"
-                />
-                <button
-                  onclick={() =>
-                    movement(
-                      p.product_id,
-                      Math.abs(Number(miktarlar[p.product_id]) || 0),
-                    )}>Giriş</button
-                >
-                <button
-                  onclick={() =>
-                    movement(
-                      p.product_id,
-                      -Math.abs(Number(miktarlar[p.product_id]) || 0),
-                    )}>Çıkış</button
-                >
-              </td>
-            </tr>
-          {/each}
-        </tbody>
-      </table>
-
-      <div
-        style="display: flex; gap:2rem; align-items: flex-start; flex-wrap: wrap;"
+    <div class="toolbar">
+      <button
+        class="toolbar-baslik"
+        onclick={() =>
+          (aktifSekme = role === "Admin" ? "hareketler" : "anasayfa")}
+        >KOBURA</button
       >
-        <div style="flex: 1; min-width: 200px;">
-          <h2>Giriş / Çıkış Geçmişi</h2>
-          {#if history.length}
-            <table>
-              <thead>
-                <tr><th>Tarih</th><th>Giriş</th><th>Çıkış</th></tr>
-              </thead>
-              <tbody>
-                {#each history as h}
-                  <tr>
-                    <td>{new Date(h.tarih).toLocaleDateString("tr-TR")}</td>
-                    <td style="color: greenyellow;">+{h.giris}</td>
-                    <td style="color: #c00;">-{h.cikis}</td>
-                  </tr>
-                {/each}
-              </tbody>
-            </table>
-          {:else}
-            <p>Henüz giriş / çıkış yapılmamış.</p>
-          {/if}
-        </div>
-        <div style="flex: 1; min-width: 350px;">
-          <h2>Giriş / Çıkış Grafiği</h2>
-          {#if history.length}
-            <div style="max-width: 600px;">
-              <canvas bind:this={chartCanvas}></canvas>
-            </div>
-          {/if}
-        </div>
-      </div>
-    {/if}
 
-    {#if role == "Admin"}
-      <div class="toolbar">
-        <button
-          class="toolbar-baslik"
-          onclick={() => (aktifSekme = "hareketler")}>Stok Paneli</button
-        >
+      {#if role === "Admin"}
         <button
           class:aktif={aktifSekme === "dealers"}
           onclick={() => (aktifSekme = "dealers")}>Bayiler</button
@@ -509,154 +448,244 @@
           class:aktif={aktifSekme === "users"}
           onclick={() => (aktifSekme = "users")}>Kullanıcılar</button
         >
-        <span class="toolbar-spacer"></span>
-        <span class="toolbar-user">{currentUser}</span>
-        <button class="cikis-btn" onclick={logout}>Çıkış</button>
-      </div>
+      {:else if role === "Bayi"}
+        <button
+          class:aktif={aktifSekme === "stok"}
+          onclick={() => (aktifSekme = "stok")}>Stok</button
+        >
+        <button
+          class:aktif={aktifSekme === "raporlar"}
+          onclick={() => (aktifSekme = "raporlar")}>Raporlar</button
+        >
+      {/if}
 
-      <div class="sekme-icerik">
-        {#if aktifSekme === "hareketler"}
-          <h2>Bayi hareketleri</h2>
-          {#if movements.length}
-            <div class="tablo-cerceve">
-              <table>
-                <thead>
-                  <tr
-                    ><th>Bayi</th><th>Ürün</th><th>İşlem</th><th>Miktar</th><th
-                      >Tarih</th
-                    ></tr
-                  >
-                </thead>
-                <tbody>
-                  {#each movementPage as m}
+      <span class="toolbar-spacer"></span>
+      <span class="toolbar-user">{currentUser} ({role})</span>
+      <button class="cikis-btn" onclick={logout}>Çıkış</button>
+    </div>
+
+    <div class="sekme-icerik">
+      {#if aktifSekme === "anasayfa"}
+        <div class="hosgeldin">
+          <h1>Hoş Geldiniz, {currentUser}!</h1>
+          <p>
+            Stok işlemleriniz için "Stok", raporlarınız için "Raporlar"
+            sekmesini kullanın.
+          </p>
+        </div>
+      {:else if aktifSekme === "stok"}
+        <h2>Stok Yönetimi</h2>
+        <div class="tablo-cerceve">
+          <table>
+            <thead>
+              <tr
+                ><th>Ürün</th><th>Kategori</th><th>Stok</th><th
+                  >Giriş / Çıkış</th
+                ></tr
+              >
+            </thead>
+            <tbody>
+              {#each myStock as p}
+                <tr class:dusuk={p.stock < 10}>
+                  <td>{p.name}</td>
+                  <td>{p.category}</td>
+                  <td>{p.stock}</td>
+                  <td>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Miktar"
+                      bind:value={miktarlar[p.product_id]}
+                      style="width: 80px"
+                    />
+                    <button
+                      onclick={() =>
+                        movement(
+                          p.product_id,
+                          Math.abs(Number(miktarlar[p.product_id]) || 0),
+                        )}>Giriş</button
+                    >
+                    <button
+                      onclick={() =>
+                        movement(
+                          p.product_id,
+                          -Math.abs(Number(miktarlar[p.product_id]) || 0),
+                        )}>Çıkış</button
+                    >
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {:else if aktifSekme === "raporlar"}
+        <h2>Raporlar</h2>
+          <div style="flex: 1; min-width: 280px">
+            <h3>Giriş / Çıkış Geçmişi</h3>
+            {#if history.length}
+              <div class="tablo-cerceve">
+                <table>
+                  <thead>
                     <tr>
-                      <td>{m.bayi}</td>
-                      <td>{m.urun}</td>
-                      <td style="color: {m.quantity > 0 ? 'green' : '#c00'}">
-                        {m.quantity > 0 ? "Giriş" : "Çıkış"}
-                      </td>
-                      <td>{Math.abs(m.quantity)}</td>
-                      <td>{new Date(m.created_at).toLocaleString("tr-TR")}</td>
+                      <th>Tarih</th><th>Giriş</th><th>Çıkış</th><th>Ürün</th>
                     </tr>
-                  {/each}
-                </tbody>
-              </table>
-            </div>
-
-            <div class="pagination">
-              <button
-                onclick={() => (mainPage = mainPage - 1)}
-                disabled={mainPage === 1}>Önceki</button
-              >
-              <span>Sayfa {mainPage} / {totalPages}</span>
-              <button
-                onclick={() => (mainPage = mainPage + 1)}
-                disabled={mainPage === totalPages}>Sonraki</button
-              >
-            </div>
-          {:else}
-            <p>Henüz hareket yok.</p>
-          {/if}
-        {:else if aktifSekme === "urunler"}
-          <h2>Ürünler</h2>
-          <button class="ekle-btn" onclick={urunEkleAc}>+ Yeni Ürün</button>
-
-          {#if products.length}
-            <div class="tablo-cerceve">
-              <table>
-                <thead>
+                  </thead>
+                  <tbody>
+                    {#each history as h}
+                      <tr>
+                        <td>{new Date(h.tarih).toLocaleDateString("tr-TR")}</td>
+                        <td style="color: green;">+{h.giris}</td>
+                        <td style="color: red;">-{h.cikis}</td>
+                        <td>{h.name}</td>
+                      </tr>
+                    {/each}
+                  </tbody>
+                </table>
+              </div>
+            {:else}
+              <p>Henüz giriş/çıkış yapılmamış.</p>
+            {/if}
+          </div>
+      {:else if aktifSekme === "hareketler"}
+        <h2>Bayi hareketleri</h2>
+        {#if movements.length}
+          <div class="tablo-cerceve">
+            <table>
+              <thead>
+                <tr
+                  ><th>Bayi</th><th>Ürün</th><th>İşlem</th><th>Miktar</th><th
+                    >Tarih</th
+                  ></tr
+                >
+              </thead>
+              <tbody>
+                {#each movementPage as m}
                   <tr>
-                    <th>ID</th><th>Ürün</th><th>Kategori</th><th>Stok</th><th
-                      >Fiyat</th
-                    ><th></th>
+                    <td>{m.bayi}</td>
+                    <td>{m.urun}</td>
+                    <td style="color: {m.quantity > 0 ? 'green' : '#c00'}">
+                      {m.quantity > 0 ? "Giriş" : "Çıkış"}
+                    </td>
+                    <td>{Math.abs(m.quantity)}</td>
+                    <td>{new Date(m.created_at).toLocaleString("tr-TR")}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {#each products as p}
-                    <tr class:dusuk={p.stock < 10}>
-                      <td>{p.id}</td>
-                      <td>{p.name}</td>
-                      <td>{p.category}</td>
-                      <td>{p.stock}</td>
-                      <td>{p.price} ₺</td>
-                      <td>
-                        <button
-                          class="duzenle-btn"
-                          onclick={() => urunDuzenleAc(p)}>Düzenle</button
-                        >
-                        <button class="sil" onclick={() => deleteProduct(p.id)}
-                          >Sil</button
-                        ></td
-                      >
-                    </tr>
-                  {/each}
-                </tbody>
-              </table>
-            </div>
-          {/if}
-        {:else if aktifSekme === "dealers"}
-          <h2>Bayiler</h2>
-          {#if dealers.length}
-            <div class="tablo-cerceve">
-              <table>
-                <thead>
-                  <tr
-                    ><th>ID</th><th>Bayi Adı</th><th>Adres</th><th>Telefon</th
-                    ></tr
-                  >
-                </thead>
-                <tbody>
-                  {#each dealers as d}
-                    <tr>
-                      <td>{d.id}</td>
-                      <td>{d.username}</td>
-                      <td>{d.address ?? "-"}</td>
-                      <td>{d.phone ?? "-"}</td>
-                    </tr>
-                  {/each}
-                </tbody>
-              </table>
-            </div>
-          {:else}
-            <p>Henüz bayi yok.</p>
-          {/if}
-        {:else if aktifSekme === "indirim"}
-          <h2>İndirim</h2>
-          <p>Bu bölüm yakında eklenecek.</p>
-        {:else if aktifSekme === "users"}
-          <h2>Kullanıcılar</h2>
-          <button class="ekle-btn" onclick={() => (modalAcik = true)}>
-            + Yeni Kullanıcı</button
-          >
-
-          {#if users.length}
-            <div class="tablo-cerceve">
-              <table>
-                <thead>
-                  <tr><th>ID</th><th>Kullanıcı</th><th>Rol</th></tr>
-                </thead>
-                <tbody>
-                  {#each users as u}
-                    <tr>
-                      <td>{u.id}</td>
-                      <td>{u.username}</td>
-                      <td>{u.role}</td>
-                    </tr>
-                  {/each}
-                </tbody>
-              </table>
-            </div>
-          {:else}
-            <p>Henüz kullanıcı yok.</p>
-          {/if}
+                {/each}
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <button
+              onclick={() => (mainPage = mainPage - 1)}
+              disabled={mainPage === 1}>Önceki</button
+            >
+            <span>Sayfa {mainPage} / {totalPages}</span>
+            <button
+              onclick={() => (mainPage = mainPage + 1)}
+              disabled={mainPage === totalPages}>Sonraki</button
+            >
+          </div>
+        {:else}
+          <p>Henüz hareket yok.</p>
         {/if}
-      </div>
-    {/if}
+      {:else if aktifSekme === "urunler"}
+        <h2>Ürünler</h2>
+        <button class="ekle-btn" onclick={urunEkleAc}>+ Yeni Ürün</button>
 
-    {#if error}<p class="error">{error}</p>
-    {/if}
-    {#if loading}<p>Yükleniyor... Lütfen Bekleyiniz...</p>{/if}
+        {#if products.length}
+          <div class="tablo-cerceve">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th><th>Ürün</th><th>Kategori</th><th>Stok</th><th
+                    >Fiyat</th
+                  ><th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each products as p}
+                  <tr class:dusuk={p.stock < 10}>
+                    <td>{p.id}</td>
+                    <td>{p.name}</td>
+                    <td>{p.category}</td>
+                    <td>{p.stock}</td>
+                    <td>{p.price} ₺</td>
+                    <td>
+                      <button
+                        class="duzenle-btn"
+                        onclick={() => urunDuzenleAc(p)}>Düzenle</button
+                      >
+                      <button class="sil" onclick={() => deleteProduct(p.id)}
+                        >Sil</button
+                      ></td
+                    >
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {/if}
+      {:else if aktifSekme === "dealers"}
+        <h2>Bayiler</h2>
+        {#if dealers.length}
+          <div class="tablo-cerceve">
+            <table>
+              <thead>
+                <tr
+                  ><th>ID</th><th>Bayi Adı</th><th>Adres</th><th>Telefon</th
+                  ></tr
+                >
+              </thead>
+              <tbody>
+                {#each dealers as d}
+                  <tr>
+                    <td>{d.id}</td>
+                    <td>{d.username}</td>
+                    <td>{d.address ?? "-"}</td>
+                    <td>{d.phone ?? "-"}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {:else}
+          <p>Henüz bayi yok.</p>
+        {/if}
+      {:else if aktifSekme === "indirim"}
+        <h2>İndirim</h2>
+        <p>Bu bölüm yakında eklenecek.</p>
+      {:else if aktifSekme === "users"}
+        <h2>Kullanıcılar</h2>
+        <button class="ekle-btn" onclick={() => (modalAcik = true)}>
+          + Yeni Kullanıcı</button
+        >
+
+        {#if users.length}
+          <div class="tablo-cerceve">
+            <table>
+              <thead>
+                <tr><th>ID</th><th>Kullanıcı</th><th>Rol</th></tr>
+              </thead>
+              <tbody>
+                {#each users as u}
+                  <tr>
+                    <td>{u.id}</td>
+                    <td>{u.username}</td>
+                    <td>{u.role}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {:else}
+          <p>Henüz kullanıcı yok.</p>
+        {/if}
+      {/if}
+    </div>
   {/if}
+
+  {#if error}<p class="error">{error}</p>
+  {/if}
+  {#if loading}<p>Yükleniyor... Lütfen Bekleyiniz...</p>{/if}
 
   {#if modalAcik}
     <div
