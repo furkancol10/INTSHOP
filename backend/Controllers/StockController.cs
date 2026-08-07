@@ -74,6 +74,26 @@ public class StockController : ControllerBase
         
     }
 
+    [HttpGet("my-stock/movements")]
+    public async Task<IActionResult> MyMovements()
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var user = await GetUser(token);
+        if (user is null) return Unauthorized("Giriş Gerekli!");
+        if (user.Value.role != "Bayi") return StatusCode(403, "Sadece bayiler");
+
+        var sql = @"
+            SELECT p.name AS urun, sm.quantity, sm.created_at
+            FROM stock_movements sm
+            JOIN products p ON p.id = sm.product_id
+            JOIN categories c ON c.id = p.category_id
+            WHERE sm.dealer_id = @dealerId
+            ORDER BY sm.created_at DESC, sm.id DESC";
+        
+        var rows = await _db.QueryAsync(sql, new { dealerId = user.Value.id });
+        return Ok(rows);
+    }
+
     [HttpGet("my-stock/history")]
     public async Task<IActionResult> History()
     {

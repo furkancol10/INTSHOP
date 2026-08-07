@@ -190,20 +190,8 @@ table {
 table th,
 table td {
   border: 1px solid whitesmoke;
-  padding: .5rem .75rem;
-  text-align: lef;
-}
-table thead th {
-  background: wheat;
-  font-weight: 600;
-}
-table tbody tr:nth-child(even) {
-  background: whitesmoke;
-}
-.modal-arkaplan {
-  position: fixed;
-  inset: 0;
-    text-align: center;
+  padding: .5rem;
+  text-align: left;
 }
 table thead th {
   background: wheat;
@@ -249,6 +237,7 @@ table tbody tr:nth-child(even) {
   color: white;
   border: none;
   padding: .5rem 1rem;
+  margin-bottom: .6rem;
   border-radius: 6px;
   cursor: pointer;
 }

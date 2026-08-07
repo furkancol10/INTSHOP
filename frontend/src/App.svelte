@@ -50,25 +50,29 @@
   //Ürün Ekleme
   let urunModalAcik = $state(false);
   let duzenlenenId = $state(false);
-  let urunForm = $state({ name: "", category_id: "", price: "" });
+  let urunForm = $state({ name: "", category_id: "", price: "", image_url: "" });
 
   //bayi oturumu
   let myStock = $state([]);
   let dealers = $state([]);
+  let myMovements = $state([]);
 
   //admin oturumu
   let movements = $state([]);
 
   //Kullanıcı oturumu
   let users = $state([]);
+  let shopData = $state([]);
+  let seciliBayiler = $state([]);
 
-  //Ana sayfa
+  //Sayfalama
   let mainPage = $state(1);
   const pageSize = 10;
+  let aktifHareketler = $derived(role === 'Admin' ? movements : myMovements);
   let movementPage = $derived(
-    movements.slice((mainPage - 1) * pageSize, mainPage * pageSize),
+    aktifHareketler.slice((mainPage - 1) * pageSize, mainPage * pageSize),
   );
-  let totalPages = $derived(Math.ceil(movements.length / pageSize));
+  let totalPages = $derived(Math.ceil(aktifHareketler.length / pageSize));
 
   async function login() {
     loginError = "";
@@ -88,7 +92,7 @@
       localStorage.setItem("username", currentUser);
       if (role === "Bayi") {
         await loadMyStock();
-        await loadHistory();
+        await loadMyMovements();
       } else if (role == "Admin") {
         await loadAll();
         await loadMovements();
@@ -157,9 +161,21 @@
     }
   }
 
+  async function loadShop() {
+    try {
+      const res = await fetch(`${API}/api/shop`, {
+        headers: { 'Authorization': token }
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      shopData = await res.json();
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
   function urunEkleAc() {
     duzenlenenId = null;
-    urunForm = { name: "", category_id: "", price: "" };
+    urunForm = { name: "", category_id: "", price: "", image_url: "" };
     urunModalAcik = true;
   }
 
@@ -169,6 +185,7 @@
       name: p.name,
       category_id: p.category_id ?? "",
       price: p.price,
+      image_url: p.image_url ?? ""
     };
     urunModalAcik = true;
   }
@@ -186,6 +203,7 @@
           name: urunForm.name,
           category_id: Number(urunForm.category_id),
           price: Number(urunForm.price),
+          image_url: urunForm.image_url
         }),
       });
       if (!res.ok) {
@@ -253,6 +271,18 @@
       error = e instanceof Error ? e.message : String(e);
     } finally {
       loading = false;
+    }
+  }
+
+  async function loadMyMovements() {
+    try {
+      const res = await fetch(`${API}/api/my-stock/movements`, {
+        headers: { Authorization: token },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      myMovements = await res.json();
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
     }
   }
 
@@ -331,9 +361,15 @@
     });
   }
 
+  $effect(() => {
+    if (aktifSekme === "raporlar" && history.length) {
+      setTimeout(drawChart, 0);
+    }
+  });
+
   async function kullaniciekle() {
     try {
-      const res = await fetch(`${APİ}/api/register`, {
+      const res = await fetch(`${API}/api/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: token },
         body: JSON.stringify(yeniKullanici),
@@ -368,6 +404,7 @@
     if (role === "Bayi") {
       aktifSekme = "anasayfa";
       loadMyStock();
+      loadMyMovements();
       loadHistory();
     } else if (role === "Admin") {
       aktifSekme = "hareketler";
@@ -457,6 +494,10 @@
           class:aktif={aktifSekme === "raporlar"}
           onclick={() => (aktifSekme = "raporlar")}>Raporlar</button
         >
+        <button
+          class:aktif={aktifSekme === "indirim"}
+          onclick={() => (aktifSekme = "indirim")}>İndirim</button
+        >
       {/if}
 
       <span class="toolbar-spacer"></span>
@@ -520,32 +561,56 @@
         </div>
       {:else if aktifSekme === "raporlar"}
         <h2>Raporlar</h2>
-          <div style="flex: 1; min-width: 280px">
-            <h3>Giriş / Çıkış Geçmişi</h3>
-            {#if history.length}
-              <div class="tablo-cerceve">
-                <table>
-                  <thead>
+        <div style="display: flex-wrap; min-width: 280px">
+          <h3>Giriş / Çıkış Geçmişi</h3>
+          {#if myMovements.length}
+            <div class="tablo-cerceve">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Tarih</th><th>Ürün</th><th>İşlem</th><th>Miktar</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {#each movementPage as m}
                     <tr>
-                      <th>Tarih</th><th>Giriş</th><th>Çıkış</th><th>Ürün</th>
+                      <td>{new Date(m.created_at).toLocaleDateString("tr-TR")}</td>
+                      <td>{m.urun}</td>
+                      <td style="color: {m.quantity > 0 ? 'green' : 'red'}"
+                        >{m.quantity > 0 ? "Giriş" : "Çıkış"}</td
+                      >
+                      <td>{Math.abs(m.quantity)}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {#each history as h}
-                      <tr>
-                        <td>{new Date(h.tarih).toLocaleDateString("tr-TR")}</td>
-                        <td style="color: green;">+{h.giris}</td>
-                        <td style="color: red;">-{h.cikis}</td>
-                        <td>{h.name}</td>
-                      </tr>
-                    {/each}
-                  </tbody>
-                </table>
+                  {/each}
+                </tbody>
+              </table>
+              <div class="pagination">
+                <button
+                  onclick={() => (mainPage = mainPage - 1)}
+                  disabled={mainPage === 1}>Önceki</button
+                >
+                <span>Sayfa {mainPage} / {totalPages}</span>
+                <button
+                  onclick={() => (mainPage = mainPage + 1)}
+                  disabled={mainPage === totalPages}>Sonraki</button
+                >
               </div>
-            {:else}
-              <p>Henüz giriş/çıkış yapılmamış.</p>
-            {/if}
-          </div>
+            </div>
+          {:else}
+            <p>Henüz giriş/çıkış yapılmamış.</p>
+          {/if}
+        </div>
+
+        <div style="display: flex-wrap; min-width: 350px;">
+          <h3>Giriş / Çıkış Grafiği</h3>
+          {#if history.length}
+            <div style="max-width: 600px;">
+              <canvas bind:this={chartCanvas}></canvas>
+            </div>
+          {/if}
+        </div>
+      {:else if aktifSekme === "indirim"}
+        <h2>İndirimler</h2>
       {:else if aktifSekme === "hareketler"}
         <h2>Bayi hareketleri</h2>
         {#if movements.length}
@@ -596,7 +661,7 @@
             <table>
               <thead>
                 <tr>
-                  <th>ID</th><th>Ürün</th><th>Kategori</th><th>Stok</th><th
+                  <th>ID</th><th>Resim</th><th>Ürün</th><th>Kategori</th><th>Stok</th><th
                     >Fiyat</th
                   ><th></th>
                 </tr>
@@ -605,6 +670,11 @@
                 {#each products as p}
                   <tr class:dusuk={p.stock < 10}>
                     <td>{p.id}</td>
+                    <td>
+                      {#if p.image_url}
+                        <img src={p.image_url} alt= {p.name} style="width:40px; height: 40px; object-fit: cover; border-radius: 4px;"/>
+                      {/if}
+                    </td>
                     <td>{p.name}</td>
                     <td>{p.category}</td>
                     <td>{p.stock}</td>
@@ -622,6 +692,17 @@
                 {/each}
               </tbody>
             </table>
+            <div class="pagination">
+              <button
+                onclick={() => (mainPage = mainPage - 1)}
+                disabled={mainPage === 1}>Önceki</button
+              >
+              <span>Sayfa {mainPage} / {totalPages}</span>
+              <button
+                onclick={() => (mainPage = mainPage + 1)}
+                disabled={mainPage === totalPages}>Sonraki</button
+              >
+            </div>
           </div>
         {/if}
       {:else if aktifSekme === "dealers"}
@@ -646,12 +727,23 @@
                 {/each}
               </tbody>
             </table>
+            <div class="pagination">
+              <button
+                onclick={() => (mainPage = mainPage - 1)}
+                disabled={mainPage === 1}>Önceki</button
+              >
+              <span>Sayfa {mainPage} / {totalPages}</span>
+              <button
+                onclick={() => (mainPage = mainPage + 1)}
+                disabled={mainPage === totalPages}>Sonraki</button
+              >
+            </div>
           </div>
         {:else}
           <p>Henüz bayi yok.</p>
         {/if}
-      {:else if aktifSekme === "indirim"}
-        <h2>İndirim</h2>
+      {:else if aktifSekme === "indirimAyar"}
+        <h2>İndirim Ayarları</h2>
         <p>Bu bölüm yakında eklenecek.</p>
       {:else if aktifSekme === "users"}
         <h2>Kullanıcılar</h2>
@@ -675,6 +767,17 @@
                 {/each}
               </tbody>
             </table>
+            <div class="pagination">
+              <button
+                onclick={() => (mainPage = mainPage - 1)}
+                disabled={mainPage === 1}>Önceki</button
+              >
+              <span>Sayfa {mainPage} / {totalPages}</span>
+              <button
+                onclick={() => (mainPage = mainPage + 1)}
+                disabled={mainPage === totalPages}>Sonraki</button
+              >
+            </div>
           </div>
         {:else}
           <p>Henüz kullanıcı yok.</p>
@@ -769,6 +872,13 @@
           />
         </label>
 
+        <label>
+          Resim URL<input bind:value={urunForm.image_url} placeholder="https://...">
+        </label>
+
+        {#if urunForm.image_url}
+          <img src={urunForm.image_url} alt="Önizleme" style="max-width: 150px; border-radius: 8px;"/>
+        {/if}
         <div class="modal-butonlar">
           <button class="iptal-btn" onclick={() => (urunModalAcik = false)}
             >İptal</button

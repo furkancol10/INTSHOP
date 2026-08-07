@@ -15,13 +15,15 @@ public class ProductsController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var sql = @"
-            SELECT p.id, p.name, p.category_id, c.name AS category, p.stock, p.price, p.created_at
+            SELECT p.id, p.name, p.category_id, c.name AS category, p.stock, p.price, p.image_url, p.created_at
             FROM products p
             JOIN categories c ON c.id = p.category_id
             ORDER BY p.id";
         var rows = await _db.QueryAsync(sql);
         return Ok(rows);
     }
+
+    public record NewProduct(string name, int category_id, int stock, decimal price, string? image_url);
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] NewProduct p)
@@ -31,8 +33,8 @@ public class ProductsController : ControllerBase
         if (role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok !!!");
 
         var sql=@"
-            INSERT INTO products (name, category_id, stock, price)
-            VALUES (@name, @category_id, @stock, @price)
+            INSERT INTO products (name, category_id, stock, price, image_url)
+            VALUES (@name, @category_id, @stock, @price, @image_url)
             RETURNING id";
         var id = await _db.ExecuteScalarAsync<int>(sql, p);
         return Ok(new { id });
@@ -51,7 +53,7 @@ public class ProductsController : ControllerBase
         return affected > 0 ? Ok() : NotFound();
     }
 
-    public record UpdateProduct(string name, int category_id, decimal price);
+    public record UpdateProduct(string name, int category_id, decimal price, string? image_url);
 
     [HttpPut("{id}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateProduct p)
@@ -61,9 +63,9 @@ public class ProductsController : ControllerBase
         if(role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok!");
 
         var affected = await _db.ExecuteAsync(
-            @"UPDATE products SET name = @name, category_id = @category_id, price = @price
+            @"UPDATE products SET name = @name, category_id = @category_id, price = @price, image_url = @image_url
               WHERE id = @id",
-            new { id, p.name, p.category_id, p.price });
+            new { id, p.name, p.category_id, p.price, p.image_url });
 
         return affected > 0 ? Ok() : NotFound();
     }
