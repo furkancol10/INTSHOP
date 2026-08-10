@@ -50,7 +50,12 @@
   //Ürün Ekleme
   let urunModalAcik = $state(false);
   let duzenlenenId = $state(false);
-  let urunForm = $state({ name: "", category_id: "", price: "", image_url: "" });
+  let urunForm = $state({
+    name: "",
+    category_id: "",
+    price: "",
+    image_url: "",
+  });
 
   //bayi oturumu
   let myStock = $state([]);
@@ -63,12 +68,12 @@
   //Kullanıcı oturumu
   let users = $state([]);
   let shopData = $state([]);
-  let seciliBayiler = $state([]);
+  let seciliBayiler = $state({});
 
   //Sayfalama
   let mainPage = $state(1);
   const pageSize = 10;
-  let aktifHareketler = $derived(role === 'Admin' ? movements : myMovements);
+  let aktifHareketler = $derived(role === "Admin" ? movements : myMovements);
   let movementPage = $derived(
     aktifHareketler.slice((mainPage - 1) * pageSize, mainPage * pageSize),
   );
@@ -164,14 +169,37 @@
   async function loadShop() {
     try {
       const res = await fetch(`${API}/api/shop`, {
-        headers: { 'Authorization': token }
+        headers: { Authorization: token },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       shopData = await res.json();
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
+    } finally {
+      loading = false;
     }
   }
+
+  let gruplananUrunler = $derived.by(() => {
+    const map = {};
+    for (const row of shopData) {
+      if (!map[row.product_id]) {
+        map[row.product_id] = {
+          product_id: row.product_id,
+          name: row.name,
+          price: row.price,
+          image_url: row.image_url,
+          bayiler: [],
+        };
+      }
+      map[row.product_id].bayiler.push({
+        dealer_id: row.dealer_id,
+        dealer_name: row.dealer_name,
+        stock: row.stock,
+      });
+    }
+    return Object.values(map);
+  });
 
   function urunEkleAc() {
     duzenlenenId = null;
@@ -185,7 +213,7 @@
       name: p.name,
       category_id: p.category_id ?? "",
       price: p.price,
-      image_url: p.image_url ?? ""
+      image_url: p.image_url ?? "",
     };
     urunModalAcik = true;
   }
@@ -203,7 +231,7 @@
           name: urunForm.name,
           category_id: Number(urunForm.category_id),
           price: Number(urunForm.price),
-          image_url: urunForm.image_url
+          image_url: urunForm.image_url,
         }),
       });
       if (!res.ok) {
@@ -412,6 +440,9 @@
       loadMovements();
       loadDealers();
       loadUsers();
+    } else if (role === "Kullanici") {
+      aktifSekme = "magaza";
+      loadShop();
     }
   });
 </script>
@@ -498,6 +529,11 @@
           class:aktif={aktifSekme === "indirim"}
           onclick={() => (aktifSekme = "indirim")}>İndirim</button
         >
+      {:else if role === "Kullanici"}
+        <button
+          class:aktif={aktifSekme === "magaza"}
+          onclick={() => (aktifSekme = "magaza")}>Mağaza</button
+        >
       {/if}
 
       <span class="toolbar-spacer"></span>
@@ -574,7 +610,11 @@
                 <tbody>
                   {#each movementPage as m}
                     <tr>
-                      <td>{new Date(m.created_at).toLocaleDateString("tr-TR")}</td>
+                      <td
+                        >{new Date(m.created_at).toLocaleDateString(
+                          "tr-TR",
+                        )}</td
+                      >
                       <td>{m.urun}</td>
                       <td style="color: {m.quantity > 0 ? 'green' : 'red'}"
                         >{m.quantity > 0 ? "Giriş" : "Çıkış"}</td
@@ -661,9 +701,9 @@
             <table>
               <thead>
                 <tr>
-                  <th>ID</th><th>Resim</th><th>Ürün</th><th>Kategori</th><th>Stok</th><th
-                    >Fiyat</th
-                  ><th></th>
+                  <th>ID</th><th>Resim</th><th>Ürün</th><th>Kategori</th><th
+                    >Stok</th
+                  ><th>Fiyat</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -672,7 +712,11 @@
                     <td>{p.id}</td>
                     <td>
                       {#if p.image_url}
-                        <img src={p.image_url} alt= {p.name} style="width:40px; height: 40px; object-fit: cover; border-radius: 4px;"/>
+                        <img
+                          src={p.image_url}
+                          alt={p.name}
+                          style="width:40px; height: 40px; object-fit: cover; border-radius: 4px;"
+                        />
                       {/if}
                     </td>
                     <td>{p.name}</td>
@@ -782,6 +826,38 @@
         {:else}
           <p>Henüz kullanıcı yok.</p>
         {/if}
+      {:else if aktifSekme === "magaza"}
+        <h2>Mağaza</h2>
+        {#if gruplananUrunler.length}
+          <div class="urun-kartlari">
+            {#each gruplananUrunler as urun}
+              <div class="urun-kart">
+                {#if urun.image_url}
+                  <img
+                    src={urun.image_url}
+                    alt={urun.name}
+                    class="kart-resim"
+                  />
+                {/if}
+                <h3>{urun.name}</h3>
+                <p class="kart-fiyat">{urun.price} ₺</p>
+                <label
+                  >Satıcı:
+                  <select bind:value={seciliBayiler[urun.product_id]}>
+                    <option value="">Bayi Seçiniz ...</option>
+                    {#each urun.bayiler as b}
+                      <option value={b.dealer_id}
+                        >{b.dealer_name} (stok: {b.stock})</option
+                      >
+                    {/each}
+                  </select>
+                </label>
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <p>Şu an satışta ürün yok.</p>
+        {/if}
       {/if}
     </div>
   {/if}
@@ -873,11 +949,18 @@
         </label>
 
         <label>
-          Resim URL<input bind:value={urunForm.image_url} placeholder="https://...">
+          Resim URL<input
+            bind:value={urunForm.image_url}
+            placeholder="https://..."
+          />
         </label>
 
         {#if urunForm.image_url}
-          <img src={urunForm.image_url} alt="Önizleme" style="max-width: 150px; border-radius: 8px;"/>
+          <img
+            src={urunForm.image_url}
+            alt="Önizleme"
+            style="max-width: 150px; border-radius: 8px;"
+          />
         {/if}
         <div class="modal-butonlar">
           <button class="iptal-btn" onclick={() => (urunModalAcik = false)}

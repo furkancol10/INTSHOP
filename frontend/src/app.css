@@ -200,6 +200,9 @@ table thead th {
 table tbody tr:nth-child(even) {
   background: whitesmoke;
 }
+
+/* ---- Modal ekranı ---- */
+
 .modal-arkaplan {
   position: fixed;
   inset: 0;
@@ -287,4 +290,40 @@ table tbody tr:nth-child(even) {
 }
 .buyuk-modal .modal-butonlar {
   margin-top: auto;
+}
+
+/* ---- Mağaza ekranı ---- */
+
+.urun-kartlari {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1.5rem;
+}
+.urun-kart {
+  border: 1px solid whitesmoke;
+  border-radius: 18px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  background: white;
+}
+.kart-resim {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.urun-kart h3 { margin: 0;}
+.kart-fiyat {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: midnightblue;
+  margin: 0;
+}
+.urun-kart select {
+  padding: .5rem;
+  border: 1px solid whitesmoke;
+  border-radius: 6px;
+  width: 100%;
 }
