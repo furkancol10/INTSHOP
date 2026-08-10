@@ -38,7 +38,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginReq req)
     {
         var user = await _db.QueryFirstOrDefaultAsync(
-            "SELECT id, password_hash, role FROM users WHERE username = @username",
+            "SELECT id, password_hash, role, avatar_url FROM users WHERE username = @username",
             new { req.username });
 
         if (user is null)
@@ -53,6 +53,6 @@ public class AuthController : ControllerBase
             "UPDATE users SET token = @token WHERE id = @id",
             new { token, id = (int)user.id });
 
-        return Ok(new { token, role = (string)user.role, username = req.username });
-    }
+        return Ok(new { token, role = (string)user.role, username = req.username, avatar_url = (string?)user.avatar_url});
+    } 
 }

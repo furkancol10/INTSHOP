@@ -10,6 +10,16 @@
   let role = $state(localStorage.getItem("role") || "");
   let currentUser = $state(localStorage.getItem("username") || "");
 
+  // Profil Sayfası
+  let avatarUrl = $state(localStorage.getItem("avatarUrl") || "");
+  let profil = $state({
+    username: "",
+    role: "",
+    address: "",
+    phone: "",
+    avatar_url: "",
+  });
+
   // veriler
   let products = $state([]);
   let categories = $state([]);
@@ -92,9 +102,11 @@
       token = data.token;
       role = data.role;
       currentUser = data.username;
+      avatarUrl = data.avatar_url || "";
       localStorage.setItem("token", token);
       localStorage.setItem("role", role);
       localStorage.setItem("username", currentUser);
+      localStorage.setItem("avatar_url", avatarUrl);
       if (role === "Bayi") {
         await loadMyStock();
         await loadMyMovements();
@@ -113,6 +125,7 @@
     token = "";
     role = "";
     currentUser = "";
+    avatarUrl = "";
     aktifSekme = "anasayfa";
     products = [];
     movements = [];
@@ -179,6 +192,44 @@
       loading = false;
     }
   }
+
+  async function loadProfile() {
+    try {
+      const res = await fetch(`${API}/api/profile`, {
+        headers: { Authorization: token },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      profil = await res.json();
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  async function profilGuncelle() {
+    try {
+      const res = await fetch(`${API}/api/profile`, {
+        method: "PUT",
+        headers: { ContentType: "application/json", Authorization: token },
+        body: JSON.stringify({
+          address: profil.address,
+          phone: profil.phone,
+          avatar_url: profil.avatar_url,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      avatarUrl = profil.avatar_url || "";
+      localStorage.setItem("avatar_url", avatarUrl);
+      alert("Profil Güncellendi");
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  $effect(() => {
+    if (aktifSekme === "profil") {
+      loadProfile();
+    }
+  });
 
   let gruplananUrunler = $derived.by(() => {
     const map = {};
@@ -537,7 +588,12 @@
       {/if}
 
       <span class="toolbar-spacer"></span>
-      <span class="toolbar-user">{currentUser} ({role})</span>
+      <button class="profil-btn" onclick={() => (aktifSekme = "profil")}>
+        {#if avatarUrl}
+          <img src={avatarUrl} alt="avatar" class="toolbar-avatar" />
+        {/if}
+        <span>{currentUser}</span>
+      </button>
       <button class="cikis-btn" onclick={logout}>Çıkış</button>
     </div>
 
@@ -858,6 +914,42 @@
         {:else}
           <p>Şu an satışta ürün yok.</p>
         {/if}
+      {:else if aktifSekme === "profil"}
+        <h2>Profilim</h2>
+        <div class="profil-sayfa">
+          <div class="profil-avatar">
+            {#if profil.avatar_url}
+              <img src={profil.avatar_url} alt="avatar" />
+            {/if}
+          </div>
+
+          <div class="profil-bilgi">
+            <label
+              >Kullanıcı Adı
+              <input value={profil.username} disabled />
+            </label>
+            <label
+              >Rol
+              <input value={profil.role} disabled />
+            </label>
+            <label
+              >Adres
+              <input bind:value={profil.address} placeholder="Adres" />
+            </label>
+            <label
+              >Telefon
+              <input bind:value={profil.phone} placeholder="Telefon" />
+            </label>
+            <label
+              >Avatar URL
+              <input
+                bind:value={profil.avatar_url}
+                placeholder="/avatars/..."
+              />
+            </label>
+            <button class="ekle-btn" onclick={profilGuncelle}>Kaydet</button>
+          </div>
+        </div>
       {/if}
     </div>
   {/if}

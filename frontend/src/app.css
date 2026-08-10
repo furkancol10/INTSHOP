@@ -327,3 +327,27 @@ table tbody tr:nth-child(even) {
   border-radius: 6px;
   width: 100%;
 }
+
+/* ---- Profil ---- */
+
+.profil-btn {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: .3rem .6rem;
+  border-radius: 8px;
+  transition: background .2s;
+}
+.profil-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.toolbar-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
