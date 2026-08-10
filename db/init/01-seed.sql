@@ -6,7 +6,7 @@
 --
 -- Kullanıcı şifreleri (BCrypt hash'li):
 --   admin / admin123   (Admin)
---   bayi1  / bayi123    (Bayi)
+--   bayi  / bayi123    (Bayi)
 --   bayi2 / bayi123    (Bayi)
 --   bayi3 / bayi123    (Bayi)
 --   user1 / user123    (Kullanici)
@@ -57,10 +57,10 @@ CREATE TABLE users (
 
 INSERT INTO users (username, password_hash, role, address, phone) VALUES
     ('admin', '$2a$11$/HEWwh0XFN2vBgwD7DsbFOoxQPtvtw5ChTTOi2c0i0uLReO8d4JH2', 'Admin',     NULL,                NULL),
-    ('bayi',  '$2a$11$qddF251nRT8zne3vzE5FGehCRrD/y7Xyk5sNVWlNnn4q5ylRJMC1m', 'Bayi',      'Istanbul, Tuzla',   '0532 111 22 33'),
+    ('bayi',  '$2a$11$4nMDaYWhemDQOc5K5.C4a.gJxn89kekAOjcTAfWz/MTt0wDb7hoz2', 'Bayi',      'Istanbul, Tuzla',   '0532 111 22 33'),
     ('bayi2', '$2a$11$4nMDaYWhemDQOc5K5.C4a.gJxn89kekAOjcTAfWz/MTt0wDb7hoz2', 'Bayi',      'Istanbul, Kartal',  '0532 111 44 55'),
     ('bayi3', '$2a$11$nUeo6B4.gwLflsYYzOOo0evbBnv6C17FFJn6/9FcrZNDhBDVIhFN2', 'Bayi',      'Istanbul, Kadikoy', '0538 666 77 88'),
-    ('user1', '$2a$11$tH0cAyacwEi6m4As759wou2qmYO3lxYpSWnym5zltD4s6q/Kdveyu', 'Kullanici', NULL,                NULL);
+    ('user1', '$2a$11$KM/OVZMbSJPZYNrU60ZSpuIKl1jQ15buBKlSgqI3yKifLwhuKf13q', 'Kullanici', NULL,                NULL);
 
 -- ---------- 4. BAYI STOKLARI ----------
 CREATE TABLE dealer_stock (
