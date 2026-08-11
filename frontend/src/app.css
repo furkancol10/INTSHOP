@@ -328,7 +328,7 @@ table tbody tr:nth-child(even) {
   width: 100%;
 }
 
-/* ---- Profil ---- */
+/* ---- Profil Butonu ---- */
 
 .profil-btn {
   display: flex;
@@ -350,4 +350,50 @@ table tbody tr:nth-child(even) {
   height: 32px;
   border-radius: 50%;
   object-fit: cover;
+}
+
+/* ---- Profil Sayfası ---- */
+
+.profil-sayfa {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  max-width: 600px;
+}
+
+.profil-avatar img {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid whitesmoke;
+}
+
+.profil-bilgi {
+  flex: 1;
+  min-width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+}
+
+.profil-bilgi label {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  font-weight: 600;
+  color: darkgray;
+}
+
+.profil-bilgi input {
+  padding: .6rem;
+  border: 1px solid whitesmoke;
+  border-radius: 6px;
+  font-weight: normal;
+}
+
+.profil-bilgi input:disabled {
+  background: white;
+  color: gray;
 }
