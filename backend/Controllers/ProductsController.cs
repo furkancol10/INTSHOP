@@ -37,6 +37,18 @@ public class ProductsController : ControllerBase
             VALUES (@name, @category_id, @stock, @price, @image_url)
             RETURNING id";
         var id = await _db.ExecuteScalarAsync<int>(sql, p);
+
+        await _db.ExecuteAsync(
+            @"INSERT INTO dealer_stock (dealer_id, product_id, stock)
+              SELECT u.id, @productId, 0
+              FROM users u
+              WHERE u.role = 'Bayi'
+                AND NOT EXISTS (
+                  SELECT 1 FROM dealer_stock ds
+                  WHERE ds.dealer_id = u.id AND ds.product_id = @productId
+                )",
+            new { productId = id });
+
         return Ok(new { id });
         
     }
@@ -48,8 +60,11 @@ public class ProductsController : ControllerBase
         var role = await AuthHelper.GetRole(_db, token);
         if (role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok !!!");
         
-        var affected = await _db.ExecuteAsync(
-            "DELETE FROM products WHERE id = @id", new { id });
+        await _db.ExecuteAsync("DELETE FROM stock_movements WHERE product_id = @id", new { id });
+        await _db.ExecuteAsync("DELETE FROM dealer_stock WHERE product_id = @id", new { id });
+
+        // Sonra ürünü sil
+        var affected = await _db.ExecuteAsync("DELETE FROM products WHERE id = @id", new { id });
         return affected > 0 ? Ok() : NotFound();
     }
 

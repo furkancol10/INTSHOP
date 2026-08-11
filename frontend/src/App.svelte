@@ -9,6 +9,7 @@
   let token = $state(localStorage.getItem("token") || "");
   let role = $state(localStorage.getItem("role") || "");
   let currentUser = $state(localStorage.getItem("username") || "");
+  let karsilama = $state(false);
 
   // Profil Sayfası
   let avatarUrl = $state(localStorage.getItem("avatarUrl") || "");
@@ -67,6 +68,14 @@
     image_url: "",
   });
 
+  let onizlemeYolu = $derived.by(() => {
+    let v = urunForm.image_url?.trim() || "";
+    if (!v) return "";
+    if (v.startsWith("/") || v.startsWith("http")) return v;
+    if (!/\.(jpg|jpeg|png|webp|gif)$/i.test(v)) v += ".jpg";
+    return `/products/${v}`;
+  });
+
   //bayi oturumu
   let myStock = $state([]);
   let dealers = $state([]);
@@ -108,14 +117,24 @@
       localStorage.setItem("username", currentUser);
       localStorage.setItem("avatar_url", avatarUrl);
       if (role === "Bayi") {
+        aktifSekme = "anasayfa";
         await loadMyStock();
         await loadMyMovements();
+        await loadHistory();
       } else if (role == "Admin") {
+        aktifSekme = "hareketler";
         await loadAll();
         await loadMovements();
         await loadDealers();
         await loadUsers();
+      } else if (role == "Kullanici") {
+        aktifSekme = "magaza";
+        await loadShop();
       }
+      karsilama = true;
+      setTimeout(() => {
+        karsilama = false;
+      }, 2000);
     } catch (e) {
       loginError = e instanceof Error ? e.message : String(e);
     }
@@ -209,7 +228,7 @@
     try {
       const res = await fetch(`${API}/api/profile`, {
         method: "PUT",
-        headers: { ContentType: "application/json", Authorization: token },
+        headers: { "Content-Type": "application/json", 'Authorization' : token },
         body: JSON.stringify({
           address: profil.address,
           phone: profil.phone,
@@ -274,6 +293,15 @@
       ? `${API}/api/products/${duzenlenenId}`
       : `${API}/api/products`;
     const method = duzenlenenId ? "PUT" : "POST";
+
+    let resimYolu = urunForm.image_url?.trim() || "";
+    if (resimYolu && !resimYolu.startsWith("/") && !resimYolu.startsWith("http")) {
+      if (!/\.(jpg|jpeg|png|webp|gif)$/i.test(resimYolu)) {
+        resimYolu += ".jpg";
+      }
+      resimYolu = `/products/${resimYolu}`;
+    }
+
     try {
       const res = await fetch(url, {
         method,
@@ -282,7 +310,7 @@
           name: urunForm.name,
           category_id: Number(urunForm.category_id),
           price: Number(urunForm.price),
-          image_url: urunForm.image_url,
+          image_url: resimYolu,
         }),
       });
       if (!res.ok) {
@@ -294,7 +322,7 @@
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     }
-  }
+  }  
 
   async function addProduct() {
     if (!name || !categoryId) {
@@ -445,6 +473,7 @@
       setTimeout(drawChart, 0);
     }
   });
+  
 
   async function kullaniciekle() {
     try {
@@ -540,6 +569,15 @@
         <button class="login-btn" onclick={login}>Giriş</button>
         {#if loginError}<p class="error">{loginError}</p>{/if}
       </div>
+    </div>
+  {:else if karsilama}
+    <div class="karsilama-ekran">
+      {#if avatarUrl}
+        <img src={avatarUrl} alt="avatar" class="karsilama-avatar" />
+      {/if}
+      <h1>Hoş Geldiniz, {currentUser}!</h1>
+      <div class="spinner"></div>
+      <p>Sayfa Yükleniyor...</p>
     </div>
   {:else}
     <div class="toolbar">
@@ -1041,15 +1079,15 @@
         </label>
 
         <label>
-          Resim URL<input
+          Resim <input
             bind:value={urunForm.image_url}
-            placeholder="https://..."
+            placeholder="Ürün Adı"
           />
         </label>
 
         {#if urunForm.image_url}
           <img
-            src={urunForm.image_url}
+            src={onizlemeYolu}
             alt="Önizleme"
             style="max-width: 150px; border-radius: 8px;"
           />
