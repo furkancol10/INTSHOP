@@ -4,14 +4,16 @@
   Chart.register(...registerables);
 
   const API = import.meta.env.VITE_API_URL ?? "http://localhost:5081";
-
+  //
   // oturum
+  //
   let token = $state(localStorage.getItem("token") || "");
   let role = $state(localStorage.getItem("role") || "");
   let currentUser = $state(localStorage.getItem("username") || "");
   let karsilama = $state(false);
-
+  //
   // Profil Sayfası
+  //
   let avatarUrl = $state(localStorage.getItem("avatarUrl") || "");
   let profil = $state({
     username: "",
@@ -20,8 +22,9 @@
     phone: "",
     avatar_url: "",
   });
-
+  //
   // veriler
+  //
   let products = $state([]);
   let categories = $state([]);
   let error = $state("");
@@ -31,24 +34,29 @@
   let categoryId = $state("");
   let stock = $state(0);
   let price = $state(0);
-
+  //
   // Geçmiş tablosu
+  //
   let miktarlar = $state({});
   let history = $state([]);
-
+  //
   // Grafik
+  //
   let chartCanvas = $state(null);
   let chartInstance = null;
-
+  //
   //Toolbar
+  //
   let aktifSekme = $state("hareketler");
-
+  //
   // Giriş
+  //
   let loginUser = $state("");
   let loginPass = $state("");
   let loginError = $state("");
-
+  //
   //Kullanıcı ekleme
+  //
   let modalAcik = $state(false);
   let yeniKullanici = $state({
     username: "",
@@ -57,8 +65,9 @@
     address: "",
     phone: "",
   });
-
+  //
   //Ürün Ekleme
+  //
   let urunModalAcik = $state(false);
   let duzenlenenId = $state(false);
   let urunForm = $state({
@@ -68,6 +77,9 @@
     image_url: "",
   });
 
+  //
+  //Resim Önizleme
+  //
   let onizlemeYolu = $derived.by(() => {
     let v = urunForm.image_url?.trim() || "";
     if (!v) return "";
@@ -75,29 +87,44 @@
     if (!/\.(jpg|jpeg|png|webp|gif)$/i.test(v)) v += ".jpg";
     return `/products/${v}`;
   });
-
+  //
   //bayi oturumu
+  //
   let myStock = $state([]);
   let dealers = $state([]);
   let myMovements = $state([]);
-
+  //
   //admin oturumu
+  //
   let movements = $state([]);
-
+  //
   //Kullanıcı oturumu
+  //
   let users = $state([]);
   let shopData = $state([]);
   let seciliBayiler = $state({});
-
+  //
   //Sayfalama
-  let mainPage = $state(1);
+  //
   const pageSize = 10;
-  let aktifHareketler = $derived(role === "Admin" ? movements : myMovements);
-  let movementPage = $derived(
-    aktifHareketler.slice((mainPage - 1) * pageSize, mainPage * pageSize),
-  );
-  let totalPages = $derived(Math.ceil(aktifHareketler.length / pageSize));
+  let sayfalar = $state({});
 
+  function sayfala(dizi, sekme) {
+    const s = sayfalar[sekme] ?? 1;
+    return dizi.slice((s - 1) * pageSize, s * pageSize);
+  }
+
+  function toplamSayfa(dizi) {
+    return Math.max(1, Math.ceil(dizi.length / pageSize));
+  }
+
+  function sayfaGit(sekme, yon) {
+    const su = sayfalar[sekme] ?? 1;
+    sayfalar[sekme] = su + yon;
+  }
+  //
+  // Giriş ekranı
+  //
   async function login() {
     loginError = "";
     try {
@@ -152,10 +179,13 @@
     history = [];
     dealers = [];
     users = [];
+    sayfalar = {};
     localStorage.clear();
     location.reload();
   }
-
+  //
+  // Sayfa Fonksiyonları
+  //
   async function loadAll() {
     loading = true;
     error = "";
@@ -228,7 +258,7 @@
     try {
       const res = await fetch(`${API}/api/profile`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", 'Authorization' : token },
+        headers: { "Content-Type": "application/json", Authorization: token },
         body: JSON.stringify({
           address: profil.address,
           phone: profil.phone,
@@ -249,7 +279,9 @@
       loadProfile();
     }
   });
-
+  //
+  // Ürünlerin Fonksiyonları
+  //
   let gruplananUrunler = $derived.by(() => {
     const map = {};
     for (const row of shopData) {
@@ -295,7 +327,11 @@
     const method = duzenlenenId ? "PUT" : "POST";
 
     let resimYolu = urunForm.image_url?.trim() || "";
-    if (resimYolu && !resimYolu.startsWith("/") && !resimYolu.startsWith("http")) {
+    if (
+      resimYolu &&
+      !resimYolu.startsWith("/") &&
+      !resimYolu.startsWith("http")
+    ) {
       if (!/\.(jpg|jpeg|png|webp|gif)$/i.test(resimYolu)) {
         resimYolu += ".jpg";
       }
@@ -322,7 +358,7 @@
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     }
-  }  
+  }
 
   async function addProduct() {
     if (!name || !categoryId) {
@@ -366,7 +402,9 @@
       error = e instanceof Error ? e.message : String(e);
     }
   }
-
+  //
+  //Bayi Fonksiyonları
+  //
   async function loadMyStock() {
     try {
       const res = await fetch(`${API}/api/my-stock`, {
@@ -436,7 +474,9 @@
       error = e instanceof Error ? e.message : String(e);
     }
   }
-
+  //
+  // Grafik Fonksiyonu
+  //
   function drawChart() {
     if (!chartCanvas || !history.length) return;
 
@@ -473,8 +513,9 @@
       setTimeout(drawChart, 0);
     }
   });
-  
-
+  //
+  //Kullanıcı Fonksiyonu
+  //
   async function kullaniciekle() {
     try {
       const res = await fetch(`${API}/api/register`, {
@@ -581,58 +622,60 @@
     </div>
   {:else}
     <div class="toolbar">
-      <button
-        class="toolbar-baslik"
-        onclick={() =>
-          (aktifSekme = role === "Admin" ? "hareketler" : "anasayfa")}
-        >KOBURA</button
-      >
+      <div class="toolbar-ic">
+        <button
+          class="toolbar-baslik"
+          onclick={() =>
+            (aktifSekme = role === "Admin" ? "hareketler" : "anasayfa")}
+          >KOBURA</button
+        >
 
-      {#if role === "Admin"}
-        <button
-          class:aktif={aktifSekme === "dealers"}
-          onclick={() => (aktifSekme = "dealers")}>Bayiler</button
-        >
-        <button
-          class:aktif={aktifSekme === "urunler"}
-          onclick={() => (aktifSekme = "urunler")}>Ürünler</button
-        >
-        <button
-          class:aktif={aktifSekme === "indirim"}
-          onclick={() => (aktifSekme = "indirim")}>İndirim</button
-        >
-        <button
-          class:aktif={aktifSekme === "users"}
-          onclick={() => (aktifSekme = "users")}>Kullanıcılar</button
-        >
-      {:else if role === "Bayi"}
-        <button
-          class:aktif={aktifSekme === "stok"}
-          onclick={() => (aktifSekme = "stok")}>Stok</button
-        >
-        <button
-          class:aktif={aktifSekme === "raporlar"}
-          onclick={() => (aktifSekme = "raporlar")}>Raporlar</button
-        >
-        <button
-          class:aktif={aktifSekme === "indirim"}
-          onclick={() => (aktifSekme = "indirim")}>İndirim</button
-        >
-      {:else if role === "Kullanici"}
-        <button
-          class:aktif={aktifSekme === "magaza"}
-          onclick={() => (aktifSekme = "magaza")}>Mağaza</button
-        >
-      {/if}
-
-      <span class="toolbar-spacer"></span>
-      <button class="profil-btn" onclick={() => (aktifSekme = "profil")}>
-        {#if avatarUrl}
-          <img src={avatarUrl} alt="avatar" class="toolbar-avatar" />
+        {#if role === "Admin"}
+          <button
+            class:aktif={aktifSekme === "dealers"}
+            onclick={() => (aktifSekme = "dealers")}>Bayiler</button
+          >
+          <button
+            class:aktif={aktifSekme === "urunler"}
+            onclick={() => (aktifSekme = "urunler")}>Ürünler</button
+          >
+          <button
+            class:aktif={aktifSekme === "indirim"}
+            onclick={() => (aktifSekme = "indirim")}>İndirim</button
+          >
+          <button
+            class:aktif={aktifSekme === "users"}
+            onclick={() => (aktifSekme = "users")}>Kullanıcılar</button
+          >
+        {:else if role === "Bayi"}
+          <button
+            class:aktif={aktifSekme === "stok"}
+            onclick={() => (aktifSekme = "stok")}>Stok</button
+          >
+          <button
+            class:aktif={aktifSekme === "raporlar"}
+            onclick={() => (aktifSekme = "raporlar")}>Raporlar</button
+          >
+          <button
+            class:aktif={aktifSekme === "indirim"}
+            onclick={() => (aktifSekme = "indirim")}>İndirim</button
+          >
+        {:else if role === "Kullanici"}
+          <button
+            class:aktif={aktifSekme === "magaza"}
+            onclick={() => (aktifSekme = "magaza")}>Mağaza</button
+          >
         {/if}
-        <span>{currentUser}</span>
-      </button>
-      <button class="cikis-btn" onclick={logout}>Çıkış</button>
+
+        <span class="toolbar-spacer"></span>
+        <button class="profil-btn" onclick={() => (aktifSekme = "profil")}>
+          {#if avatarUrl}
+            <img src={avatarUrl} alt="avatar" class="toolbar-avatar" />
+          {/if}
+          <span>{currentUser}</span>
+        </button>
+        <button class="cikis-btn" onclick={logout}>Çıkış</button>
+      </div>
     </div>
 
     <div class="sekme-icerik">
@@ -702,7 +745,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  {#each movementPage as m}
+                  {#each sayfala(myMovements, "raporlar") as m}
                     <tr>
                       <td
                         >{new Date(m.created_at).toLocaleDateString(
@@ -720,13 +763,18 @@
               </table>
               <div class="pagination">
                 <button
-                  onclick={() => (mainPage = mainPage - 1)}
-                  disabled={mainPage === 1}>Önceki</button
+                  onclick={() => sayfaGit("raporlar", -1)}
+                  disabled={(sayfalar.raporlar ?? 1) === 1}>Önceki</button
                 >
-                <span>Sayfa {mainPage} / {totalPages}</span>
+                <span
+                  >Sayfa {sayfalar.raporlar ?? 1} / {toplamSayfa(
+                    myMovements,
+                  )}</span
+                >
                 <button
-                  onclick={() => (mainPage = mainPage + 1)}
-                  disabled={mainPage === totalPages}>Sonraki</button
+                  onclick={() => sayfaGit("raporlar", 1)}
+                  disabled={(sayfalar.raporlar ?? 1) ===
+                    toplamSayfa(myMovements)}>Sonraki</button
                 >
               </div>
             </div>
@@ -758,7 +806,7 @@
                 >
               </thead>
               <tbody>
-                {#each movementPage as m}
+                {#each sayfala(movements, "hareketler") as m}
                   <tr>
                     <td>{m.bayi}</td>
                     <td>{m.urun}</td>
@@ -774,13 +822,16 @@
           </div>
           <div class="pagination">
             <button
-              onclick={() => (mainPage = mainPage - 1)}
-              disabled={mainPage === 1}>Önceki</button
+              onclick={() => sayfaGit("hareketler", -1)}
+              disabled={(sayfalar.hareketler ?? 1) === 1}>Önceki</button
             >
-            <span>Sayfa {mainPage} / {totalPages}</span>
+            <span
+              >Sayfa {sayfalar.hareketler ?? 1} / {toplamSayfa(movements)}</span
+            >
             <button
-              onclick={() => (mainPage = mainPage + 1)}
-              disabled={mainPage === totalPages}>Sonraki</button
+              onclick={() => sayfaGit("hareketler", 1)}
+              disabled={(sayfalar.hareketler ?? 1) === toplamSayfa(movements)}
+              >Sonraki</button
             >
           </div>
         {:else}
@@ -801,7 +852,7 @@
                 </tr>
               </thead>
               <tbody>
-                {#each products as p}
+                {#each sayfala(products, "urunler") as p}
                   <tr class:dusuk={p.stock < 10}>
                     <td>{p.id}</td>
                     <td>
@@ -832,13 +883,16 @@
             </table>
             <div class="pagination">
               <button
-                onclick={() => (mainPage = mainPage - 1)}
-                disabled={mainPage === 1}>Önceki</button
+                onclick={() => sayfaGit("urunler", -1)}
+                disabled={(sayfalar.urunler ?? 1) === 1}>Önceki</button
               >
-              <span>Sayfa {mainPage} / {totalPages}</span>
+              <span
+                >Sayfa {sayfalar.urunler ?? 1} / {toplamSayfa(products)}</span
+              >
               <button
-                onclick={() => (mainPage = mainPage + 1)}
-                disabled={mainPage === totalPages}>Sonraki</button
+                onclick={() => sayfaGit("urunler", 1)}
+                disabled={(sayfalar.urunler ?? 1) === toplamSayfa(products)}
+                >Sonraki</button
               >
             </div>
           </div>
@@ -855,7 +909,7 @@
                 >
               </thead>
               <tbody>
-                {#each dealers as d}
+                {#each sayfala(dealers, "dealers") as d}
                   <tr>
                     <td>{d.id}</td>
                     <td>{d.username}</td>
@@ -867,13 +921,15 @@
             </table>
             <div class="pagination">
               <button
-                onclick={() => (mainPage = mainPage - 1)}
-                disabled={mainPage === 1}>Önceki</button
+                onclick={() => sayfaGit("dealers", -1)}
+                disabled={(sayfalar.dealers ?? 1) === 1}>Önceki</button
               >
-              <span>Sayfa {mainPage} / {totalPages}</span>
+              <span>Sayfa {sayfalar.dealers ?? 1} / {toplamSayfa(dealers)}</span
+              >
               <button
-                onclick={() => (mainPage = mainPage + 1)}
-                disabled={mainPage === totalPages}>Sonraki</button
+                onclick={() => sayfaGit("dealers", 1)}
+                disabled={(sayfalar.dealers ?? 1) === toplamSayfa(dealers)}
+                >Sonraki</button
               >
             </div>
           </div>
@@ -896,7 +952,7 @@
                 <tr><th>ID</th><th>Kullanıcı</th><th>Rol</th></tr>
               </thead>
               <tbody>
-                {#each users as u}
+                {#each sayfala(users, "users") as u}
                   <tr>
                     <td>{u.id}</td>
                     <td>{u.username}</td>
@@ -907,13 +963,14 @@
             </table>
             <div class="pagination">
               <button
-                onclick={() => (mainPage = mainPage - 1)}
-                disabled={mainPage === 1}>Önceki</button
+                onclick={() => sayfaGit("users", -1)}
+                disabled={(sayfalar.users ?? 1) === 1}>Önceki</button
               >
-              <span>Sayfa {mainPage} / {totalPages}</span>
+              <span>Sayfa {sayfalar.users ?? 1} / {toplamSayfa(users)}</span>
               <button
-                onclick={() => (mainPage = mainPage + 1)}
-                disabled={mainPage === totalPages}>Sonraki</button
+                onclick={() => sayfaGit("users", 1)}
+                disabled={(sayfalar.users ?? 1) === toplamSayfa(users)}
+                >Sonraki</button
               >
             </div>
           </div>
@@ -1079,10 +1136,7 @@
         </label>
 
         <label>
-          Resim <input
-            bind:value={urunForm.image_url}
-            placeholder="Ürün Adı"
-          />
+          Resim <input bind:value={urunForm.image_url} placeholder="Ürün Adı" />
         </label>
 
         {#if urunForm.image_url}
