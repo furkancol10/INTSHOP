@@ -1,6 +1,7 @@
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
+using System.Reflection.Metadata.Ecma335;
 
 [ApiController]
 [Route("api")]
@@ -27,7 +28,13 @@ public class StockController : ControllerBase
         if (user.Value.role != "Bayi") return StatusCode(403, "Sadece bayiler");
 
         var sql = @"
-            SELECT p.id AS product_id, p.name, c.name AS category, p.price, ds.stock
+            SELECT p.id AS product_id, p.name, c.name AS category, 
+                p.price AS referans_fiyat,
+                ds.price AS benim_fiyatim,
+                ds.stock,
+                ROUND(p.price * p.min_oran / 100,2) AS alt_sinir,
+                ROUND(p.price * p.max_oran / 100,2) AS ust_sinir,
+                ROUND(p.price * 1.05, 2) AS onerilen
             FROM dealer_stock ds
             JOIN products p ON p.id = ds.product_id
             JOIN categories c ON c.id = p.category_id
@@ -114,5 +121,41 @@ public class StockController : ControllerBase
         
         var rows = await _db.QueryAsync(sql, new { dealerId = user.Value.id });
         return Ok(rows);
+    }
+
+    public record PriceReq(int product_id, decimal price);
+
+    [HttpPut("my-stock/price")]
+    public async Task<IActionResult> UpdatePrice([FromBody] PriceReq req)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var user = await GetUser(token);
+        if (user is null) return Unauthorized("Giriş Gerekli");
+        if (user.Value.role != "Bayi") return StatusCode(403, "Sadece bayiler");
+
+        var dealerId = user.Value.id;
+
+        var alt = await _db.ExecuteScalarAsync<decimal?>(
+            "SELECT ROUND(p.price * COALESCE(p.min_oran, 80) / 100, 2) FROM products p WHERE p.id = @pid",
+            new { pid = req.product_id });
+
+        var ust = await _db.ExecuteScalarAsync<decimal?>(
+            "SELECT ROUND(p.price * COALESCE(p.max_oran, 120) / 100, 2) FROM products p WHERE p.id = @pid",
+            new { pid = req.product_id });
+
+        if (alt is null || ust is null)
+            return NotFound("Ürün bulunamadı ya da fiyat sınırları tanımsız");
+
+        if (req.price < alt.Value || req.price > ust.Value)
+            return BadRequest($"Fiyat {alt.Value} - {ust.Value} ₺ aralığında olmalı. Girilen: {req.price} ₺");
+        
+        var etkilenen = await _db.ExecuteAsync(
+            @"UPDATE dealer_stock SET price = @price
+              WHERE dealer_id = @dealerId AND product_id = @pid",
+              new { price = req.price, dealerId, pid = req.product_id });
+
+        if (etkilenen == 0) return NotFound("Bu ürün sizin listenizde yok");
+
+        return Ok(new { product_id = req.product_id, price = req.price });
     }
 }

@@ -26,12 +26,12 @@ public class ShopController : ControllerBase
         if (role != "Kullanici") return StatusCode(403, "Sadece müşteriler");
 
         var sql= @"
-            SELECT p.id AS product_id, p.name, p.price, p.image_url,
+            SELECT p.id AS product_id, p.name, ds.price, p.image_url,
                     u.id AS dealer_id, u.username AS dealer_name, ds.stock
             FROM dealer_stock ds
             JOIN products p ON p.id = ds.product_id
             JOIN users u ON u.id = ds.dealer_id
-            WHERE ds.stock > 0
+            WHERE ds.stock > 0 AND ds.price IS NOT NULL
             ORDER BY p.name, u.username
             LIMIT @adet OFFSET @baslangic";
         var rows = await _db.QueryAsync(sql, new { adet = limit, baslangic = offset});
