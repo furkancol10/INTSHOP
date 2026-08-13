@@ -234,6 +234,12 @@
       loginError = e instanceof Error ? e.message : string(e);
     }
   }
+
+  let epostaGecerli = $derived.by(() => {
+    const e = kayitForm.email?.trim() || "";
+    if (!e) return null;   // boşsa henüz bir şey söyleme
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+  });
   //
   // Sayfa Fonksiyonları
   //
@@ -650,7 +656,7 @@
       <div class="flip-cerceve">
         <div class="flip-ic" class:donuk={kayitModu}>
 
-          <div class="flip-yuz flip-on">
+          <div class="flip-yuz flip-on" inert={kayitModu}>
             <div class="login-card">
               <div class="avatar">
                 <svg viewBox="0 0 24 24" width="40" height="40" fill="white">
@@ -704,7 +710,7 @@
             </div>
           </div>
 
-          <div class="flip-yuz flip-arka">
+          <div class="flip-yuz flip-arka" inert={!kayitModu}>
             <div class="login-card">
               <h3 class="kayit-baslik">Kayıt Ol</h3>
               <div class="input-group">
@@ -720,20 +726,23 @@
                   bind:value={kayitForm.password}
                 />
               </div>
-              <div class="input-group">
+              <div class="input-group" class:hatali={epostaGecerli === false}>
                 <input
                   type="email"
                   placeholder="E-Posta"
                   bind:value={kayitForm.email}
                 />
               </div>
+              {#if epostaGecerli === false}
+                <p class="ipucu-hata">Geçerli bir E-Posta giriniz. (ornek@site.com)</p>
+              {/if}
               <div class="input-group">
                 <input placeholder="Adres" bind:value={kayitForm.address} />
               </div>
               <div class="input-group">
                 <input placeholder="Telefon" bind:value={kayitForm.phone} />
               </div>
-              <button class="login-btn" onclick={kayitOl}>Kayıt Ol</button>
+              <button class="login-btn" onclick={kayitOl} >Kayıt Ol</button>
               <button
                 class="mod-degistir"
                 onclick={() => {
@@ -743,7 +752,7 @@
               >
                 Zaten hesabım var -Giriş Yap
               </button>
-              {#if loginError && !kayitModu}<p class="error">
+              {#if loginError && kayitModu}<p class="error">
                   {loginError}
                 </p>{/if}
             </div>

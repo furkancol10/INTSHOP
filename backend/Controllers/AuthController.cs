@@ -64,6 +64,8 @@ public class AuthController : ControllerBase
             return BadRequest("Kullanıcı adı ve şifre zorunlu !");
         if (req.password.Length < 6)
             return BadRequest("Şifre en az 6 karakter olmalı !");
+        if (string.IsNullOrWhiteSpace(req.email) || !EpostaGecerliMi(req.email))
+            return BadRequest("Geçerli bir e-posta adresi giriniz!");
 
         var hash = BCrypt.Net.BCrypt.HashPassword(req.password);
         try
@@ -82,6 +84,19 @@ public class AuthController : ControllerBase
         catch (Exception)
         {
             return StatusCode(500, "Kayıt sırasında bir hata oluştu");
+        }
+    }
+
+    private static bool EpostaGecerliMi(string eposta)
+    {
+        try
+        {
+            var adres = new System.Net.Mail.MailAddress(eposta.Trim());
+            return adres.Address == eposta.Trim();
+        }
+        catch
+        {
+            return false;
         }
     }
 }

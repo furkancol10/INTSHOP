@@ -147,6 +147,15 @@ h1, h2 {
   margin: 0;
   text-align: center;
 }
+.input-group.hatali {
+  border: 1px solid crimson;
+}
+.ipucu-hata {
+  margin: -.6rem 0 0;
+  font-size: .8rem;
+  color: crimson;
+  align-self: flex-start;
+}
 
 /* ---- Dashboard ekranı ---- */
 .toolbar {
