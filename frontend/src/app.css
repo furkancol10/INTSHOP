@@ -29,7 +29,8 @@ h1, h2 {
   padding: 2.5rem 2rem;
   border-radius: 20px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  width: 320px;
+  width: 100%;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
@@ -97,6 +98,54 @@ h1, h2 {
   color: #c00;
   font-size: .85rem;
   margin: 0;
+}
+/* ---- Kayıt Ol ---- */
+.kayit-baslik{
+  perspective: 1200px;
+  width: 100%;
+}
+.flip-cerceve {
+  perspective: 1200px;
+  width: 340px;
+  min-height: 520px;
+}
+.flip-ic {
+  position: relative;
+  width: 100%;
+  transition: transform .7s cubic-bezier(.4, .2, .2, 1);
+  transform-style: preserve-3d;
+}
+.flip-ic.donuk {
+  transform: rotateY(180deg);
+}
+.flip-yuz {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-arka {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform: rotateY(180deg);
+}
+.mod-degistir {
+  background: none;
+  border: none;
+  color: black;
+  font-size: .85rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: .3rem;
+}
+.mod-degistir:hover {
+  color:#b80000
+}
+.basari {
+  color: green;
+  font-size: .85rem;
+  margin: 0;
+  text-align: center;
 }
 
 /* ---- Dashboard ekranı ---- */
