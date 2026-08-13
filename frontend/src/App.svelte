@@ -101,8 +101,15 @@
   //Kullanıcı oturumu
   //
   let users = $state([]);
+  //
+  //Mağaza
+  //
   let shopData = $state([]);
-  let seciliBayiler = $state({});
+  let shopOffset = $state([]);
+  let hepsiYuklendi = $state(false);
+  let yukleniyorShop = $state(false);
+  const shopLimit = 14;
+  let sentinel = $state(null);
   //
   //Sayfalama
   //
@@ -156,6 +163,7 @@
         await loadUsers();
       } else if (role == "Kullanici") {
         aktifSekme = "magaza";
+        shopSifirla();
         await loadShop();
       }
       karsilama = true;
@@ -182,6 +190,7 @@
     sayfalar = {};
     localStorage.clear();
     location.reload();
+    shopSifirla();
   }
   //
   // Sayfa Fonksiyonları
@@ -229,18 +238,51 @@
   }
 
   async function loadShop() {
+
+    console.log("loadShop çağrıldı — offset:", shopOffset, "hepsiYuklendi:", hepsiYuklendi, "yukleniyor:", yukleniyorShop);
+    if (yukleniyorShop || hepsiYuklendi) {
+      console.log("→ ÇIKIŞ: kilit veya veri bitti");
+      return;
+    }
+    yukleniyorShop = true;
     try {
-      const res = await fetch(`${API}/api/shop`, {
+      const res = await fetch(`${API}/api/shop?offset=${shopOffset}&limit=${shopLimit}`, {
         headers: { Authorization: token },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      shopData = await res.json();
+      const yeni = await res.json();
+
+      if (yeni.length < shopLimit) hepsiYuklendi = true;
+
+      shopData = [...shopData, ...yeni];
+      shopOffset+= yeni.length;
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     } finally {
       loading = false;
+      yukleniyorShop = false;
     }
   }
+
+  function shopSifirla() {
+    shopData = [];
+    shopOffset = 0;
+    hepsiYuklendi = false;
+  }
+
+  $effect(() => {
+    if (aktifSekme !== "magaza" || !sentinel) return;
+
+    const gozlemci = new IntersectionObserver((girisler) => {
+      if (girisler[0].isIntersecting) {
+        loadShop();
+      }
+    }, { rootMargin: "200px" });
+
+    gozlemci.observe(sentinel);
+
+    return () => gozlemci.disconnect();
+  });
 
   async function loadProfile() {
     try {
@@ -282,27 +324,6 @@
   //
   // Ürünlerin Fonksiyonları
   //
-  let gruplananUrunler = $derived.by(() => {
-    const map = {};
-    for (const row of shopData) {
-      if (!map[row.product_id]) {
-        map[row.product_id] = {
-          product_id: row.product_id,
-          name: row.name,
-          price: row.price,
-          image_url: row.image_url,
-          bayiler: [],
-        };
-      }
-      map[row.product_id].bayiler.push({
-        dealer_id: row.dealer_id,
-        dealer_name: row.dealer_name,
-        stock: row.stock,
-      });
-    }
-    return Object.values(map);
-  });
-
   function urunEkleAc() {
     duzenlenenId = null;
     urunForm = { name: "", category_id: "", price: "", image_url: "" };
@@ -563,6 +584,7 @@
       loadUsers();
     } else if (role === "Kullanici") {
       aktifSekme = "magaza";
+      shopSifirla();
       loadShop();
     }
   });
@@ -640,8 +662,8 @@
             onclick={() => (aktifSekme = "urunler")}>Ürünler</button
           >
           <button
-            class:aktif={aktifSekme === "indirim"}
-            onclick={() => (aktifSekme = "indirim")}>İndirim</button
+            class:aktif={aktifSekme === "fiyatlandirma"}
+            onclick={() => (aktifSekme = "fiyatlandirma")}>Fiyatlandırma</button
           >
           <button
             class:aktif={aktifSekme === "users"}
@@ -657,13 +679,17 @@
             onclick={() => (aktifSekme = "raporlar")}>Raporlar</button
           >
           <button
-            class:aktif={aktifSekme === "indirim"}
-            onclick={() => (aktifSekme = "indirim")}>İndirim</button
+            class:aktif={aktifSekme === "fiyatlandirma"}
+            onclick={() => (aktifSekme = "fiyatlandirma")}>Fiyatlandırma</button
           >
         {:else if role === "Kullanici"}
           <button
             class:aktif={aktifSekme === "magaza"}
             onclick={() => (aktifSekme = "magaza")}>Mağaza</button
+          >
+          <button
+            class:aktif={aktifSekme === "indirim"}
+            onclick={() => (aktifSekme = "indirim")}>İndirimler</button
           >
         {/if}
 
@@ -979,9 +1005,9 @@
         {/if}
       {:else if aktifSekme === "magaza"}
         <h2>Mağaza</h2>
-        {#if gruplananUrunler.length}
+        {#if shopData.length}
           <div class="urun-kartlari">
-            {#each gruplananUrunler as urun}
+            {#each shopData as urun}
               <div class="urun-kart">
                 {#if urun.image_url}
                   <img
@@ -991,21 +1017,20 @@
                   />
                 {/if}
                 <h3>{urun.name}</h3>
+                <p class="kart-satici">Satıcı: <strong>{urun.dealer_name}</strong></p>
                 <p class="kart-fiyat">{urun.price} ₺</p>
-                <label
-                  >Satıcı:
-                  <select bind:value={seciliBayiler[urun.product_id]}>
-                    <option value="">Bayi Seçiniz ...</option>
-                    {#each urun.bayiler as b}
-                      <option value={b.dealer_id}
-                        >{b.dealer_name} (stok: {b.stock})</option
-                      >
-                    {/each}
-                  </select>
-                </label>
+                <p class="kart-stok">Stok: {urun.stock}</p>
+                <button class="sepet-btn">Sepete Ekle</button>
               </div>
             {/each}
           </div>
+          {#if !hepsiYuklendi}
+            <div bind:this={sentinel} class="sentinel">
+              {#if yukleniyorShop}
+                <div class="spinner"></div>
+              {/if}
+            </div>
+          {/if}
         {:else}
           <p>Şu an satışta ürün yok.</p>
         {/if}
@@ -1021,12 +1046,13 @@
           <div class="profil-bilgi">
             <label
               >Kullanıcı Adı
-              <input value={profil.username} disabled />
+              <input value={profil.username} />
             </label>
-            <label
-              >Rol
-              <input value={profil.role} disabled />
-            </label>
+            {#if role === "Admin"}
+              <label>
+                Rol<input value="{profil.role}" disabled>
+              </label>
+            {/if}
             <label
               >Adres
               <input bind:value={profil.address} placeholder="Adres" />
