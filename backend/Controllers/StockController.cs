@@ -28,13 +28,16 @@ public class StockController : ControllerBase
         if (user.Value.role != "Bayi") return StatusCode(403, "Sadece bayiler");
 
         var sql = @"
-            SELECT p.id AS product_id, p.name, c.name AS category, 
-                p.price AS referans_fiyat,
-                ds.price AS benim_fiyatim,
-                ds.stock,
-                ROUND(p.price * p.min_oran / 100,2) AS alt_sinir,
-                ROUND(p.price * p.max_oran / 100,2) AS ust_sinir,
-                ROUND(p.price * 1.05, 2) AS onerilen
+            SELECT p.id AS product_id, p.name, c.name AS category,
+                   p.price AS referans_fiyat,
+                   ds.price AS benim_fiyatim,
+                   ds.stock,
+                   ROUND(p.price * COALESCE(p.min_oran, 80) / 100, 2) AS alt_sinir,
+                   ROUND(p.price * COALESCE(p.max_oran, 120) / 100, 2) AS ust_sinir,
+                   ROUND(p.price * 1.05, 2) AS onerilen,
+                   (SELECT MAX(sm.created_at) FROM stock_movements sm
+                     WHERE sm.dealer_id = ds.dealer_id
+                       AND sm.product_id = ds.product_id) AS son_hareket
             FROM dealer_stock ds
             JOIN products p ON p.id = ds.product_id
             JOIN categories c ON c.id = p.category_id
@@ -148,14 +151,40 @@ public class StockController : ControllerBase
 
         if (req.price < alt.Value || req.price > ust.Value)
             return BadRequest($"Fiyat {alt.Value} - {ust.Value} ₺ aralığında olmalı. Girilen: {req.price} ₺");
+
+        var mevcutFiyat = await _db.ExecuteScalarAsync<decimal?>(
+            "SELECT price FROM dealer_stock WHERE dealer_id = @dealerId AND product_id = @pid",
+            new { dealerId, pid = req.product_id});
         
-        var etkilenen = await _db.ExecuteAsync(
-            @"UPDATE dealer_stock SET price = @price
-              WHERE dealer_id = @dealerId AND product_id = @pid",
-              new { price = req.price, dealerId, pid = req.product_id });
+        if (mevcutFiyat is null && !await UrunListedeMi(dealerId, req.product_id))
+            return NotFound("Bu ürün sizin listenizde yok");
+        //
+        //Bekleyen eski talebi iptal et
+        //
+        await _db.ExecuteAsync(
+            @"UPDATE requests SET status = 'cancelled', resolved_at = NOW()
+              WHERE dealer_id = @dealerId AND product_id = @pid
+                AND type = 'price' AND status = 'pending'",
+            new { dealerId, pid = req.product_id });
+        //
+        //Yeni talep oluştur
+        //        
+        var talepId = await _db.ExecuteScalarAsync<int>(
+            @"INSERT INTO requests (dealer_id, product_id, type, old_price, new_price, status) 
+              VALUES (@dealerId, @pid, 'price', @old, @new, 'pending')
+              RETURNING id",
+            new { dealerId, pid = req.product_id, old = mevcutFiyat, @new = req.price });
 
-        if (etkilenen == 0) return NotFound("Bu ürün sizin listenizde yok");
+        return Ok(new { talep_id = talepId, durum = "Onay bekliyor", eski_fiyat = mevcutFiyat, yeni_fiyat = req.price });
+    }
 
-        return Ok(new { product_id = req.product_id, price = req.price });
+    private async Task<bool> UrunListedeMi (int dealerId, int product_id)
+    {
+        var sayi = await _db.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM dealer_stock WHERE dealer_id = @dealerId AND product_id = @pid",
+            new { dealerId, pid = product_id });
+        return sayi > 0;
+        
     }
 }
+

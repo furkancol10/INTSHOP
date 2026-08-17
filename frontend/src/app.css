@@ -498,8 +498,143 @@ sepet-btn:active { transform: scale(0.97); }
   color: gray;
 }
 
-/* ---- Karşılama Ekranı ---- */
+/* ---- Stok-Fiyat Modal ----*/
+.modal-bilgi {
+  margin: 0;
+  font-size: .9rem;
+  color: darkgray;
+}
+.modal label {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  font-weight: 600;
+  color: darkgray;
+}
+.modal label select,
+.modal label input {
+  font-weight: normal;
+}
+.fiyat-input {
+  padding: .4rem;
+  border: 2px solid whitesmoke;
+  border-radius: 6px;
+}
+.fiyat-input.iyi { border-color: green; }
+.fiyat-input.sinirda { border-color: orange; }
+.fiyat-input.disarida { border-color: red; }
 
+.fiyat-ipucu {
+  font-size: .75rem;
+  color: gray;
+  margin-top: .3rem;
+}
+/* ---- Stok Ekranı ---- */
+.depo-bar {
+  position: relative;
+  width: 100%;
+  max-width: 180px;
+  height: 22px;
+  background: lightgray;
+  border-radius: 11px;
+  overflow: hidden;
+}
+.depo-dolu {
+  height: 100%;
+  border-radius: 11px;
+  transition: width .4s ease;
+}
+.depo-dolu.bos { background: gray; }
+.depo-dolu.kritik { background: red; }
+.depo-dolu.az { background: orange; }
+.depo-dolu.normal { background: yellow; }
+.depo-dolu.bol { background: green; }
+
+.depo-etiket {
+  font-size: .75rem;
+  font-weight: 600;
+}
+.depo-yazi {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .75rem;
+  font-weight: 700;
+  color: black;
+}
+
+.islem-btn, .islem-btn1 {
+  padding: .45rem;
+  background: lightseagreen;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: .85rem;
+  cursor: pointer;
+  transition: background .2s, transform .1s;
+}
+.islem-btn1 { margin-bottom: .6rem; padding: .65rem; width: 100px;}
+
+.islem-btn:hover { background: seagreen;}
+.islem-btn:active { background: scale(0.96);}
+
+.tarih-hucre {
+  font-size: .8rem;
+  color: gray;
+  white-space: nowwrap;
+}
+/* ---- Stok Ekranı ---- */
+.filtre-satir {
+  display: flex;
+  gap: .5rem;
+  margin-bottom: 1rem;
+}
+.filtre-satir button {
+  padding: .4rem .9rem;
+  background: lightseagreen;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .85rem; 
+}
+.filtre-satir button.aktif {
+  background: seagreen;
+  color: white;
+}
+.durum {
+  display: inline-block;
+  padding: .2rem .6rem;
+  border-radius: 12px;
+  font-size: .75rem;
+  font-weight: 600;
+}
+.durum.bekliyor { background: lightpink; color: brown;}
+.durum.onayli { background: lightpink; color: green;}
+.durum.redli { background: lightpink; color: darkred;}
+
+.kucuk { font-size: .75rem; color: gray}
+
+.onay-btn {
+  background: seagreen; color: white; border: none;
+  padding: .35rem .7rem; border-radius: 5px; cursor: pointer; margin-right: .3rem;
+}
+
+.red-btn {
+  background: red; color: white; border: none;
+  padding: .35rem .7rem; border-radius: 5px; cursor: pointer;
+}
+
+.badge {
+  background: coral;
+  color: white;
+  border-radius: 10px;
+  padding: .1rem .4rem;
+  font-size: .7rem;
+  margin-left: .3rem;
+}
+/* ---- Karşılama Ekranı ---- */
 .karsilama-ekran {
   min-height: 100vh;
   display: flex;

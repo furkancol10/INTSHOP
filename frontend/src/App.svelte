@@ -6,9 +6,9 @@
   const API = import.meta.env.VITE_API_URL ?? "http://localhost:5081";
   //
   // oturum
-  //
+  //  
   let token = $state(localStorage.getItem("token") || "");
-  let role = $state(localStorage.getItem("role") || "");
+  let role = $state("");
   let currentUser = $state(localStorage.getItem("username") || "");
   let karsilama = $state(false);
   //
@@ -88,7 +88,7 @@
     price: "",
     image_url: "",
   });
-
+  
   //
   //Resim Önizleme
   //
@@ -109,6 +109,9 @@
   //admin oturumu
   //
   let movements = $state([]);
+  let requests = $state([]);
+  let requestsFiltre = $state("pending");
+  let bekleyenSayi = $derived(requests.filter(r => r.status === "pending").length);
   //
   //Kullanıcı oturumu
   //
@@ -122,6 +125,48 @@
   let yukleniyorShop = $state(false);
   const shopLimit = 14;
   let sentinel = $state(null);
+  //
+  //Bayi Stok-fiyat
+  //
+  let islemModalAcik = $state(false);
+  let secilenUrunId = $state("");
+  let islemTuru = $state("");
+  let hareketMiktar = $state("");
+  let yeniFiyat = $state("");
+  let modalHata = $state("");
+
+  let secilenUrun = $derived(
+    myStock.find((p) => p.product_id === Number(secilenUrunId)) ?? null,
+  );
+
+  let fiyatDurum = $derived.by(() => {
+    if (islemTuru !== "fiyat" || !secilenUrun || !yeniFiyat) return null;
+    const f = Number(yeniFiyat);
+    if (isNaN(f)) return null;
+    const alt = Number(secilenUrun.alt_sinir);
+    const ust = Number(secilenUrun.ust_sinir);
+    if (f < alt || f > ust) return "disarida";
+    const aralik = ust - alt;
+    if (f - alt < aralik * 0.15 || ust - f < aralik * 0.15) return "sinirda";
+    return "iyi";
+  });
+  //
+  //Depo Durum
+  //
+  let maxStok = $derived(
+    Math.max(...myStock.map((p) => Number(p.stock) || 0), 1),
+  );
+
+  function depoDurumu(stok) {
+    const s = Number(stok) || 0;
+    const yuzde = Math.min(100, Math.round((s / 100) * 100));
+    let sinif = "bol";
+    if (s === 0) sinif = "bos";
+    else if (s <= 10) sinif = "kritik";
+    else if (s <= 30) sinif = "az";
+    else if (s <= 60) sinif = "normal";
+    return { yuzde, sinif, sayi: s };
+  }
   //
   //Sayfalama
   //
@@ -159,7 +204,6 @@
       currentUser = data.username;
       avatarUrl = data.avatar_url || "";
       localStorage.setItem("token", token);
-      localStorage.setItem("role", role);
       localStorage.setItem("username", currentUser);
       localStorage.setItem("avatar_url", avatarUrl);
       if (role === "Bayi") {
@@ -237,7 +281,7 @@
 
   let epostaGecerli = $derived.by(() => {
     const e = kayitForm.email?.trim() || "";
-    if (!e) return null;   // boşsa henüz bir şey söyleme
+    if (!e) return null; // boşsa henüz bir şey söyleme
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
   });
   //
@@ -381,6 +425,80 @@
       loadProfile();
     }
   });
+  
+  //
+  //Bayi Stok-Fiyat
+  //
+  function islemModalAc(productId = "") {
+    secilenUrunId = productId;
+    islemTuru = "";
+    hareketMiktar = "";
+    yeniFiyat = "";
+    modalHata = "";
+    islemModalAcik = true;
+  }
+
+  async function islemKaydet() {
+    modalHata = "";
+
+    if (!secilenUrunId) {
+      modalHata = "Ürün seçin";
+      return;
+    }
+    if (!islemTuru) {
+      modalHata = "İşlem türü seçin";
+      return;
+    }
+
+    const pid = Number(secilenUrunId);
+
+    if (islemTuru === "fiyat") {
+      const f = Number(yeniFiyat);
+      if (!yeniFiyat || isNaN(f) || f <= 0) {
+        modalHata = "Geçerli bir fiyat girin";
+        return;
+      }
+      if (fiyatDurum === "disarida") {
+        modalHata = `Fiyat ${secilenUrun.alt_sinir} - ${secilenUrun.ust_sinir} ₺ aralığında olmalı`;
+        return;
+      }
+      try {
+        const res = await fetch(`${API}/api/my-stock/price`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: token },
+          body: JSON.stringify({ product_id: pid, price: f }),
+        });
+        if (!res.ok)
+          throw new Error((await res.text()) || `HTTP ${res.status}`);
+        islemModalAcik = false;
+        await loadMyStock();
+      } catch (e) {
+        modalHata = e instanceof Error ? e.message : String(e);
+      }
+    } else {
+      const m = Math.abs(Number(hareketMiktar) || 0);
+      if (m <= 0) {
+        modalHata = "Miktar 0'dan büyük olmalı";
+        return;
+      }
+      const degisim = islemTuru === "giris" ? m : -m;
+      try {
+        const res = await fetch(`${API}/api/my-stock/movement`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: token },
+          body: JSON.stringify({ product_id: pid, change: degisim }),
+        });
+        if (!res.ok)
+          throw new Error((await res.text()) || `HTTP ${res.status}`);
+        islemModalAcik = false;
+        await loadMyStock();
+        await loadMyMovements();
+        await loadHistory();
+      } catch (e) {
+        modalHata = e instanceof Error ? e.message : String(e);
+      }
+    }
+  }
   //
   // Ürünlerin Fonksiyonları
   //
@@ -483,6 +601,41 @@
       error = e instanceof Error ? e.message : String(e);
     }
   }
+  //
+  // Admin onay fonksiyonu
+  //
+  async function laodRequests() {
+    try {
+      const res = await fetch(`${API}/api/requests?status=${requestsFiltre}`, {
+        headers : {Authorization: token },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      requests = await res.json();
+    }catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  async function talepKarar(id, karar, not = "") {
+    try {
+      const res = await fetch(`${API}/api/requests/${id}/${karar}`, {
+        method: "PUT",
+        headers: { "Content-Type" : "application/json", Authorization: token },
+        body: JSON.stringify({ note: not }),
+      });
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      await laodRequests();
+      await loadAll();
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  $effect(() => {
+    if (role === "Admin" && aktifSekme === "istekler") {
+      laodRequests();
+    }
+  });
   //
   //Bayi Fonksiyonları
   //
@@ -621,16 +774,26 @@
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     }
-  }
+  }  
 
-  onMount(() => {
+  onMount(async () => {
     if (!token) return;
-    console.log(
-      "onMount role:",
-      role,
-      "→ aktifSekme olacak:",
-      role === "Admin" ? "hareketler" : "anasayfa",
-    );
+
+    try {
+      const res = await fetch(`${API}/api/profile`, {
+        headers: { Authorization: token },
+        });
+        if (!res.ok) { logout(); return; }
+        const p = await res.json();
+        role = p.role;
+        currentUser = p.username;
+        avatarUrl = p.avatarUrl || "";
+        localStorage.setItem("username", currentUser);
+        localStorage.setItem("avatar_url", avatarUrl);
+    }catch {
+      logout();
+      return;
+    }
     if (role === "Bayi") {
       aktifSekme = "anasayfa";
       loadMyStock();
@@ -655,7 +818,6 @@
     <div class="login-wrapper">
       <div class="flip-cerceve">
         <div class="flip-ic" class:donuk={kayitModu}>
-
           <div class="flip-yuz flip-on" inert={kayitModu}>
             <div class="login-card">
               <div class="avatar">
@@ -734,7 +896,9 @@
                 />
               </div>
               {#if epostaGecerli === false}
-                <p class="ipucu-hata">Geçerli bir E-Posta giriniz. (ornek@site.com)</p>
+                <p class="ipucu-hata">
+                  Geçerli bir E-Posta giriniz. (ornek@site.com)
+                </p>
               {/if}
               <div class="input-group">
                 <input placeholder="Adres" bind:value={kayitForm.address} />
@@ -742,7 +906,7 @@
               <div class="input-group">
                 <input placeholder="Telefon" bind:value={kayitForm.phone} />
               </div>
-              <button class="login-btn" onclick={kayitOl} >Kayıt Ol</button>
+              <button class="login-btn" onclick={kayitOl}>Kayıt Ol</button>
               <button
                 class="mod-degistir"
                 onclick={() => {
@@ -757,11 +921,12 @@
                 </p>{/if}
             </div>
           </div>
-
-        </div><!-- Ic -->
-      </div><!-- Cerceve -->
-    </div> <!-- Wrapper -->
-  
+        </div>
+        <!-- Ic -->
+      </div>
+      <!-- Cerceve -->
+    </div>
+    <!-- Wrapper -->
   {:else if karsilama}
     <div class="karsilama-ekran">
       {#if avatarUrl}
@@ -791,8 +956,8 @@
             onclick={() => (aktifSekme = "urunler")}>Ürünler</button
           >
           <button
-            class:aktif={aktifSekme === "fiyatlandirma"}
-            onclick={() => (aktifSekme = "fiyatlandirma")}>Fiyatlandırma</button
+            class:aktif={aktifSekme === "istekler"}
+            onclick={() => (aktifSekme = "istekler")}>İstekler {#if bekleyenSayi > 0}<span class="badge">{bekleyenSayi}</span>{/if}</button
           >
           <button
             class:aktif={aktifSekme === "users"}
@@ -845,43 +1010,42 @@
       {:else if aktifSekme === "stok"}
         <h2>Stok Yönetimi</h2>
         <div class="tablo-cerceve">
+          <button class="islem-btn1" onclick={() => islemModalAc("")}
+            >Stok/fiyat</button
+          >
+          <!-- Stok Tablosu -->
           <table>
             <thead>
               <tr
-                ><th>Ürün</th><th>Kategori</th><th>Stok</th><th
-                  >Giriş / Çıkış</th
-                ></tr
+                ><th>Ürün</th><th>Bayi Fiyatı</th><th>Kategori</th><th
+                  >Depo Durumu</th><th>Son Güncelleme Tarihi</th><th>İşlem</th></tr
               >
             </thead>
             <tbody>
               {#each myStock as p}
+                {@const d = depoDurumu(p.stock)}
                 <tr class:dusuk={p.stock < 10}>
                   <td>{p.name}</td>
+                  <td>{p.benim_fiyatim ?? "-"}</td>
                   <td>{p.category}</td>
-                  <td>{p.stock}</td>
                   <td>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder="Miktar"
-                      bind:value={miktarlar[p.product_id]}
-                      style="width: 80px"
-                    />
-                    <button
-                      onclick={() =>
-                        movement(
-                          p.product_id,
-                          Math.abs(Number(miktarlar[p.product_id]) || 0),
-                        )}>Giriş</button
-                    >
-                    <button
-                      onclick={() =>
-                        movement(
-                          p.product_id,
-                          -Math.abs(Number(miktarlar[p.product_id]) || 0),
-                        )}>Çıkış</button
-                    >
+                    <div class="depo-bar">
+                      <div
+                        class="depo-dolu {d.sinif}"
+                        style="width: {d.yuzde}%"
+                      ></div>
+                      <span class="depo-yazi">{d.sayi}</span>
+                    </div>
+                    <span class="depo-etiket {d.sinif}">{d.etiket}</span>
                   </td>
+                  <td class="tarih-hucre">{p.son_hareket ? new Date(p.son_hareket).toLocaleString("tr-TR") : "-"}</td>
+                  <td
+                    ><button
+                      class="islem-btn"
+                      onclick={() => islemModalAc(p.product_id)}
+                      >Stok/fiyat</button
+                    ></td
+                  >
                 </tr>
               {/each}
             </tbody>
@@ -946,9 +1110,62 @@
             </div>
           {/if}
         </div>
-      {:else if aktifSekme === "indirim"}
-        <h2>İndirimler</h2>
-      {:else if aktifSekme === "hareketler"}
+      {:else if aktifSekme === "istekler"}
+        <h2>Bekleyen İstekler</h2>
+        
+        <div class="filtre-satir">
+          <button class:aktif={requestsFiltre === "pending"} onclick={() => (requestsFiltre = "pending")}>Bekleyen</button>
+          <button class:aktif={requestsFiltre === "approved"} onclick={() => (requestsFiltre = "approved")}>Onaylanan</button>
+          <button class:aktif={requestsFiltre === "rejected"} onclick={() => (requestsFiltre = "rejected")}>Reddedilen</button>
+          <button class:aktif={requestsFiltre === "all"} onclick={() => (requestsFiltre = "all")}>Hepsi</button>
+        </div>
+
+        {#if requests.length}
+          <div class="tablo-cerceve">
+            <table>
+              <thead>
+                <tr>
+                  <th>Bayi</th><th>Ürün</th><th>Eski Fiyat</th><th>Yeni Fiyat</th><th>Aralık</th><th>Tarih</th><th>Durum</th><th>İşlem</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each requests as r}
+                  <tr>
+                    <td>{r.bayi}</td>
+                    <td>{r.urun}</td>
+                    <td>{r.old_price ?? "-"} ₺</td>
+                    <td><strong>{r.new_price} ₺</strong></td>
+                    <td class="kucuk">{r.alt_sinir} - {r.ust_sinir} ₺</td>
+                    <td class="kucuk">{new Date(r.created_at).toLocalString("tr-TR")}</td>
+                    <td>
+                      {#if r.status === pending}
+                      <span class="durum bekliyor">Bekliyor</span>
+                      {:else if r.status === "approved"}
+                      <span class="durum onayli">Onaylandı</span>
+                      {:else if r.status === "rejected"}
+                      <span class="durum redli">Reddedildi</span>
+                      {:else}
+                      <span class="durumlar">{r.status}</span>
+                      {/if}
+                      {#if r.admin_note}<div class="kucuk">{r.admin_note}</div>{/if}
+                    </td>
+                    <td>
+                      {#if r.status === pending}
+                        <button class="onay-btn" onclick={() => talepKarar(r.id, "approve")}>Onayla</button>
+                        <button class="red-btn" onclick={() => talepKarar(r.id, "reject", prompt = "Red sebebi:") ?? ""}>Reddet</button>
+                      {:else}
+                        <span class="kucuk">-</span>
+                      {/if}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+          {:else}
+          <p>Bu durumda istek yok.</p>
+          {/if}
+        {:else if aktifSekme === "hareketler"}
         <h2>Bayi hareketleri</h2>
         {#if movements.length}
           <div class="tablo-cerceve">
@@ -1091,9 +1308,6 @@
         {:else}
           <p>Henüz bayi yok.</p>
         {/if}
-      {:else if aktifSekme === "indirimAyar"}
-        <h2>İndirim Ayarları</h2>
-        <p>Bu bölüm yakında eklenecek.</p>
       {:else if aktifSekme === "users"}
         <h2>Kullanıcılar</h2>
         <button class="ekle-btn" onclick={() => (modalAcik = true)}>
@@ -1310,6 +1524,90 @@
           <button class="ekle-btn" onclick={urunKaydet}
             >{duzenlenenId ? "Kaydet" : "Ekle"}</button
           >
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Stok-fiyat Modal -->
+  {#if islemModalAcik}
+    <div
+      class="modal-arkaplan"
+      onclick={() => (islemModalAcik = false)}
+      onkeydown={(e) => e.key === "Escape" && (islemModalAcik = false)}
+      role="button"
+      tabindex="0"
+    >
+      <div
+        class="modal"
+        onclick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        <h3>Stok-Fiyat Güncelle</h3>
+        <!-- 2. Ürün seçimi (dropdown) -->
+        <label
+          >Ürün
+          <select bind:value={secilenUrunId}>
+            <option value="">Ürün Seçiniz</option>
+            {#each myStock as p}
+              <option value={p.product_id}>{p.name}</option>
+            {/each}
+          </select>
+        </label>
+        <!-- 3. İşlem türü seçimi (üç buton ya da select) -->
+        <label
+          >İşlem Türü
+          <select class="islem-secim" bind:value={islemTuru}>
+            <option disabled>İşlem türü seçiniz.</option>
+            <option value="giris">Giriş</option>
+            <option value="cikis">Çıkış</option>
+            <option value="fiyat">Fiyat Güncelleme</option>
+          </select>
+        </label>
+
+        <!-- 4. Türe göre değişen kısım: {#if islemTuru === ...} -->
+        {#if secilenUrun && (islemTuru === "giris" || islemTuru === "cikis")}
+          <p class="modal-bilgi">
+            Mevcut stok: <strong>{secilenUrun.stock}</strong>
+          </p>
+          <label
+            >Miktar
+            <input
+              type="number"
+              min="1"
+              bind:value={hareketMiktar}
+              placeholder="0"
+            />
+          </label>
+        {:else if secilenUrun && islemTuru === "fiyat"}
+          <p class="modal-bilgi">
+            Mevcut fiyat: <strong>{secilenUrun ?? "-"} ₺ </strong>
+          </p>
+          <label
+            >Yeni Fiyat
+            <input
+              type="number"
+              step="0.01"
+              bind:value={yeniFiyat}
+              placeholder={secilenUrun.onerilen}
+              class="fiyat-input {fiyatDurum ?? ''}"
+            />
+          </label>
+          <p class="fiyat-ipucu">
+            Aralık: {secilenUrun.alt_sinir} - {secilenUrun.ust_sinir} ₺ · Önerilen:
+            {secilenUrun.onerilen} ₺
+          </p>
+        {/if}
+
+        <!-- 5. Hata mesajı: {#if modalHata} -->
+        {#if modalHata}<p class="error">{modalHata}</p>{/if}
+
+        <!-- 6. İptal / Kaydet butonları -->
+        <div class="modal-butonlar">
+          <button class="iptal-btn" onclick={() => (islemModalAcik = false)}
+            >İptal</button
+          >
+          <button class="ekle-btn" onclick={islemKaydet}>Kaydet</button>
         </div>
       </div>
     </div>
