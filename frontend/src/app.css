@@ -189,8 +189,7 @@ h1, h2 {
   transition: background .2s ease, transform .1s;
 }
 .toolbar-baslik:hover {
-  background: rgba(255, 255, 255, 0.15);
-  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.15);  
 }
 .toolbar button {
   padding: .5rem 1rem;
@@ -204,6 +203,7 @@ h1, h2 {
 .toolbar button:hover {
   background: rgba(255, 255, 255, 0.1);
   color: whitesmoke;
+  transform: scale(1.15);
 }
 .toolbar button:active {
   background: blue;
@@ -242,7 +242,7 @@ h1, h2 {
   cursor: pointer;
 }
 .pagination button:disabled {
-  background: #ccc;
+  background: gray;
   opacity: .4;
   cursor: not-allowed;
 }
@@ -250,7 +250,7 @@ h1, h2 {
   min-height: 280px;
   overflow-x: auto;
   overflow-y: auto;
-  border: 1px solid whitesmoke;
+  border: 1px solid white;
   border-radius: 8px;
 }
 table {
@@ -259,16 +259,17 @@ table {
 }
 table th,
 table td {
+  border-radius: 5px;
   border: 1px solid whitesmoke;
-  padding: .5rem;
-  text-align: left;
+  padding: .4rem;
+  text-align: center;
 }
 table thead th {
-  background: wheat;
+  background: coral;
   font-weight: 600;
 }
 table tbody tr:nth-child(even) {
-  background: whitesmoke;
+  background: lightyellow;
 }
 
 /* ---- Modal ekranı ---- */
@@ -350,6 +351,7 @@ table tbody tr:nth-child(even) {
   font-weight: normal;
 }
 .duzenle-btn {
+  align-items: center;
   background: #f0ad4e;
   color: white;
   border: none;
@@ -529,6 +531,17 @@ sepet-btn:active { transform: scale(0.97); }
   color: gray;
   margin-top: .3rem;
 }
+.bildirim {
+  position: fixed;
+  top: 70px;
+  right: 20px;
+  background: green;
+  color: white;
+  padding: .8rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.2);
+  z-index: 200;
+}
 /* ---- Stok Ekranı ---- */
 .depo-bar {
   position: relative;
@@ -585,7 +598,7 @@ sepet-btn:active { transform: scale(0.97); }
   color: gray;
   white-space: nowwrap;
 }
-/* ---- Stok Ekranı ---- */
+/* ---- Onay Ekranı ---- */
 .filtre-satir {
   display: flex;
   gap: .5rem;

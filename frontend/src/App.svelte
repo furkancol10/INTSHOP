@@ -6,7 +6,7 @@
   const API = import.meta.env.VITE_API_URL ?? "http://localhost:5081";
   //
   // oturum
-  //  
+  //
   let token = $state(localStorage.getItem("token") || "");
   let role = $state("");
   let currentUser = $state(localStorage.getItem("username") || "");
@@ -35,6 +35,21 @@
   let stock = $state(0);
   let price = $state(0);
   //
+  //Fiyat Kolonu Düzenleme
+  //
+  function fiyatKolon(fiyat) {
+    if (fiyat === null || fiyat === undefined || fiyat === "") {
+      return "-";
+    }
+
+    return (
+      Number(fiyat).toLocaleString("tr-TR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }) + "₺"
+    );
+  }
+  //
   // Geçmiş tablosu
   //
   let miktarlar = $state({});
@@ -48,6 +63,12 @@
   //Toolbar
   //
   let aktifSekme = $state("hareketler");
+  let kategoriListesi = $derived(
+    categories.map((c) => ({
+      id: c.id,
+      etiket: c.parent_id ? `\u00A0\u00A0- ${c.name}` : c.name,
+    })),
+  );
   //
   // Giriş
   //
@@ -88,7 +109,15 @@
     price: "",
     image_url: "",
   });
-  
+  //
+  //Kategori Ekleme
+  //
+  let kategoriModalAcik = $state(false);
+  let acikKategori = $state(null);
+  let yeniAltAd = $state("");
+  let altHata = $state("");
+
+  let anaKategoriler = $derived(categories.filter((c) => !c.parent_id));
   //
   //Resim Önizleme
   //
@@ -110,8 +139,10 @@
   //
   let movements = $state([]);
   let requests = $state([]);
-  let requestsFiltre = $state("pending");
-  let bekleyenSayi = $derived(requests.filter(r => r.status === "pending").length);
+  let requestsFiltre = $state("all");
+  let bekleyenSayi = $derived(
+    requests.filter((r) => r.status === "pending").length,
+  );
   //
   //Kullanıcı oturumu
   //
@@ -134,6 +165,7 @@
   let hareketMiktar = $state("");
   let yeniFiyat = $state("");
   let modalHata = $state("");
+  let bildirim = $state("");
 
   let secilenUrun = $derived(
     myStock.find((p) => p.product_id === Number(secilenUrunId)) ?? null,
@@ -425,7 +457,6 @@
       loadProfile();
     }
   });
-  
   //
   //Bayi Stok-Fiyat
   //
@@ -459,7 +490,7 @@
         return;
       }
       if (fiyatDurum === "disarida") {
-        modalHata = `Fiyat ${secilenUrun.alt_sinir} - ${secilenUrun.ust_sinir} ₺ aralığında olmalı`;
+        modalHata = `Fiyat ${fiyatKolon(secilenUrun.alt_sinir)} - ${fiyatKolon(secilenUrun.ust_sinir)} aralığında olmalı`;
         return;
       }
       try {
@@ -471,7 +502,10 @@
         if (!res.ok)
           throw new Error((await res.text()) || `HTTP ${res.status}`);
         islemModalAcik = false;
+        bildirim = "Fiyat talebiniz onaya gönderildi.";
+        setTimeout(() => (bildirim = ""), 4000);
         await loadMyStock();
+        await loadMyRequests();
       } catch (e) {
         modalHata = e instanceof Error ? e.message : String(e);
       }
@@ -497,6 +531,55 @@
       } catch (e) {
         modalHata = e instanceof Error ? e.message : String(e);
       }
+    }
+  }
+  //
+  // Kategori sayfası
+  //
+  function altlariGetir(anaId) {
+    return categories.filter((c) => c.parent_id === anaId);
+  }
+
+  function kategoriDetayAc(kategori) {
+    acikKategori = kategori;
+    yeniAltAd = "";
+    altHata = "";
+    kategoriDetayAc = true;
+  }
+  async function altKategoriEkle() {
+    altHata = "";
+    if (!yeniAltAd.trim()) {
+      altHata = "Kategori adı zorunlu";
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/api/categories`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: token },
+        body: JSON.stringify({
+          name: yeniAltAd.trim(),
+          parent_id: acikKategori.id,
+        }),
+      });
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      yeniAltAd = "";
+      await loadAll();
+    } catch (e) {
+      altHata = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  async function altKategoriSil(id) {
+    altHata = "";
+    try {
+      const res = await fetch(`${API}/api/categories/${id}`, {
+        method: "Delete",
+        headers: { Authorization: token },
+      });
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      await loadAll();
+    } catch (e) {
+      altHata = e instanceof Error ? e.message : String(e);
     }
   }
   //
@@ -607,11 +690,11 @@
   async function laodRequests() {
     try {
       const res = await fetch(`${API}/api/requests?status=${requestsFiltre}`, {
-        headers : {Authorization: token },
+        headers: { Authorization: token },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       requests = await res.json();
-    }catch (e) {
+    } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     }
   }
@@ -620,7 +703,7 @@
     try {
       const res = await fetch(`${API}/api/requests/${id}/${karar}`, {
         method: "PUT",
-        headers: { "Content-Type" : "application/json", Authorization: token },
+        headers: { "Content-Type": "application/json", Authorization: token },
         body: JSON.stringify({ note: not }),
       });
       if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
@@ -774,7 +857,7 @@
     } catch (e) {
       error = e instanceof Error ? e.message : String(e);
     }
-  }  
+  }
 
   onMount(async () => {
     if (!token) return;
@@ -782,15 +865,18 @@
     try {
       const res = await fetch(`${API}/api/profile`, {
         headers: { Authorization: token },
-        });
-        if (!res.ok) { logout(); return; }
-        const p = await res.json();
-        role = p.role;
-        currentUser = p.username;
-        avatarUrl = p.avatarUrl || "";
-        localStorage.setItem("username", currentUser);
-        localStorage.setItem("avatar_url", avatarUrl);
-    }catch {
+      });
+      if (!res.ok) {
+        logout();
+        return;
+      }
+      const p = await res.json();
+      role = p.role;
+      currentUser = p.username;
+      avatarUrl = p.avatarUrl || "";
+      localStorage.setItem("username", currentUser);
+      localStorage.setItem("avatar_url", avatarUrl);
+    } catch {
       logout();
       return;
     }
@@ -956,8 +1042,15 @@
             onclick={() => (aktifSekme = "urunler")}>Ürünler</button
           >
           <button
+            class:aktif={aktifSekme === "kategoriler"}
+            onclick={() => (aktifSekme = "kategoriler")}>Kategoriler</button
+          >
+          <button
             class:aktif={aktifSekme === "istekler"}
-            onclick={() => (aktifSekme = "istekler")}>İstekler {#if bekleyenSayi > 0}<span class="badge">{bekleyenSayi}</span>{/if}</button
+            onclick={() => (aktifSekme = "istekler")}
+            >İstekler {#if bekleyenSayi > 0}<span class="badge"
+                >{bekleyenSayi}</span
+              >{/if}</button
           >
           <button
             class:aktif={aktifSekme === "users"}
@@ -998,6 +1091,10 @@
       </div>
     </div>
 
+    {#if bildirim}
+      <div class="bildirim">{bildirim}</div>
+    {/if}
+
     <div class="sekme-icerik">
       {#if aktifSekme === "anasayfa"}
         <div class="hosgeldin">
@@ -1017,14 +1114,17 @@
           <table>
             <thead>
               <tr
-                ><th>Ürün</th><th>Bayi Fiyatı</th><th>Kategori</th><th
-                  >Depo Durumu</th><th>Son Güncelleme Tarihi</th><th>İşlem</th></tr
+                ><th>Ürün-Id</th><th>Ürün</th><th>Bayi Fiyatı</th><th
+                  >Kategori</th
+                ><th>Depo Durumu</th><th>Son Güncelleme Tarihi</th><th>İşlem</th
+                ></tr
               >
             </thead>
             <tbody>
               {#each myStock as p}
                 {@const d = depoDurumu(p.stock)}
                 <tr class:dusuk={p.stock < 10}>
+                  <td>{p.product_id}</td>
                   <td>{p.name}</td>
                   <td>{p.benim_fiyatim ?? "-"}</td>
                   <td>{p.category}</td>
@@ -1038,7 +1138,11 @@
                     </div>
                     <span class="depo-etiket {d.sinif}">{d.etiket}</span>
                   </td>
-                  <td class="tarih-hucre">{p.son_hareket ? new Date(p.son_hareket).toLocaleString("tr-TR") : "-"}</td>
+                  <td class="tarih-hucre"
+                    >{p.son_hareket
+                      ? new Date(p.son_hareket).toLocaleString("tr-TR")
+                      : "-"}</td
+                  >
                   <td
                     ><button
                       class="islem-btn"
@@ -1110,14 +1214,70 @@
             </div>
           {/if}
         </div>
+      {:else if aktifSekme === "kategoriler"}
+        <div class="sekme-baslik">
+          <h2>Kategoriler</h2>
+          <button
+            class="ekle-btn"
+            onclick={() => {
+              kategoriModalAcik = true;
+              kategoriHata = "";
+            }}>+ Yeni Ana Kategori</button
+          >
+        </div>
+
+        {#if anaKategoriler.length}
+          <div class="kategori-kartlari">
+            {#each anaKategoriler as ana}
+              {@const altlar = altlariGetir(ana.id)}
+              <button
+                class="kategori-kart"
+                onclick={() => kategoriDetayAc(ana)}
+              >
+                <div class="kart-ust">
+                  <h3>{ana.name}</h3>
+                  <span class="kart-sayi">{altlar.length}</span>
+                </div>
+
+                <div class="kart-altlar">
+                  {#if altlar.length}
+                    {#each altlar.slice(0, 4) as alt}
+                      <span class="alt-etiket">{alt.name}</span>
+                    {/each}
+                    {#if altlar.length > 4}
+                      <span class="alt-etiket daha"
+                        >+{altlar.length - 4} daha</span
+                      >
+                    {/if}
+                  {:else}
+                    <span class="bos-yazi">Alt Kategori Yok</span>
+                  {/if}
+                </div>
+              </button>
+            {/each}
+          </div>
+        {:else}
+          <p>Kategori Yok</p>
+        {/if}
       {:else if aktifSekme === "istekler"}
         <h2>Bekleyen İstekler</h2>
-        
         <div class="filtre-satir">
-          <button class:aktif={requestsFiltre === "pending"} onclick={() => (requestsFiltre = "pending")}>Bekleyen</button>
-          <button class:aktif={requestsFiltre === "approved"} onclick={() => (requestsFiltre = "approved")}>Onaylanan</button>
-          <button class:aktif={requestsFiltre === "rejected"} onclick={() => (requestsFiltre = "rejected")}>Reddedilen</button>
-          <button class:aktif={requestsFiltre === "all"} onclick={() => (requestsFiltre = "all")}>Hepsi</button>
+          <button
+            class:aktif={requestsFiltre === "all"}
+            onclick={() => (requestsFiltre = "all")}>Hepsi</button
+          >
+          <button
+            class:aktif={requestsFiltre === "pending"}
+            onclick={() => (requestsFiltre = "pending")}>Bekleyen</button
+          >
+          <button
+            class:aktif={requestsFiltre === "approved"}
+            onclick={() => (requestsFiltre = "approved")}>Onaylanan</button
+          >
+          <button
+            class:aktif={requestsFiltre === "rejected"}
+            onclick={() => (requestsFiltre = "rejected")}>Reddedilen</button
+          >
         </div>
 
         {#if requests.length}
@@ -1125,7 +1285,9 @@
             <table>
               <thead>
                 <tr>
-                  <th>Bayi</th><th>Ürün</th><th>Eski Fiyat</th><th>Yeni Fiyat</th><th>Aralık</th><th>Tarih</th><th>Durum</th><th>İşlem</th>
+                  <th>Bayi</th><th>Ürün</th><th>Eski Fiyat</th><th
+                    >Yeni Fiyat</th
+                  ><th>Aralık</th><th>Tarih</th><th>Durum</th><th>İşlem</th>
                 </tr>
               </thead>
               <tbody>
@@ -1133,26 +1295,44 @@
                   <tr>
                     <td>{r.bayi}</td>
                     <td>{r.urun}</td>
-                    <td>{r.old_price ?? "-"} ₺</td>
-                    <td><strong>{r.new_price} ₺</strong></td>
-                    <td class="kucuk">{r.alt_sinir} - {r.ust_sinir} ₺</td>
-                    <td class="kucuk">{new Date(r.created_at).toLocalString("tr-TR")}</td>
+                    <td>{fiyatKolon(r.old_price)}</td>
+                    <td><strong>{fiyatKolon(r.new_price)}</strong></td>
+                    <td class="kucuk"
+                      >{fiyatKolon(r.alt_sinir)} - {fiyatKolon(r.ust_sinir)}</td
+                    >
+                    <td class="kucuk"
+                      >{new Date(r.created_at).toLocaleString("tr-TR")}</td
+                    >
                     <td>
-                      {#if r.status === pending}
-                      <span class="durum bekliyor">Bekliyor</span>
+                      {#if r.status === "pending"}
+                        <span class="durum bekliyor">Bekliyor</span>
                       {:else if r.status === "approved"}
-                      <span class="durum onayli">Onaylandı</span>
+                        <span class="durum onayli">Onaylandı</span>
                       {:else if r.status === "rejected"}
-                      <span class="durum redli">Reddedildi</span>
+                        <span class="durum redli">Reddedildi</span>
                       {:else}
-                      <span class="durumlar">{r.status}</span>
+                        <span class="durumlar">{r.status}</span>
                       {/if}
-                      {#if r.admin_note}<div class="kucuk">{r.admin_note}</div>{/if}
+                      {#if r.admin_note}<div class="kucuk">
+                          {r.admin_note}
+                        </div>{/if}
                     </td>
                     <td>
-                      {#if r.status === pending}
-                        <button class="onay-btn" onclick={() => talepKarar(r.id, "approve")}>Onayla</button>
-                        <button class="red-btn" onclick={() => talepKarar(r.id, "reject", prompt = "Red sebebi:") ?? ""}>Reddet</button>
+                      {#if r.status === "pending"}
+                        <button
+                          class="onay-btn"
+                          onclick={() => talepKarar(r.id, "approve")}
+                          >Onayla</button
+                        >
+                        <button
+                          class="red-btn"
+                          onclick={() =>
+                            talepKarar(
+                              r.id,
+                              "reject",
+                              (prompt = "Red sebebi:"),
+                            ) ?? ""}>Reddet</button
+                        >
                       {:else}
                         <span class="kucuk">-</span>
                       {/if}
@@ -1161,11 +1341,25 @@
                 {/each}
               </tbody>
             </table>
+            <div class="pagination">
+              <button
+                onclick={() => sayfaGit("istekler", -1)}
+                disabled={(sayfalar.istekler ?? 1) === 1}>Önceki</button
+              >
+              <span
+                >Sayfa {sayfalar.istekler ?? 1} / {toplamSayfa(requests)}</span
+              >
+              <button
+                onclick={() => sayfaGit("istekler", 1)}
+                disabled={(sayfalar.istekler ?? 1) === toplamSayfa(requests)}
+                >Sonraki</button
+              >
+            </div>
           </div>
-          {:else}
+        {:else}
           <p>Bu durumda istek yok.</p>
-          {/if}
-        {:else if aktifSekme === "hareketler"}
+        {/if}
+      {:else if aktifSekme === "hareketler"}
         <h2>Bayi hareketleri</h2>
         {#if movements.length}
           <div class="tablo-cerceve">
@@ -1237,9 +1431,13 @@
                       {/if}
                     </td>
                     <td>{p.name}</td>
-                    <td>{p.category}</td>
+                    <td
+                      >{p.parent_category
+                        ? `${p.parent_category} › ${p.category}`
+                        : p.category}</td
+                    >
                     <td>{p.stock}</td>
-                    <td>{p.price} ₺</td>
+                    <td>{fiyatKolon(p.price)}</td>
                     <td>
                       <button
                         class="duzenle-btn"
@@ -1363,7 +1561,7 @@
                 <p class="kart-satici">
                   Satıcı: <strong>{urun.dealer_name}</strong>
                 </p>
-                <p class="kart-fiyat">{urun.price} ₺</p>
+                <p class="kart-fiyat">{fiyatKolon(urun.price)}</p>
                 <p class="kart-stok">Stok: {urun.stock}</p>
                 <button class="sepet-btn">Sepete Ekle</button>
               </div>
@@ -1490,8 +1688,16 @@
           >Kategori
           <select bind:value={urunForm.category_id}>
             <option value="">Kategori seç</option>
-            {#each categories as c}
-              <option value={c.id}>{c.name}</option>
+            {#each categories.filter((c) => !c.parent_id) as ust}
+              {#if categories.some((c) => c.parent_id === ust.id)}
+                <optgroup label={ust.name}>
+                  {#each categories.filter((c) => c.parent_id === ust.id) as alt}
+                    <option value={alt.id}>{alt.name}</option>
+                  {/each}
+                </optgroup>
+              {:else}
+                <option value={ust.id}>{ust.name}</option>
+              {/if}
             {/each}
           </select>
         </label>
@@ -1565,7 +1771,7 @@
           </select>
         </label>
 
-        <!-- 4. Türe göre değişen kısım: {#if islemTuru === ...} -->
+        <!-- 4. Türe göre değişen kısım: -->
         {#if secilenUrun && (islemTuru === "giris" || islemTuru === "cikis")}
           <p class="modal-bilgi">
             Mevcut stok: <strong>{secilenUrun.stock}</strong>
@@ -1581,7 +1787,7 @@
           </label>
         {:else if secilenUrun && islemTuru === "fiyat"}
           <p class="modal-bilgi">
-            Mevcut fiyat: <strong>{secilenUrun ?? "-"} ₺ </strong>
+            Mevcut fiyat: <strong>{fiyatKolon(secilenUrun)}</strong>
           </p>
           <label
             >Yeni Fiyat
@@ -1594,8 +1800,10 @@
             />
           </label>
           <p class="fiyat-ipucu">
-            Aralık: {secilenUrun.alt_sinir} - {secilenUrun.ust_sinir} ₺ · Önerilen:
-            {secilenUrun.onerilen} ₺
+            Aralık: {fiyatKolon(secilenUrun.alt_sinir)} - {fiyatKolon(
+              secilenUrun.ust_sinir,
+            )} · Önerilen:
+            {fiyatKolon(secilenUrun.onerilen)}
           </p>
         {/if}
 
