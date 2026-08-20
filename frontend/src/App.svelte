@@ -143,10 +143,13 @@
   //
   let movements = $state([]);
   let requests = $state([]);
-  let requestsFiltre = $state("all");
+  let requestFiltre = $state("all");
   let bekleyenSayi = $derived(
     requests.filter((r) => r.status === "pending").length,
   );
+  let redModalAcik = $state(false);
+  let redTalepId = $state(null);
+  let redSebep = $state("");
   //
   //Kullanıcı oturumu
   //
@@ -715,9 +718,9 @@
   //
   // Admin onay fonksiyonu
   //
-  async function laodRequests() {
+  async function laodRequests(filtre = requestFiltre) {
     try {
-      const res = await fetch(`${API}/api/requests?status=${requestsFiltre}`, {
+      const res = await fetch(`${API}/api/requests?status=${filtre}`, {
         headers: { Authorization: token },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -744,9 +747,20 @@
 
   $effect(() => {
     if (role === "Admin" && aktifSekme === "istekler") {
-      laodRequests();
+      laodRequests(requestFiltre);
     }
   });
+
+  function redModalAc(id) {
+    redTalepId = id;
+    redSebep = "";
+    redModalAcik = true;
+  }
+
+  async function redOnayla() {
+    await talepKarar(redTalepId, "reject", redSebep);
+    redModalAcik = false;
+  }
   //
   //Bayi Fonksiyonları
   //
@@ -1176,7 +1190,7 @@
                 <tr class:dusuk={p.stock < 10}>
                   <td>{p.product_id}</td>
                   <td>{p.name}</td>
-                  <td>{p.benim_fiyatim ?? "-"}</td>
+                  <td>{fiyatKolon(p.benim_fiyatim)}</td>
                   <td>{p.category}</td>
                   <td>
                     <div class="depo-bar">
@@ -1313,20 +1327,20 @@
         <h2>Bekleyen İstekler</h2>
         <div class="filtre-satir">
           <button
-            class:aktif={requestsFiltre === "all"}
-            onclick={() => (requestsFiltre = "all")}>Hepsi</button
+            class:aktif={requestFiltre === "all"}
+            onclick={() => (requestFiltre = "all")}>Hepsi</button
           >
           <button
-            class:aktif={requestsFiltre === "pending"}
-            onclick={() => (requestsFiltre = "pending")}>Bekleyen</button
+            class:aktif={requestFiltre === "pending"}
+            onclick={() => (requestFiltre = "pending")}>Bekleyen</button
           >
           <button
-            class:aktif={requestsFiltre === "approved"}
-            onclick={() => (requestsFiltre = "approved")}>Onaylanan</button
+            class:aktif={requestFiltre === "approved"}
+            onclick={() => (requestFiltre = "approved")}>Onaylanan</button
           >
           <button
-            class:aktif={requestsFiltre === "rejected"}
-            onclick={() => (requestsFiltre = "rejected")}>Reddedilen</button
+            class:aktif={requestFiltre === "rejected"}
+            onclick={() => (requestFiltre = "rejected")}>Reddedilen</button
           >
         </div>
 
@@ -1341,7 +1355,7 @@
                 </tr>
               </thead>
               <tbody>
-                {#each requests as r}
+                {#each sayfala(requests, "istekler") as r}
                   <tr>
                     <td>{r.bayi}</td>
                     <td>{r.urun}</td>
@@ -1374,14 +1388,8 @@
                           onclick={() => talepKarar(r.id, "approve")}
                           >Onayla</button
                         >
-                        <button
-                          class="red-btn"
-                          onclick={() =>
-                            talepKarar(
-                              r.id,
-                              "reject",
-                              (prompt = "Red sebebi:"),
-                            ) ?? ""}>Reddet</button
+                        <button class="red-btn" onclick={() => redModalAc(r.id)}
+                          >Reddet</button
                         >
                       {:else}
                         <span class="kucuk">-</span>
@@ -1391,20 +1399,19 @@
                 {/each}
               </tbody>
             </table>
-            <div class="pagination">
-              <button
-                onclick={() => sayfaGit("istekler", -1)}
-                disabled={(sayfalar.istekler ?? 1) === 1}>Önceki</button
-              >
-              <span
-                >Sayfa {sayfalar.istekler ?? 1} / {toplamSayfa(requests)}</span
-              >
-              <button
-                onclick={() => sayfaGit("istekler", 1)}
-                disabled={(sayfalar.istekler ?? 1) === toplamSayfa(requests)}
-                >Sonraki</button
-              >
-            </div>
+          </div>
+          <div class="pagination">
+            <button
+              onclick={() => sayfaGit("istekler", -1)}
+              disabled={(sayfalar.istekler ?? 1) === 1}>Önceki</button
+            >
+            <span>Sayfa {sayfalar.istekler ?? 1} / {toplamSayfa(requests)}</span
+            >
+            <button
+              onclick={() => sayfaGit("istekler", 1)}
+              disabled={(sayfalar.istekler ?? 1) === toplamSayfa(requests)}
+              >Sonraki</button
+            >
           </div>
         {:else}
           <p>Bu durumda istek yok.</p>
@@ -1473,11 +1480,7 @@
                     <td>{p.id}</td>
                     <td>
                       {#if p.image_url}
-                        <img
-                          src={p.image_url}
-                          alt={p.name}
-                          style="width:40px; height: 40px; object-fit: cover; border-radius: 4px;"
-                        />
+                        <img src={p.image_url} alt={p.name} />
                       {/if}
                     </td>
                     <td>{p.name}</td>
@@ -1501,20 +1504,18 @@
                 {/each}
               </tbody>
             </table>
-            <div class="pagination">
-              <button
-                onclick={() => sayfaGit("urunler", -1)}
-                disabled={(sayfalar.urunler ?? 1) === 1}>Önceki</button
-              >
-              <span
-                >Sayfa {sayfalar.urunler ?? 1} / {toplamSayfa(products)}</span
-              >
-              <button
-                onclick={() => sayfaGit("urunler", 1)}
-                disabled={(sayfalar.urunler ?? 1) === toplamSayfa(products)}
-                >Sonraki</button
-              >
-            </div>
+          </div>
+          <div class="pagination">
+            <button
+              onclick={() => sayfaGit("urunler", -1)}
+              disabled={(sayfalar.urunler ?? 1) === 1}>Önceki</button
+            >
+            <span>Sayfa {sayfalar.urunler ?? 1} / {toplamSayfa(products)}</span>
+            <button
+              onclick={() => sayfaGit("urunler", 1)}
+              disabled={(sayfalar.urunler ?? 1) === toplamSayfa(products)}
+              >Sonraki</button
+            >
           </div>
         {/if}
       {:else if aktifSekme === "dealers"}
@@ -1539,19 +1540,18 @@
                 {/each}
               </tbody>
             </table>
-            <div class="pagination">
-              <button
-                onclick={() => sayfaGit("dealers", -1)}
-                disabled={(sayfalar.dealers ?? 1) === 1}>Önceki</button
-              >
-              <span>Sayfa {sayfalar.dealers ?? 1} / {toplamSayfa(dealers)}</span
-              >
-              <button
-                onclick={() => sayfaGit("dealers", 1)}
-                disabled={(sayfalar.dealers ?? 1) === toplamSayfa(dealers)}
-                >Sonraki</button
-              >
-            </div>
+          </div>
+          <div class="pagination">
+            <button
+              onclick={() => sayfaGit("dealers", -1)}
+              disabled={(sayfalar.dealers ?? 1) === 1}>Önceki</button
+            >
+            <span>Sayfa {sayfalar.dealers ?? 1} / {toplamSayfa(dealers)}</span>
+            <button
+              onclick={() => sayfaGit("dealers", 1)}
+              disabled={(sayfalar.dealers ?? 1) === toplamSayfa(dealers)}
+              >Sonraki</button
+            >
           </div>
         {:else}
           <p>Henüz bayi yok.</p>
@@ -1865,6 +1865,38 @@
           <button class="iptal-btn" onclick={() => (kategoriDetayAcik = false)}
             >Kapat</button
           >
+        </div>
+      </div>
+    </div>
+  {/if}
+  <!-- Onay Modalı -->
+  {#if redModalAcik}
+    <div
+      class="modal-arkaplan"
+      onclick={() => (redModalAcik = false)}
+      onkeydown={(e) => e.key === "Escape" && (redModalAcik = false)}
+      role="button"
+      tabindex="0"
+    >
+      <div
+        class="modal"
+        onclick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        <h3>Talebi Reddet</h3>
+        <label
+          >Red Sebebi
+          <input
+            bind:value={redSebep}
+            placeholder="Örn: Fiyat çok düşük"
+            onkeydown={(e) => e.key === "Enter" && redOnayla()}
+          />
+        </label>
+        <div class="modal-butonlar">
+          <button class="iptal-btn" onclick={() => (redModalAcik = false)}
+            >İptal</button
+          >
+          <button class="red-btn" onclick={redOnayla}>Reddet</button>
         </div>
       </div>
     </div>
