@@ -1830,7 +1830,7 @@
       tabindex="0"
     >
       <div
-        class="buyuk-modal"
+        class="kategori-detay-modal"
         onclick={(e) => e.stopPropagation()}
         role="presentation"
       >

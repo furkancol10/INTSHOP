@@ -739,11 +739,11 @@ sepet-btn:active { transform: scale(0.97); }
   gap:1.2rem
 }
 .kategori-kart {
-  background: white;
-  border: 1px solid whitesmoke;
+  background: lightblue;
+  border: 1px solid gray;
   border-radius: 12px;
   padding: 1.2rem;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
   font-family: inherit;
   font-size: inherit;
@@ -755,7 +755,8 @@ sepet-btn:active { transform: scale(0.97); }
 
 .kategori-kart:hover {
   border-color: lightseagreen;
-  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 9px 16px rgba(255, 255, 255, 0.08);
+  transform: scale(1.1);
 }
 
 .kategori-kart:active {
@@ -785,8 +786,8 @@ sepet-btn:active { transform: scale(0.97); }
   gap:.4rem;
 }
 .alt-etiket {
-  background: whitesmoke;
-  color: gray;
+  background: color-mix( lightseagreen 20%, orange 80%);
+  color: black;
   padding: .25rem .6rem;
   border-radius: 6px;
   font-size: .8rem;
@@ -795,6 +796,29 @@ sepet-btn:active { transform: scale(0.97); }
 .bos-yazi { color: gray; font-size: .85rem;}
 
 /*---- Kategori Modal İçi ----*/
+.kategori-detay-modal {
+  background: whitesmoke;
+  padding: 2.5rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 700px;
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.25);
+}
+.sil {
+  border-radius: 5px;
+  text-align: right;
+  background: orangered;
+  width: 30px;
+}
+.modal-bilgi {
+  background: whitesmoke;
+  color: gray;
+  text-align: left;
+}
 .alt-liste {
   display: flex;
   flex-direction: column;
@@ -807,7 +831,7 @@ sepet-btn:active { transform: scale(0.97); }
   align-items: center;
   justify-content: space-between;
   padding: .6rem.8rem;
-  background: whitesmoke;
+  background: lightblue;
   border-radius: 8px;
 }
 .alt-ekle-satir {
