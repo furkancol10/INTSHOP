@@ -113,6 +113,10 @@
   //Kategori Ekleme
   //
   let kategoriModalAcik = $state(false);
+  let yeniKategori = $state({ name: "" });
+  let kategoriHata = $state("");
+
+  let kategoriDetayAcik = $state(false);
   let acikKategori = $state(null);
   let yeniAltAd = $state("");
   let altHata = $state("");
@@ -544,8 +548,32 @@
     acikKategori = kategori;
     yeniAltAd = "";
     altHata = "";
-    kategoriDetayAc = true;
+    kategoriDetayAcik = true;
   }
+  async function kategoriEkle() {
+    kategoriHata = "";
+    if (!yeniKategori.name.trim()) {
+      kategoriHata = "Kategori adı zorunlu";
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/api/categories`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: token },
+        body: JSON.stringify({
+          name: yeniKategori.name.trim(),
+          parent_id: null,
+        }),
+      });
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      yeniKategori = { name: "" };
+      kategoriModalAcik = false;
+      await loadAll();
+    } catch (e) {
+      kategoriHata = e instanceof Error ? e.message : String(e);
+    }
+  }
+
   async function altKategoriEkle() {
     altHata = "";
     if (!yeniAltAd.trim()) {
@@ -901,7 +929,29 @@
 
 <main>
   {#if !token}
+    <!-- <svg style="position: absolute; width: 0; height: 0;">
+      <filter id="goo">
+        <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur" />
+        <feColorMatrix
+          in="blur"
+          mode="matrix"
+          values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -8"
+          result="goo"
+        />
+        <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+      </filter>
+    </svg> -->
+
     <div class="login-wrapper">
+      <div class="lava-background">
+        <div class="lava lava-1"></div>
+        <div class="lava lava-2"></div>
+        <div class="lava lava-3"></div>
+        <div class="lava lava-4"></div>
+        <div class="lava lava-5"></div>
+        <div class="lava lava-6"></div>
+        <div class="lava lava-7"></div>
+      </div>
       <div class="flip-cerceve">
         <div class="flip-ic" class:donuk={kayitModu}>
           <div class="flip-yuz flip-on" inert={kayitModu}>
@@ -1029,7 +1079,7 @@
           class="toolbar-baslik"
           onclick={() =>
             (aktifSekme = role === "Admin" ? "hareketler" : "anasayfa")}
-          >KOBURA</button
+          >HABURA</button
         >
 
         {#if role === "Admin"}
@@ -1620,7 +1670,6 @@
 
   {#if error}<p class="error">{error}</p>
   {/if}
-  {#if loading}<p>Yükleniyor... Lütfen Bekleyiniz...</p>{/if}
 
   {#if modalAcik}
     <div
@@ -1735,6 +1784,91 @@
     </div>
   {/if}
 
+  <!-- Kategori Modal-->
+  {#if kategoriModalAcik}
+    <div
+      class="modal-arkaplan"
+      onclick={() => (kategoriModalAcik = false)}
+      onkeydown={(e) => e.key === "Escape" && (kategoriModalAcik = false)}
+      role="button"
+      tabindex="0"
+    >
+      <div
+        class="modal"
+        onclick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        <h3>Yeni Ana Kategori</h3>
+
+        <label
+          >Kategori Adı
+          <input
+            bind:value={yeniKategori.name}
+            placeholder="Örn: Kozmetik"
+            onkeydown={(e) => e.key === "Enter" && kategoriEkle()}
+          />
+        </label>
+
+        {#if kategoriHata}<p class="error">{kategoriHata}</p>{/if}
+
+        <div class="modal-butonlar">
+          <button class="iptal-btn" onclick={() => (kategoriModalAcik = false)}
+            >İptal</button
+          >
+          <button class="ekle-btn" onclick={kategoriEkle}>Ekle</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if kategoriDetayAcik && acikKategori}
+    <div
+      class="modal-arkaplan"
+      onclick={() => (kategoriDetayAcik = false)}
+      onkeydown={(e) => e.key === "Escape" && (kategoriDetayAcik = false)}
+      role="button"
+      tabindex="0"
+    >
+      <div
+        class="buyuk-modal"
+        onclick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        <h2>{acikKategori.name}</h2>
+        <p class="modal-bilgi">Alt kategoriler</p>
+
+        <div class="alt-liste">
+          {#each altlariGetir(acikKategori.id) as alt}
+            <div class="alt-satir">
+              <span>{alt.name}</span>
+              <button class="sil" onclick={() => altKategoriSil(alt.id)}
+                >Sil</button
+              >
+            </div>
+          {:else}
+            <p class="bos-yazi">Bu kategoride alt kategori yok.</p>
+          {/each}
+        </div>
+
+        <div class="alt-ekle-satir">
+          <input
+            bind:value={yeniAltAd}
+            placeholder="Yeni alt kategori adı"
+            onkeydown={(e) => e.key === "Enter" && altKategoriEkle()}
+          />
+          <button class="ekle-btn" onclick={altKategoriEkle}>Ekle</button>
+        </div>
+
+        {#if altHata}<p class="error">{altHata}</p>{/if}
+
+        <div class="modal-butonlar">
+          <button class="iptal-btn" onclick={() => (kategoriDetayAcik = false)}
+            >Kapat</button
+          >
+        </div>
+      </div>
+    </div>
+  {/if}
   <!-- Stok-fiyat Modal -->
   {#if islemModalAcik}
     <div

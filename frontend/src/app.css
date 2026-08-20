@@ -14,16 +14,22 @@ h1, h2 {
   font-weight: 600;
 }
 
+
 /* ---- Login ekranı ---- */
 .login-wrapper {
-  min-height: 100vh;
-  display: flex;
+  text-align: center;
   align-items: center;
+  display: flex;
+  min-height: 100vh;
   justify-content: center;
-  background: repeating-radial-gradient(circle, blue,lightseagreen, lightblue,whitesmoke );
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgb(153, 0, 255), blue, lightseagreen, lightblue);
 }
 
 .login-card {
+  position: relative;
+  z-index: 10;
   background: whitesmoke;
   backdrop-filter: blur(10px);
   padding: 2.5rem 2rem;
@@ -99,6 +105,76 @@ h1, h2 {
   font-size: .85rem;
   margin: 0;
 }
+/* ---- Lav Animasyonları ----*/
+.lava-background {
+  position: absolute;
+  inset: 0;
+  filter: blur(25px) contrast(19);
+  z-index: 0;
+  pointer-events: none;
+}
+.lava {
+  position: absolute;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+}
+
+.lava-1 {
+  width: 240px; height: 240px;
+  background: red;
+  left: 12%;
+  animation: yuz1 14s ease-in-out infinite;
+}
+.lava-2 {
+  width: 180px; height: 180px;
+  background: cyan;
+  left: 30%;
+  animation: yuz2 18s ease-in-out infinite;
+}
+.lava-3 {
+  width: 300px; height: 300px;
+  background: #7c3aed;
+  left: 55%;
+  animation: yuz3 22s ease-in-out infinite;
+}
+.lava-4 {
+  width: 150px; height: 150px;
+  background: orange;
+  left: 12%;
+  animation: yuz1 14s ease-in-out infinite reverse;
+}
+.lava-5 {
+  width: 200px; height: 200px;
+  background: cyan;
+  left: 30%;
+  animation: yuz2 18s ease-in-out infinite reverse;
+}
+.lava-6 {
+  width: 130px; height: 130px;
+  background: red;
+  left: 88%;
+  animation: yuz3 12s ease-in-out infinite;
+}
+
+@keyframes yuz1 {
+  0%, 100% {top: 110%; transform: scale(1);}
+  35% {top: 40%; transform: scale(1.25);}
+  55% {top: 15%; transform: scale(0.85);}
+  80% {top: -20%; transform: scale(1.1);}
+}
+@keyframes yuz2 {
+  0%, 100% {top: -25%; transform: scale(0.9);}
+  30% {top: 30%; transform: scale(1.3);}
+  60% {top: 65%; transform: scale(0.8);}
+  85% {top: 105%; transform: scale(1.15);}
+}
+@keyframes yuz3 {
+  0%, 100% {top: 100%; transform: scale(1.1);}
+  25% {top: 55%; transform: scale(0.75);}
+  50% {top: 20%; transform: scale(1.35);}
+  75% {top: -15%; transform: scale(0.95);}
+}
+
 /* ---- Kayıt Ol ---- */
 .kayit-baslik{
   perspective: 1200px;
@@ -106,6 +182,8 @@ h1, h2 {
 }
 .flip-cerceve {
   perspective: 1200px;
+  position: relative;
+  z-index: 1;
   width: 340px;
   min-height: 520px;
 }
@@ -646,6 +724,102 @@ sepet-btn:active { transform: scale(0.97); }
   padding: .1rem .4rem;
   font-size: .7rem;
   margin-left: .3rem;
+}
+/*---- Kategori Sayfası ----*/
+.sekme-baslik {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.2rem;
+}
+.sekme-baslik h2 { margin:0; }
+.kategori-kartlari {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap:1.2rem
+}
+.kategori-kart {
+  background: white;
+  border: 1px solid whitesmoke;
+  border-radius: 12px;
+  padding: 1.2rem;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  transition: box-shadow .2s, transform .1s, border-color .2s;
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+}
+
+.kategori-kart:hover {
+  border-color: lightseagreen;
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.08);
+}
+
+.kategori-kart:active {
+  transform: scale(.99);
+}
+
+.kart-ust {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.kart-ust h3 {
+  margin: 0; font-size: 1.1rem;
+}
+
+.kart-sayi {
+  background: lightseagreen;
+  color: white;
+  border-radius: 12px;
+  padding: .15rem .55rem;
+  font-size: .75rem;
+  font-weight: 700;
+}
+.kart-altlar {
+  display: flex;
+  flex-wrap: wrap;
+  gap:.4rem;
+}
+.alt-etiket {
+  background: whitesmoke;
+  color: gray;
+  padding: .25rem .6rem;
+  border-radius: 6px;
+  font-size: .8rem;
+}
+.alt-etiket.daha { background: whitesmoke; color: gray; font-style: italic; }
+.bos-yazi { color: gray; font-size: .85rem;}
+
+/*---- Kategori Modal İçi ----*/
+.alt-liste {
+  display: flex;
+  flex-direction: column;
+  gap:.4rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.alt-satir {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .6rem.8rem;
+  background: whitesmoke;
+  border-radius: 8px;
+}
+.alt-ekle-satir {
+  display: flex;
+  gap: .5rem;
+  margin-top: .5rem;
+}
+.alt-ekle-satir input {
+  flex: 1;
+  padding: .6rem;
+  border: 1px solid lightseagreen;
+  border-radius: 6px;
 }
 /* ---- Karşılama Ekranı ---- */
 .karsilama-ekran {
