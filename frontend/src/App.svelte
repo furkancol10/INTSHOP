@@ -1093,65 +1093,69 @@
           class="toolbar-baslik"
           onclick={() =>
             (aktifSekme = role === "Admin" ? "hareketler" : "anasayfa")}
-          >HABURA</button
+          >INTSHOP</button
         >
 
-        {#if role === "Admin"}
-          <button
-            class:aktif={aktifSekme === "dealers"}
-            onclick={() => (aktifSekme = "dealers")}>Bayiler</button
-          >
-          <button
-            class:aktif={aktifSekme === "urunler"}
-            onclick={() => (aktifSekme = "urunler")}>Ürünler</button
-          >
-          <button
-            class:aktif={aktifSekme === "kategoriler"}
-            onclick={() => (aktifSekme = "kategoriler")}>Kategoriler</button
-          >
-          <button
-            class:aktif={aktifSekme === "istekler"}
-            onclick={() => (aktifSekme = "istekler")}
-            >İstekler {#if bekleyenSayi > 0}<span class="badge"
-                >{bekleyenSayi}</span
-              >{/if}</button
-          >
-          <button
-            class:aktif={aktifSekme === "users"}
-            onclick={() => (aktifSekme = "users")}>Kullanıcılar</button
-          >
-        {:else if role === "Bayi"}
-          <button
-            class:aktif={aktifSekme === "stok"}
-            onclick={() => (aktifSekme = "stok")}>Stok</button
-          >
-          <button
-            class:aktif={aktifSekme === "raporlar"}
-            onclick={() => (aktifSekme = "raporlar")}>Raporlar</button
-          >
-          <button
-            class:aktif={aktifSekme === "fiyatlandirma"}
-            onclick={() => (aktifSekme = "fiyatlandirma")}>Fiyatlandırma</button
-          >
-        {:else if role === "Kullanici"}
-          <button
-            class:aktif={aktifSekme === "magaza"}
-            onclick={() => (aktifSekme = "magaza")}>Mağaza</button
-          >
-          <button
-            class:aktif={aktifSekme === "indirim"}
-            onclick={() => (aktifSekme = "indirim")}>İndirimler</button
-          >
-        {/if}
-
-        <span class="toolbar-spacer"></span>
-        <button class="profil-btn" onclick={() => (aktifSekme = "profil")}>
-          {#if avatarUrl}
-            <img src={avatarUrl} alt="avatar" class="toolbar-avatar" />
+        <div class="toolbar-sekmeler">
+          {#if role === "Admin"}
+            <button
+              class:aktif={aktifSekme === "dealers"}
+              onclick={() => (aktifSekme = "dealers")}>Bayiler</button
+            >
+            <button
+              class:aktif={aktifSekme === "urunler"}
+              onclick={() => (aktifSekme = "urunler")}>Ürünler</button
+            >
+            <button
+              class:aktif={aktifSekme === "kategoriler"}
+              onclick={() => (aktifSekme = "kategoriler")}>Kategoriler</button
+            >
+            <button
+              class:aktif={aktifSekme === "istekler"}
+              onclick={() => (aktifSekme = "istekler")}
+              >İstekler {#if bekleyenSayi > 0}<span class="badge"
+                  >{bekleyenSayi}</span
+                >{/if}</button
+            >
+            <button
+              class:aktif={aktifSekme === "users"}
+              onclick={() => (aktifSekme = "users")}>Kullanıcılar</button
+            >
+          {:else if role === "Bayi"}
+            <button
+              class:aktif={aktifSekme === "stok"}
+              onclick={() => (aktifSekme = "stok")}>Stok</button
+            >
+            <button
+              class:aktif={aktifSekme === "raporlar"}
+              onclick={() => (aktifSekme = "raporlar")}>Raporlar</button
+            >
+            <button
+              class:aktif={aktifSekme === "fiyatlandirma"}
+              onclick={() => (aktifSekme = "fiyatlandirma")}
+              >Fiyatlandırma</button
+            >
+          {:else if role === "Kullanici"}
+            <button
+              class:aktif={aktifSekme === "magaza"}
+              onclick={() => (aktifSekme = "magaza")}>Mağaza</button
+            >
+            <button
+              class:aktif={aktifSekme === "indirim"}
+              onclick={() => (aktifSekme = "indirim")}>İndirimler</button
+            >
           {/if}
-          <span>{currentUser}</span>
-        </button>
-        <button class="cikis-btn" onclick={logout}>Çıkış</button>
+        </div>
+
+        <div class="toolbar-right">
+          <button class="profil-btn" onclick={() => (aktifSekme = "profil")}>
+            {#if avatarUrl}
+              <img src={avatarUrl} alt="avatar" class="toolbar-avatar" />
+            {/if}
+            <span>{currentUser}</span>
+          </button>
+          <button class="cikis-btn" onclick={logout}>Çıkış</button>
+        </div>
       </div>
     </div>
 
