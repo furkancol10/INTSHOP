@@ -1,31 +1,19 @@
 <script>
   import { onMount } from "svelte";
   import { Chart, registerables } from "chart.js";
-  import {
-    API,
-    oturum,
-    durum,
-    veri,
-    authHeader,
-    jsonHeader,
-    fiyatKolon,
-    sayfalar,
-    sayfala,
-    toplamSayfa,
-    sayfaGit,
-    sayfalariSifirla,
-  } from "./lib/store.svelte.js";
-  import RedModal from "./lib/RedModal.svelte";
-  import KategoriModal from "./lib/KategoriModal.svelte";
-  import KategoriDetayModal from "./lib/KategoriDetayModal.svelte";
-  import KullaniciModal from "./lib/KullaniciModal.svelte";
-  import UrunModal from "./lib/UrunModal.svelte";
-  import IslemModal from "./lib/IslemModal.svelte";
+  import {API, oturum, durum, veri, authHeader, jsonHeader, fiyatKolon, sayfalar, sayfala, toplamSayfa, sayfaGit, sayfalariSifirla } from "./lib/store.svelte";
   Chart.register(...registerables);
-
+  //
+  // oturum
+  //
+  oturum.token;
+  oturum.role;
+  oturum.currentUser;
   let karsilama = $state(false);
-
+  //
   // Profil Sayfası
+  //
+  oturum.avatarUrl
   let profil = $state({
     username: "",
     role: "",
@@ -33,20 +21,41 @@
     phone: "",
     avatar_url: "",
   });
-
+  //
+  // veriler
+  //
+  veri.products;
+  veri.myStock;
+  veri.categories;
+  //
+  // durumlar
+  //
+  durum.aktifSekme;
+  durum.bildirim;
+  durum.error;
+  durum.loading;
+  //
   // Geçmiş tablosu
+  //
   let history = $state([]);
-
+  //
   // Grafik
+  //
   let chartCanvas = $state(null);
   let chartInstance = null;
-
+  //
+  //Toolbar
+  //
+  durum.aktifSekme
+  //
   // Giriş
+  //
   let loginUser = $state("");
   let loginPass = $state("");
   let loginError = $state("");
-
-  // Kayıt Olma
+  //
+  //Kayıt Olma
+  //
   let kayitModu = $state(false);
   let kayitForm = $state({
     username: "",
@@ -56,20 +65,51 @@
     phone: "",
   });
   let kayitMesaj = $state("");
-
-  // Kullanıcı ekleme
-  let kullaniciModalAcik = $state(false);
-
-  // Ürün Ekleme
+  //
+  //Kullanıcı ekleme
+  //
+  let modalAcik = $state(false);
+  let yeniKullanici = $state({
+    username: "",
+    password: "",
+    role: "",
+    address: "",
+    phone: "",
+  });
+  //
+  //Ürün Ekleme
+  //
   let urunModalAcik = $state(false);
-  let duzenlenenUrun = $state(null);
-
-  // Kategori
+  let duzenlenenId = $state(false);
+  let urunForm = $state({
+    name: "",
+    category_id: "",
+    price: "",
+    image_url: "",
+  });
+  //
+  //Kategori Ekleme
+  //
   let kategoriModalAcik = $state(false);
+  let yeniKategori = $state({ name: "" });
+  let kategoriHata = $state("");
+
   let kategoriDetayAcik = $state(false);
   let acikKategori = $state(null);
+  let yeniAltAd = $state("");
+  let altHata = $state("");
 
-  let anaKategoriler = $derived(veri.categories.filter((c) => !c.parent_id));
+  let anaKategoriler = $derived(categories.filter((c) => !c.parent_id));
+  //
+  //Resim Önizleme
+  //
+  let onizlemeYolu = $derived.by(() => {
+    let v = urunForm.image_url?.trim() || "";
+    if (!v) return "";
+    if (v.startsWith("/") || v.startsWith("http")) return v;
+    if (!/\.(jpg|jpeg|png|webp|gif)$/i.test(v)) v += ".jpg";
+    return `/products/${v}`;
+  });
   //
   //bayi oturumu
   //
@@ -86,6 +126,7 @@
   );
   let redModalAcik = $state(false);
   let redTalepId = $state(null);
+  let redSebep = $state("");
   //
   //Kullanıcı oturumu
   //
@@ -103,7 +144,28 @@
   //Bayi Stok-fiyat
   //
   let islemModalAcik = $state(false);
-  let islemUrunId = $state("");
+  let secilenUrunId = $state("");
+  let islemTuru = $state("");
+  let hareketMiktar = $state("");
+  let yeniFiyat = $state("");
+  let modalHata = $state("");
+  let bildirim = $state("");
+
+  let secilenUrun = $derived(
+    myStock.find((p) => p.product_id === Number(secilenUrunId)) ?? null,
+  );
+
+  let fiyatDurum = $derived.by(() => {
+    if (islemTuru !== "fiyat" || !secilenUrun || !yeniFiyat) return null;
+    const f = Number(yeniFiyat);
+    if (isNaN(f)) return null;
+    const alt = Number(secilenUrun.alt_sinir);
+    const ust = Number(secilenUrun.ust_sinir);
+    if (f < alt || f > ust) return "disarida";
+    const aralik = ust - alt;
+    if (f - alt < aralik * 0.15 || ust - f < aralik * 0.15) return "sinirda";
+    return "iyi";
+  });
   //
   //Depo Durum
   //
@@ -111,22 +173,12 @@
   function depoDurumu(stok) {
     const s = Number(stok) || 0;
     const yuzde = Math.min(100, Math.round((s / 100) * 100));
-    let sinif = "bol";
-    let etiket = "Bol";
-    if (s === 0) {
-      sinif = "bos";
-      etiket = "Tükendi";
-    } else if (s <= 10) {
-      sinif = "kritik";
-      etiket = "Kritik";
-    } else if (s <= 30) {
-      sinif = "az";
-      etiket = "Az";
-    } else if (s <= 60) {
-      sinif = "normal";
-      etiket = "Normal";
-    }
-    return { yuzde, sinif, sayi: s, etiket };
+    let sinif = "bol", etiket = "Bol";
+    if (s === 0) { sinif = "bos", etiket = "Tükendi"; }
+    else if (s <= 10) { sinif = "kritik", etiket = "Kritik"; }
+    else if (s <= 30) { sinif = "az", etiket = "Az"; }
+    else if (s <= 60) { sinif = "normal", etiket = "Normal"; }
+    return { yuzde, sinif, sayi: s , etiket};
   }
   //
   // Giriş ekranı
@@ -141,33 +193,33 @@
       });
       if (!res.ok) throw new Error("Kullanıcı adı veya şifre hatalı");
       const data = await res.json();
-      oturum.token = data.token;
-      oturum.role = data.role;
-      oturum.currentUser = data.username;
-      oturum.avatarUrl = data.avatar_url || "";
-      localStorage.setItem("token", oturum.token);
-      localStorage.setItem("username", oturum.currentUser);
-      localStorage.setItem("avatar_url", oturum.avatarUrl);
-      if (oturum.role === "Bayi") {
-        durum.aktifSekme = "anasayfa";
+      token = data.token;
+      role = data.role;
+      currentUser = data.username;
+      avatarUrl = data.avatar_url || "";
+      localStorage.setItem("token", token);
+      localStorage.setItem("username", currentUser);
+      localStorage.setItem("avatar_url", avatarUrl);
+      if (role === "Bayi") {
+        aktifSekme = "anasayfa";
         await loadMyStock();
         await loadMyMovements();
         await loadHistory();
-      } else if (oturum.role == "Admin") {
-        durum.aktifSekme = "hareketler";
+      } else if (role == "Admin") {
+        aktifSekme = "hareketler";
         await loadAll();
         await loadMovements();
         await loadDealers();
         await loadUsers();
-      } else if (oturum.role == "Kullanici") {
-        durum.aktifSekme = "magaza";
+      } else if (role == "Kullanici") {
+        aktifSekme = "magaza";
         shopSifirla();
         await loadShop();
       }
       karsilama = true;
       setTimeout(() => {
         karsilama = false;
-      }, 1000);
+      }, 2000);
     } catch (e) {
       loginError = e instanceof Error ? e.message : String(e);
     }
@@ -226,44 +278,44 @@
   // Sayfa Fonksiyonları
   //
   async function loadAll() {
-    durum.loading = true;
-    durum.error = "";
+    loading = true;
+    error = "";
     try {
       const [pRes, cRes] = await Promise.all([
         fetch(`${API}/api/products`),
         fetch(`${API}/api/categories`),
       ]);
       if (!pRes.ok || !cRes.ok) throw new Error("Veri alınamadı");
-      veri.products = await pRes.json();
-      veri.categories = await cRes.json();
+      products = await pRes.json();
+      categories = await cRes.json();
     } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
+      error = e instanceof Error ? e.message : String(e);
     } finally {
-      durum.loading = false;
+      loading = false;
     }
   }
 
   async function loadDealers() {
     try {
       const res = await fetch(`${API}/api/dealers`, {
-        headers: { Authorization: oturum.token },
+        headers: { Authorization: token },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       dealers = await res.json();
     } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
+      error = e instanceof Error ? e.message : String(e);
     }
   }
 
   async function loadUsers() {
     try {
       const res = await fetch(`${API}/api/users`, {
-        headers: { Authorization: oturum.token },
+        headers: { Authorization: token },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       users = await res.json();
     } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
+      error = e instanceof Error ? e.message : String(e);
     }
   }
 
@@ -276,7 +328,7 @@
       const res = await fetch(
         `${API}/api/shop?offset=${shopOffset}&limit=${shopLimit}`,
         {
-          headers: { Authorization: oturum.token },
+          headers: { Authorization: token },
         },
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -287,9 +339,9 @@
       shopData = [...shopData, ...yeni];
       shopOffset += yeni.length;
     } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
+      error = e instanceof Error ? e.message : String(e);
     } finally {
-      durum.loading = false;
+      loading = false;
       yukleniyorShop = false;
     }
   }
@@ -301,7 +353,7 @@
   }
 
   $effect(() => {
-    if (durum.aktifSekme !== "magaza" || !sentinel) return;
+    if (aktifSekme !== "magaza" || !sentinel) return;
 
     const gozlemci = new IntersectionObserver(
       (girisler) => {
@@ -320,12 +372,12 @@
   async function loadProfile() {
     try {
       const res = await fetch(`${API}/api/profile`, {
-        headers: { Authorization: oturum.token },
+        headers: { Authorization: token },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       profil = await res.json();
     } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
+      error = e instanceof Error ? e.message : String(e);
     }
   }
 
@@ -333,10 +385,7 @@
     try {
       const res = await fetch(`${API}/api/profile`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: oturum.token,
-        },
+        headers: { "Content-Type": "application/json", Authorization: token },
         body: JSON.stringify({
           address: profil.address,
           phone: profil.phone,
@@ -344,16 +393,16 @@
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      oturum.avatarUrl = profil.avatar_url || "";
-      localStorage.setItem("avatar_url", oturum.avatarUrl);
+      avatarUrl = p.avatar_url || "";
+      localStorage.setItem("avatar_url", avatarUrl);
       alert("Profil Güncellendi");
     } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
+      error = e instanceof Error ? e.message : String(e);
     }
   }
 
   $effect(() => {
-    if (durum.aktifSekme === "profil") {
+    if (aktifSekme === "profil") {
       loadProfile();
     }
   });
@@ -361,43 +410,221 @@
   //Bayi Stok-Fiyat
   //
   function islemModalAc(productId = "") {
-    islemUrunId = productId;
+    secilenUrunId = productId;
+    islemTuru = "";
+    hareketMiktar = "";
+    yeniFiyat = "";
+    modalHata = "";
     islemModalAcik = true;
+  }
+
+  async function islemKaydet() {
+    modalHata = "";
+
+    if (!secilenUrunId) {
+      modalHata = "Ürün seçin";
+      return;
+    }
+    if (!islemTuru) {
+      modalHata = "İşlem türü seçin";
+      return;
+    }
+
+    const pid = Number(secilenUrunId);
+
+    if (islemTuru === "fiyat") {
+      const f = Number(yeniFiyat);
+      if (!yeniFiyat || isNaN(f) || f <= 0) {
+        modalHata = "Geçerli bir fiyat girin";
+        return;
+      }
+      if (fiyatDurum === "disarida") {
+        modalHata = `Fiyat ${fiyatKolon(secilenUrun.alt_sinir)} - ${fiyatKolon(secilenUrun.ust_sinir)} aralığında olmalı`;
+        return;
+      }
+      try {
+        const res = await fetch(`${API}/api/my-stock/price`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: token },
+          body: JSON.stringify({ product_id: pid, price: f }),
+        });
+        if (!res.ok)
+          throw new Error((await res.text()) || `HTTP ${res.status}`);
+        islemModalAcik = false;
+        bildirim = "Fiyat talebiniz onaya gönderildi.";
+        setTimeout(() => (bildirim = ""), 4000);
+        await loadMyStock();
+        await loadMyRequests();
+      } catch (e) {
+        modalHata = e instanceof Error ? e.message : String(e);
+      }
+    } else {
+      const m = Math.abs(Number(hareketMiktar) || 0);
+      if (m <= 0) {
+        modalHata = "Miktar 0'dan büyük olmalı";
+        return;
+      }
+      const degisim = islemTuru === "giris" ? m : -m;
+      try {
+        const res = await fetch(`${API}/api/my-stock/movements`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: token },
+          body: JSON.stringify({ product_id: pid, change: degisim }),
+        });
+        if (!res.ok)
+          throw new Error((await res.text()) || `HTTP ${res.status}`);
+        islemModalAcik = false;
+        await loadMyStock();
+        await loadMyMovements();
+        await loadHistory();
+      } catch (e) {
+        modalHata = e instanceof Error ? e.message : String(e);
+      }
+    }
   }
   //
   // Kategori sayfası
   //
   function altlariGetir(anaId) {
-    return veri.categories.filter((c) => c.parent_id === anaId);
+    return categories.filter((c) => c.parent_id === anaId);
   }
 
   function kategoriDetayAc(kategori) {
     acikKategori = kategori;
+    yeniAltAd = "";
+    altHata = "";
     kategoriDetayAcik = true;
+  }
+  async function kategoriEkle() {
+    kategoriHata = "";
+    if (!yeniKategori.name.trim()) {
+      kategoriHata = "Kategori adı zorunlu";
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/api/categories`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: token },
+        body: JSON.stringify({
+          name: yeniKategori.name.trim(),
+          parent_id: null,
+        }),
+      });
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      yeniKategori = { name: "" };
+      kategoriModalAcik = false;
+      await loadAll();
+    } catch (e) {
+      kategoriHata = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  async function altKategoriEkle() {
+    altHata = "";
+    if (!yeniAltAd.trim()) {
+      altHata = "Kategori adı zorunlu";
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/api/categories`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: token },
+        body: JSON.stringify({
+          name: yeniAltAd.trim(),
+          parent_id: acikKategori.id,
+        }),
+      });
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      yeniAltAd = "";
+      await loadAll();
+    } catch (e) {
+      altHata = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  async function altKategoriSil(id) {
+    altHata = "";
+    try {
+      const res = await fetch(`${API}/api/categories/${id}`, {
+        method: "Delete",
+        headers: { Authorization: token },
+      });
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      await loadAll();
+    } catch (e) {
+      altHata = e instanceof Error ? e.message : String(e);
+    }
   }
   //
   // Ürünlerin Fonksiyonları
   //
   function urunEkleAc() {
-    duzenlenenUrun = null;
+    duzenlenenId = null;
+    urunForm = { name: "", category_id: "", price: "", image_url: "" };
     urunModalAcik = true;
   }
 
   function urunDuzenleAc(p) {
-    duzenlenenUrun = p;
+    duzenlenenId = p.id;
+    urunForm = {
+      name: p.name,
+      category_id: p.category_id ?? "",
+      price: p.price,
+      image_url: p.image_url ?? "",
+    };
     urunModalAcik = true;
+  }
+
+  async function urunKaydet() {
+    const url = duzenlenenId
+      ? `${API}/api/products/${duzenlenenId}`
+      : `${API}/api/products`;
+    const method = duzenlenenId ? "PUT" : "POST";
+
+    let resimYolu = urunForm.image_url?.trim() || "";
+    if (
+      resimYolu &&
+      !resimYolu.startsWith("/") &&
+      !resimYolu.startsWith("http")
+    ) {
+      if (!/\.(jpg|jpeg|png|webp|gif)$/i.test(resimYolu)) {
+        resimYolu += ".jpg";
+      }
+      resimYolu = `/products/${resimYolu}`;
+    }
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json", Authorization: token },
+        body: JSON.stringify({
+          name: urunForm.name,
+          category_id: Number(urunForm.category_id),
+          price: Number(urunForm.price),
+          image_url: resimYolu,
+        }),
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || `HTTP ${res.status}`);
+      }
+      urunModalAcik = false;
+      await loadAll();
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
   }
 
   async function deleteProduct(id) {
     try {
       const res = await fetch(`${API}/api/products/${id}`, {
         method: "DELETE",
-        headers: { Authorization: oturum.token },
+        headers: { Authorization: token },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       await loadAll();
     } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
+      error = e instanceof Error ? e.message : String(e);
     }
   }
   //
@@ -406,12 +633,12 @@
   async function loadRequests(filtre = requestFiltre) {
     try {
       const res = await fetch(`${API}/api/requests?status=${filtre}`, {
-        headers: { Authorization: oturum.token },
+        headers: { Authorization: token },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       requests = await res.json();
     } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
+      error = e instanceof Error ? e.message : String(e);
     }
   }
 
@@ -419,29 +646,32 @@
     try {
       const res = await fetch(`${API}/api/requests/${id}/${karar}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: oturum.token,
-        },
+        headers: { "Content-Type": "application/json", Authorization: token },
         body: JSON.stringify({ note: not }),
       });
       if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
       await loadRequests();
       await loadAll();
     } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
+      error = e instanceof Error ? e.message : String(e);
     }
   }
 
   $effect(() => {
-    if (oturum.role === "Admin" && durum.aktifSekme === "istekler") {
+    if (role === "Admin" && aktifSekme === "istekler") {
       loadRequests(requestFiltre);
     }
   });
 
   function redModalAc(id) {
     redTalepId = id;
+    redSebep = "";
     redModalAcik = true;
+  }
+
+  async function redOnayla() {
+    await talepKarar(redTalepId, "reject", redSebep);
+    redModalAcik = false;
   }
   //
   //Bayi Fonksiyonları
@@ -449,51 +679,51 @@
   async function loadMyStock() {
     try {
       const res = await fetch(`${API}/api/my-stock`, {
-        headers: { Authorization: oturum.token },
+        headers: { Authorization: token },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      veri.myStock = await res.json();
+      myStock = await res.json();
     } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
+      error = e instanceof Error ? e.message : String(e);
     } finally {
-      durum.loading = false;
+      loading = false;
     }
   }
 
   async function loadMyMovements() {
     try {
       const res = await fetch(`${API}/api/my-stock/movements`, {
-        headers: { Authorization: oturum.token },
+        headers: { Authorization: token },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       myMovements = await res.json();
     } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
+      error = e instanceof Error ? e.message : String(e);
     }
   }
 
   async function loadMovements() {
     try {
       const res = await fetch(`${API}/api/movements`, {
-        headers: { Authorization: oturum.token },
+        headers: { Authorization: token },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       movements = await res.json();
     } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
+      error = e instanceof Error ? e.message : String(e);
     }
   }
 
   async function loadHistory() {
     try {
       const res = await fetch(`${API}/api/my-stock/history`, {
-        headers: { Authorization: oturum.token },
+        headers: { Authorization: token },
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       history = await res.json();
       setTimeout(drawChart, 0);
     } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
+      error = e instanceof Error ? e.message : String(e);
     }
   }
   //
@@ -531,47 +761,73 @@
   }
 
   $effect(() => {
-    if (durum.aktifSekme === "raporlar" && history.length) {
+    if (aktifSekme === "raporlar" && history.length) {
       setTimeout(drawChart, 0);
     }
   });
   //
   //Kullanıcı Fonksiyonu
   //
+  async function kullaniciEkle() {
+    try {
+      const res = await fetch(`${API}/api/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: token },
+        body: JSON.stringify(yeniKullanici),
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || `HTTP ${res.status}`);
+      }
+      yeniKullanici = {
+        username: "",
+        password: "",
+        role: "Kullanici",
+        address: "",
+        phone: "",
+      };
+      modalAcik = false;
+      await loadUsers();
+      await loadDealers();
+    } catch (e) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
   onMount(async () => {
-    if (!oturum.token) return;
+    if (!token) return;
 
     try {
       const res = await fetch(`${API}/api/profile`, {
-        headers: { Authorization: oturum.token },
+        headers: { Authorization: token },
       });
       if (!res.ok) {
         logout();
         return;
       }
       const p = await res.json();
-      oturum.role = p.role;
-      oturum.currentUser = p.username;
-      oturum.avatarUrl = p.avatar_url || "";
-      localStorage.setItem("username", oturum.currentUser);
-      localStorage.setItem("avatar_url", oturum.avatarUrl);
+      role = p.role;
+      currentUser = p.username;
+      avatarUrl = p.avatarUrl || "";
+      localStorage.setItem("username", currentUser);
+      localStorage.setItem("avatar_url", avatarUrl);
     } catch {
       logout();
       return;
     }
-    if (oturum.role === "Bayi") {
-      durum.aktifSekme = "anasayfa";
+    if (role === "Bayi") {
+      aktifSekme = "anasayfa";
       loadMyStock();
       loadMyMovements();
       loadHistory();
-    } else if (oturum.role === "Admin") {
-      durum.aktifSekme = "hareketler";
+    } else if (role === "Admin") {
+      aktifSekme = "hareketler";
       loadAll();
       loadMovements();
       loadDealers();
       loadUsers();
-    } else if (oturum.role === "Kullanici") {
-      durum.aktifSekme = "magaza";
+    } else if (role === "Kullanici") {
+      aktifSekme = "magaza";
       shopSifirla();
       loadShop();
     }
@@ -579,7 +835,7 @@
 </script>
 
 <main>
-  {#if !oturum.token}
+  {#if !token}
     <div class="login-wrapper">
       <div class="lava-background">
         <div class="lava lava-1"></div>
@@ -703,10 +959,10 @@
     <!-- Wrapper -->
   {:else if karsilama}
     <div class="karsilama-ekran">
-      {#if oturum.avatarUrl}
-        <img src={oturum.avatarUrl} alt="avatar" class="karsilama-avatar" />
+      {#if avatarUrl}
+        <img src={avatarUrl} alt="avatar" class="karsilama-avatar" />
       {/if}
-      <h1>Hoş Geldiniz, {oturum.currentUser}!</h1>
+      <h1>Hoş Geldiniz, {currentUser}!</h1>
       <div class="spinner"></div>
       <p>Sayfa Yükleniyor...</p>
     </div>
@@ -716,88 +972,84 @@
         <button
           class="toolbar-baslik"
           onclick={() =>
-            (durum.aktifSekme =
-              oturum.role === "Admin" ? "hareketler" : "anasayfa")}
+            (aktifSekme = role === "Admin" ? "hareketler" : "anasayfa")}
           >INTSHOP</button
         >
 
         <div class="toolbar-sekmeler">
-          {#if oturum.role === "Admin"}
+          {#if role === "Admin"}
             <button
-              class:aktif={durum.aktifSekme === "dealers"}
-              onclick={() => (durum.aktifSekme = "dealers")}>Bayiler</button
+              class:aktif={aktifSekme === "dealers"}
+              onclick={() => (aktifSekme = "dealers")}>Bayiler</button
             >
             <button
-              class:aktif={durum.aktifSekme === "urunler"}
-              onclick={() => (durum.aktifSekme = "urunler")}>Ürünler</button
+              class:aktif={aktifSekme === "urunler"}
+              onclick={() => (aktifSekme = "urunler")}>Ürünler</button
             >
             <button
-              class:aktif={durum.aktifSekme === "kategoriler"}
-              onclick={() => (durum.aktifSekme = "kategoriler")}
-              >Kategoriler</button
+              class:aktif={aktifSekme === "kategoriler"}
+              onclick={() => (aktifSekme = "kategoriler")}>Kategoriler</button
             >
             <button
-              class:aktif={durum.aktifSekme === "istekler"}
-              onclick={() => (durum.aktifSekme = "istekler")}
+              class:aktif={aktifSekme === "istekler"}
+              onclick={() => (aktifSekme = "istekler")}
               >İstekler {#if bekleyenSayi > 0}<span class="badge"
                   >{bekleyenSayi}</span
                 >{/if}</button
             >
             <button
-              class:aktif={durum.aktifSekme === "users"}
-              onclick={() => (durum.aktifSekme = "users")}>Kullanıcılar</button
+              class:aktif={aktifSekme === "users"}
+              onclick={() => (aktifSekme = "users")}>Kullanıcılar</button
             >
-          {:else if oturum.role === "Bayi"}
+          {:else if role === "Bayi"}
             <button
-              class:aktif={durum.aktifSekme === "stok"}
-              onclick={() => (durum.aktifSekme = "stok")}>Stok</button
+              class:aktif={aktifSekme === "stok"}
+              onclick={() => (aktifSekme = "stok")}>Stok</button
             >
             <button
-              class:aktif={durum.aktifSekme === "raporlar"}
-              onclick={() => (durum.aktifSekme = "raporlar")}>Raporlar</button
+              class:aktif={aktifSekme === "raporlar"}
+              onclick={() => (aktifSekme = "raporlar")}>Raporlar</button
             >
-          {:else if oturum.role === "Kullanici"}
+          {:else if role === "Kullanici"}
             <button
-              class:aktif={durum.aktifSekme === "magaza"}
-              onclick={() => (durum.aktifSekme = "magaza")}>Mağaza</button
+              class:aktif={aktifSekme === "magaza"}
+              onclick={() => (aktifSekme = "magaza")}>Mağaza</button
             >
           {/if}
         </div>
 
         <div class="toolbar-right">
-          <button
-            class="profil-btn"
-            onclick={() => (durum.aktifSekme = "profil")}
-          >
-            {#if oturum.avatarUrl}
-              <img src={oturum.avatarUrl} alt="avatar" class="toolbar-avatar" />
+          <button class="profil-btn" onclick={() => (aktifSekme = "profil")}>
+            {#if avatarUrl}
+              <img src={avatarUrl} alt="avatar" class="toolbar-avatar" />
             {/if}
-            <span>{oturum.currentUser}</span>
+            <span>{currentUser}</span>
           </button>
           <button class="cikis-btn" onclick={logout}>Çıkış</button>
         </div>
       </div>
     </div>
 
-    {#if durum.bildirim}
-      <div class="bildirim">{durum.bildirim}</div>
+    {#if bildirim}
+      <div class="bildirim">{bildirim}</div>
     {/if}
 
     <div class="sekme-icerik">
-      {#if durum.aktifSekme === "anasayfa"}
+      {#if aktifSekme === "anasayfa"}
         <div class="hosgeldin">
-          <h1>Hoş Geldiniz, {oturum.currentUser}!</h1>
+          <h1>Hoş Geldiniz, {currentUser}!</h1>
           <p>
             Stok işlemleriniz için "Stok", raporlarınız için "Raporlar"
             sekmesini kullanın.
           </p>
         </div>
-      {:else if durum.aktifSekme === "stok"}
+      {:else if aktifSekme === "stok"}
         <h2>Stok Yönetimi</h2>
         <div class="tablo-cerceve">
           <button class="islem-btn1" onclick={() => islemModalAc("")}
             >Stok/fiyat</button
           >
+          <!-- Stok Tablosu -->
           <table>
             <thead>
               <tr
@@ -808,12 +1060,12 @@
               >
             </thead>
             <tbody>
-              {#each veri.myStock as p}
+              {#each myStock as p}
                 {@const d = depoDurumu(p.stock)}
                 <tr class:dusuk={p.stock < 10}>
                   <td>{p.product_id}</td>
                   <td>{p.name}</td>
-                  <td>{fiyatKolon(p.benim_fiyatim)}</td>
+                  <td>{fiyatKolon(secilenUrun.benim_fiyatim)}</td>
                   <td>{p.category}</td>
                   <td>
                     <div class="depo-bar">
@@ -842,7 +1094,7 @@
             </tbody>
           </table>
         </div>
-      {:else if durum.aktifSekme === "raporlar"}
+      {:else if aktifSekme === "raporlar"}
         <h2>Raporlar</h2>
         <div>
           <h3>Giriş / Çıkış Geçmişi</h3>
@@ -901,13 +1153,14 @@
             </div>
           {/if}
         </div>
-      {:else if durum.aktifSekme === "kategoriler"}
+      {:else if aktifSekme === "kategoriler"}
         <div class="sekme-baslik">
           <h2>Kategoriler</h2>
           <button
             class="ekle-btn"
             onclick={() => {
               kategoriModalAcik = true;
+              kategoriHata = "";
             }}>+ Yeni Ana Kategori</button
           >
         </div>
@@ -945,7 +1198,7 @@
         {:else}
           <p>Kategori Yok</p>
         {/if}
-      {:else if durum.aktifSekme === "istekler"}
+      {:else if aktifSekme === "istekler"}
         <h2>Bekleyen İstekler</h2>
         <div class="filtre-satir">
           <button
@@ -1038,7 +1291,7 @@
         {:else}
           <p>Bu durumda istek yok.</p>
         {/if}
-      {:else if durum.aktifSekme === "hareketler"}
+      {:else if aktifSekme === "hareketler"}
         <h2>Bayi hareketleri</h2>
         {#if movements.length}
           <div class="tablo-cerceve">
@@ -1082,11 +1335,11 @@
         {:else}
           <p>Henüz hareket yok.</p>
         {/if}
-      {:else if durum.aktifSekme === "urunler"}
+      {:else if aktifSekme === "urunler"}
         <h2>Ürünler</h2>
         <button class="ekle-btn" onclick={urunEkleAc}>+ Yeni Ürün</button>
 
-        {#if veri.products.length}
+        {#if products.length}
           <div class="tablo-cerceve">
             <table>
               <thead>
@@ -1097,7 +1350,7 @@
                 </tr>
               </thead>
               <tbody>
-                {#each sayfala(veri.products, "urunler") as p}
+                {#each sayfala(products, "urunler") as p}
                   <tr class:dusuk={p.stock < 10}>
                     <td>{p.id}</td>
                     <td>
@@ -1132,19 +1385,15 @@
               onclick={() => sayfaGit("urunler", -1)}
               disabled={(sayfalar.urunler ?? 1) === 1}>Önceki</button
             >
-            <span
-              >Sayfa {sayfalar.urunler ?? 1} / {toplamSayfa(
-                veri.products,
-              )}</span
-            >
+            <span>Sayfa {sayfalar.urunler ?? 1} / {toplamSayfa(products)}</span>
             <button
               onclick={() => sayfaGit("urunler", 1)}
-              disabled={(sayfalar.urunler ?? 1) === toplamSayfa(veri.products)}
+              disabled={(sayfalar.urunler ?? 1) === toplamSayfa(products)}
               >Sonraki</button
             >
           </div>
         {/if}
-      {:else if durum.aktifSekme === "dealers"}
+      {:else if aktifSekme === "dealers"}
         <h2>Bayiler</h2>
         {#if dealers.length}
           <div class="tablo-cerceve">
@@ -1182,9 +1431,9 @@
         {:else}
           <p>Henüz bayi yok.</p>
         {/if}
-      {:else if durum.aktifSekme === "users"}
+      {:else if aktifSekme === "users"}
         <h2>Kullanıcılar</h2>
-        <button class="ekle-btn" onclick={() => (kullaniciModalAcik = true)}>
+        <button class="ekle-btn" onclick={() => (modalAcik = true)}>
           + Yeni Kullanıcı</button
         >
 
@@ -1220,7 +1469,7 @@
         {:else}
           <p>Henüz kullanıcı yok.</p>
         {/if}
-      {:else if durum.aktifSekme === "magaza"}
+      {:else if aktifSekme === "magaza"}
         <h2>Mağaza</h2>
         {#if shopData.length}
           <div class="urun-kartlari">
@@ -1253,7 +1502,7 @@
         {:else}
           <p>Şu an satışta ürün yok.</p>
         {/if}
-      {:else if durum.aktifSekme === "profil"}
+      {:else if aktifSekme === "profil"}
         <h2>Profilim</h2>
         <div class="profil-sayfa">
           <div class="profil-avatar">
@@ -1265,9 +1514,9 @@
           <div class="profil-bilgi">
             <label
               >Kullanıcı Adı
-              <input value={profil.username} disabled />
+              <input value={profil.username} disabled/>
             </label>
-            {#if oturum.role === "Admin"}
+            {#if role === "Admin"}
               <label>
                 Rol<input value={profil.role} disabled />
               </label>
@@ -1294,49 +1543,322 @@
     </div>
   {/if}
 
-  {#if durum.error}<p class="error">{durum.error}</p>
+  {#if error}<p class="error">{error}</p>
   {/if}
-  <!--  Kullanıcı Ekleme Modalı  -->
-  <KullaniciModal
-    bind:acik={kullaniciModalAcik}
-    eklendi={() => {
-      loadUsers();
-      loadDealers();
-    }}
-  />
-  <!--  Ürün Ekleme Modalı  -->
-  <UrunModal
-    bind:acik={urunModalAcik}
-    urun={duzenlenenUrun}
-    kaydedildi={loadAll}
-  />
+
+  {#if modalAcik}
+    <div
+      class="modal-arkaplan"
+      onclick={() => (modalAcik = false)}
+      onkeydown={(e) => e.key === "Escape" && (modalAcik = false)}
+      role="button"
+      tabindex="0"
+    >
+      <div
+        class="modal"
+        onclick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        <h3>Yeni Kullanıcı</h3>
+        <input
+          placeholder="Kullanıcı Adı"
+          bind:value={yeniKullanici.username}
+        />
+        <input
+          type="password"
+          placeholder="Şifre"
+          bind:value={yeniKullanici.password}
+        />
+        <input placeholder="Adres" bind:value={yeniKullanici.address} />
+        <input placeholder="Telefon" bind:value={yeniKullanici.phone} />
+        <select bind:value={yeniKullanici.role}>
+          <option value="Kullanici">Kullanıcı</option>
+          <option value="Bayi">Bayi</option>
+          <option value="Admin">Admin</option>
+        </select>
+        <div class="modal-butonlar">
+          <button class="iptal-btn" onclick={() => (modalAcik = false)}
+            >İptal</button
+          >
+          <button class="ekle-btn" onclick={kullaniciEkle}>Ekle</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+  <!--
+  Ürün Ekleme Modalı
+  -->
+  {#if urunModalAcik}
+    <div
+      class="modal-arkaplan"
+      onclick={() => (urunModalAcik = false)}
+      onkeydown={(e) => e.key === "Escape" && (urunModalAcik = false)}
+      role="button"
+      tabindex="0"
+    >
+      <div
+        class="buyuk-modal"
+        onclick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        <h2>{duzenlenenId ? "Ürün Düzenle" : "Yeni Ürün"}</h2>
+
+        <label
+          >Ürün Adı
+          <input bind:value={urunForm.name} placeholder="Ürün adı" />
+        </label>
+
+        <label
+          >Kategori
+          <select bind:value={urunForm.category_id}>
+            <option value="">Kategori seç</option>
+            {#each categories.filter((c) => !c.parent_id) as ust}
+              {#if categories.some((c) => c.parent_id === ust.id)}
+                <optgroup label={ust.name}>
+                  {#each categories.filter((c) => c.parent_id === ust.id) as alt}
+                    <option value={alt.id}>{alt.name}</option>
+                  {/each}
+                </optgroup>
+              {:else}
+                <option value={ust.id}>{ust.name}</option>
+              {/if}
+            {/each}
+          </select>
+        </label>
+
+        <label
+          >Fiyat (₺)
+          <input
+            type="number"
+            step="0.01"
+            bind:value={urunForm.price}
+            placeholder="0.00"
+          />
+        </label>
+
+        <label>
+          Resim <input bind:value={urunForm.image_url} placeholder="Ürün Adı" />
+        </label>
+
+        {#if urunForm.image_url}
+          <img
+            src={onizlemeYolu}
+            alt="Önizleme"
+            style="max-width: 150px; border-radius: 8px;"
+          />
+        {/if}
+        <div class="modal-butonlar">
+          <button class="iptal-btn" onclick={() => (urunModalAcik = false)}
+            >İptal</button
+          >
+          <button class="ekle-btn" onclick={urunKaydet}
+            >{duzenlenenId ? "Kaydet" : "Ekle"}</button
+          >
+        </div>
+      </div>
+    </div>
+  {/if}
 
   <!-- Kategori Modal-->
-  <KategoriModal bind:acik={kategoriModalAcik} eklendi={loadAll} />
-  <KategoriDetayModal
-    bind:acik={kategoriDetayAcik}
-    kategori={acikKategori}
-    degisti={loadAll}
-  />
-  <!-- Red Modalı -->
-  <RedModal
-    bind:acik={redModalAcik}
-    onay={(sebep) => talepKarar(redTalepId, "reject", sebep)}
-  />
+  {#if kategoriModalAcik}
+    <div
+      class="modal-arkaplan"
+      onclick={() => (kategoriModalAcik = false)}
+      onkeydown={(e) => e.key === "Escape" && (kategoriModalAcik = false)}
+      role="button"
+      tabindex="0"
+    >
+      <div
+        class="modal"
+        onclick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        <h3>Yeni Ana Kategori</h3>
+
+        <label
+          >Kategori Adı
+          <input
+            bind:value={yeniKategori.name}
+            placeholder="Örn: Kozmetik"
+            onkeydown={(e) => e.key === "Enter" && kategoriEkle()}
+          />
+        </label>
+
+        {#if kategoriHata}<p class="error">{kategoriHata}</p>{/if}
+
+        <div class="modal-butonlar">
+          <button class="iptal-btn" onclick={() => (kategoriModalAcik = false)}
+            >İptal</button
+          >
+          <button class="ekle-btn" onclick={kategoriEkle}>Ekle</button>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  {#if kategoriDetayAcik && acikKategori}
+    <div
+      class="modal-arkaplan"
+      onclick={() => (kategoriDetayAcik = false)}
+      onkeydown={(e) => e.key === "Escape" && (kategoriDetayAcik = false)}
+      role="button"
+      tabindex="0"
+    >
+      <div
+        class="kategori-detay-modal"
+        onclick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        <h2>{acikKategori.name}</h2>
+        <p class="modal-bilgi">Alt kategoriler</p>
+
+        <div class="alt-liste">
+          {#each altlariGetir(acikKategori.id) as alt}
+            <div class="alt-satir">
+              <span>{alt.name}</span>
+              <button class="sil" onclick={() => altKategoriSil(alt.id)}
+                >Sil</button
+              >
+            </div>
+          {:else}
+            <p class="bos-yazi">Bu kategoride alt kategori yok.</p>
+          {/each}
+        </div>
+
+        <div class="alt-ekle-satir">
+          <input
+            bind:value={yeniAltAd}
+            placeholder="Yeni alt kategori adı"
+            onkeydown={(e) => e.key === "Enter" && altKategoriEkle()}
+          />
+          <button class="ekle-btn" onclick={altKategoriEkle}>Ekle</button>
+        </div>
+
+        {#if altHata}<p class="error">{altHata}</p>{/if}
+
+        <div class="modal-butonlar">
+          <button class="iptal-btn" onclick={() => (kategoriDetayAcik = false)}
+            >Kapat</button
+          >
+        </div>
+      </div>
+    </div>
+  {/if}
+  <!-- Onay Modalı -->
+  {#if redModalAcik}
+    <div
+      class="modal-arkaplan"
+      onclick={() => (redModalAcik = false)}
+      onkeydown={(e) => e.key === "Escape" && (redModalAcik = false)}
+      role="button"
+      tabindex="0"
+    >
+      <div
+        class="modal"
+        onclick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        <h3>Talebi Reddet</h3>
+        <label
+          >Red Sebebi
+          <input
+            bind:value={redSebep}
+            placeholder="Örn: Fiyat çok düşük"
+            onkeydown={(e) => e.key === "Enter" && redOnayla()}
+          />
+        </label>
+        <div class="modal-butonlar">
+          <button class="iptal-btn" onclick={() => (redModalAcik = false)}
+            >İptal</button
+          >
+          <button class="red-btn" onclick={redOnayla}>Reddet</button>
+        </div>
+      </div>
+    </div>
+  {/if}
   <!-- Stok-fiyat Modal -->
-  <IslemModal
-    bind:acik={islemModalAcik}
-    urunId={islemUrunId}
-    tamamlandi={(tur) => {
-      if (tur === "fiyat") {
-        durum.bildirim = "Fiyat talebiniz onaya gönderildi.";
-        setTimeout(() => (durum.bildirim = ""), 4000);
-        loadMyStock();
-      } else {
-        loadMyStock();
-        loadMyMovements();
-        loadHistory();
-      }
-    }}
-  />
+  {#if islemModalAcik}
+    <div
+      class="modal-arkaplan"
+      onclick={() => (islemModalAcik = false)}
+      onkeydown={(e) => e.key === "Escape" && (islemModalAcik = false)}
+      role="button"
+      tabindex="0"
+    >
+      <div
+        class="modal"
+        onclick={(e) => e.stopPropagation()}
+        role="presentation"
+      >
+        <h3>Stok-Fiyat Güncelle</h3>
+        <!-- 2. Ürün seçimi (dropdown) -->
+        <label
+          >Ürün
+          <select bind:value={secilenUrunId}>
+            <option value="">Ürün Seçiniz</option>
+            {#each myStock as p}
+              <option value={p.product_id}>{p.name}</option>
+            {/each}
+          </select>
+        </label>
+        <!-- 3. İşlem türü seçimi (üç buton ya da select) -->
+        <label
+          >İşlem Türü
+          <select class="islem-secim" bind:value={islemTuru}>
+            <option value="">İşlem türü seçiniz.</option>
+            <option value="giris">Giriş</option>
+            <option value="cikis">Çıkış</option>
+            <option value="fiyat">Fiyat Güncelleme</option>
+          </select>
+        </label>
+
+        <!-- 4. Türe göre değişen kısım: -->
+        {#if secilenUrun && (islemTuru === "giris" || islemTuru === "cikis")}
+          <p class="modal-bilgi">
+            Mevcut stok: <strong>{secilenUrun.stock}</strong>
+          </p>
+          <label
+            >Miktar
+            <input
+              type="number"
+              min="1"
+              bind:value={hareketMiktar}
+              placeholder="0"
+            />
+          </label>
+        {:else if secilenUrun && islemTuru === "fiyat"}
+          <p class="modal-bilgi">
+            Mevcut fiyat: <strong>{fiyatKolon(secilenUrun)}</strong>
+          </p>
+          <label
+            >Yeni Fiyat
+            <input
+              type="number"
+              step="0.01"
+              bind:value={yeniFiyat}
+              placeholder={secilenUrun.onerilen}
+              class="fiyat-input {fiyatDurum ?? ''}"
+            />
+          </label>
+          <p class="fiyat-ipucu">
+            Aralık: {fiyatKolon(secilenUrun.alt_sinir)} - {fiyatKolon(
+              secilenUrun.ust_sinir,
+            )} · Önerilen:
+            {fiyatKolon(secilenUrun.onerilen)}
+          </p>
+        {/if}
+
+        <!-- 5. Hata mesajı: {#if modalHata} -->
+        {#if modalHata}<p class="error">{modalHata}</p>{/if}
+
+        <!-- 6. İptal / Kaydet butonları -->
+        <div class="modal-butonlar">
+          <button class="iptal-btn" onclick={() => (islemModalAcik = false)}
+            >İptal</button
+          >
+          <button class="ekle-btn" onclick={islemKaydet}>Kaydet</button>
+        </div>
+      </div>
+    </div>
+  {/if}
 </main>
