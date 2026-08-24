@@ -15,12 +15,23 @@
     sayfaGit,
     sayfalariSifirla,
   } from "./lib/store.svelte.js";
-  import RedModal from "./lib/RedModal.svelte";
-  import KategoriModal from "./lib/KategoriModal.svelte";
-  import KategoriDetayModal from "./lib/KategoriDetayModal.svelte";
-  import KullaniciModal from "./lib/KullaniciModal.svelte";
-  import UrunModal from "./lib/UrunModal.svelte";
-  import IslemModal from "./lib/IslemModal.svelte";
+
+  // Modallar
+  import Login from "./lib/Login.svelte";
+
+  // Sayfa Bileşenleri
+  import BayiRaporlar from "./lib/BayiRaporlar.svelte";
+  import BayiStok from "./lib/BayiStok.svelte";
+  import AdminHareketler from "./lib/AdminHareketler.svelte";
+  import AdminKategoriler from "./lib/AdminKategoriler.svelte";
+  import AdminUrunler from "./lib/AdminUrunler.svelte";
+  import AdminBayiler from "./lib/AdminBayiler.svelte";
+  import AdminIstekler from "./lib/AdminIstekler.svelte";
+  import AdminKullanicilar from "./lib/AdminKullanicilar.svelte";
+  import Magaza from "./lib/Magaza.svelte";
+  import Profil from "./lib/Profil.svelte";
+  import BayiTalepler from "./lib/BayiTalepler.svelte";
+
   Chart.register(...registerables);
 
   let karsilama = $state(false);
@@ -34,143 +45,20 @@
     avatar_url: "",
   });
 
-  // Geçmiş tablosu
-  let history = $state([]);
+  // Bayi / Admin / Kullanıcı Verileri
+  let bekleyenSayi = $state(0);
 
-  // Grafik
-  let chartCanvas = $state(null);
-  let chartInstance = null;
-
-  // Giriş
-  let loginUser = $state("");
-  let loginPass = $state("");
-  let loginError = $state("");
-
-  // Kayıt Olma
-  let kayitModu = $state(false);
-  let kayitForm = $state({
-    username: "",
-    password: "",
-    email: "",
-    address: "",
-    phone: "",
-  });
-  let kayitMesaj = $state("");
-
-  // Kullanıcı ekleme
-  let kullaniciModalAcik = $state(false);
-
-  // Ürün Ekleme
-  let urunModalAcik = $state(false);
-  let duzenlenenUrun = $state(null);
-
-  // Kategori
-  let kategoriModalAcik = $state(false);
-  let kategoriDetayAcik = $state(false);
-  let acikKategori = $state(null);
-
-  let anaKategoriler = $derived(veri.categories.filter((c) => !c.parent_id));
-  //
-  //bayi oturumu
-  //
-  let dealers = $state([]);
-  let myMovements = $state([]);
-  //
-  //admin oturumu
-  //
-  let movements = $state([]);
-  let requests = $state([]);
-  let requestFiltre = $state("all");
-  let bekleyenSayi = $derived(
-    requests.filter((r) => r.status === "pending").length,
-  );
-  let redModalAcik = $state(false);
-  let redTalepId = $state(null);
-  //
-  //Kullanıcı oturumu
-  //
-  let users = $state([]);
-  //
-  //Mağaza
-  //
-  let shopData = $state([]);
-  let shopOffset = $state(0);
-  let hepsiYuklendi = $state(false);
-  let yukleniyorShop = $state(false);
-  const shopLimit = 14;
-  let sentinel = $state(null);
-  //
-  //Bayi Stok-fiyat
-  //
-  let islemModalAcik = $state(false);
-  let islemUrunId = $state("");
-  //
-  //Depo Durum
-  //
-
-  function depoDurumu(stok) {
-    const s = Number(stok) || 0;
-    const yuzde = Math.min(100, Math.round((s / 100) * 100));
-    let sinif = "bol";
-    let etiket = "Bol";
-    if (s === 0) {
-      sinif = "bos";
-      etiket = "Tükendi";
-    } else if (s <= 10) {
-      sinif = "kritik";
-      etiket = "Kritik";
-    } else if (s <= 30) {
-      sinif = "az";
-      etiket = "Az";
-    } else if (s <= 60) {
-      sinif = "normal";
-      etiket = "Normal";
+  async function girisSonrasi() {
+    if (oturum.role === "Bayi") {
+      durum.aktifSekme = "anasayfa";
+    } else if (oturum.role === "Admin") {
+      durum.aktifSekme = "hareketler";
+      await loadAll();
+    } else if (oturum.role === "Kullanici") {
+      durum.aktifSekme = "magaza";
     }
-    return { yuzde, sinif, sayi: s, etiket };
-  }
-  //
-  // Giriş ekranı
-  //
-  async function login() {
-    loginError = "";
-    try {
-      const res = await fetch(`${API}/api/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: loginUser, password: loginPass }),
-      });
-      if (!res.ok) throw new Error("Kullanıcı adı veya şifre hatalı");
-      const data = await res.json();
-      oturum.token = data.token;
-      oturum.role = data.role;
-      oturum.currentUser = data.username;
-      oturum.avatarUrl = data.avatar_url || "";
-      localStorage.setItem("token", oturum.token);
-      localStorage.setItem("username", oturum.currentUser);
-      localStorage.setItem("avatar_url", oturum.avatarUrl);
-      if (oturum.role === "Bayi") {
-        durum.aktifSekme = "anasayfa";
-        await loadMyStock();
-        await loadMyMovements();
-        await loadHistory();
-      } else if (oturum.role == "Admin") {
-        durum.aktifSekme = "hareketler";
-        await loadAll();
-        await loadMovements();
-        await loadDealers();
-        await loadUsers();
-      } else if (oturum.role == "Kullanici") {
-        durum.aktifSekme = "magaza";
-        shopSifirla();
-        await loadShop();
-      }
-      karsilama = true;
-      setTimeout(() => {
-        karsilama = false;
-      }, 1000);
-    } catch (e) {
-      loginError = e instanceof Error ? e.message : String(e);
-    }
+    karsilama = true;
+    setTimeout(() => (karsilama = false), 1000);
   }
 
   function logout() {
@@ -186,45 +74,7 @@
     localStorage.clear();
     location.reload();
   }
-  //
-  //Kayıt Ol
-  //
-  async function kayitOl() {
-    kayitMesaj = "";
-    loginError = "";
-    try {
-      const res = await fetch(`${API}/api/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(kayitForm),
-      });
-      if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || `HTTP ${res.status}`);
-      }
-      kayitMesaj = "Kayıt başarılı ! Şimdi giriş yapabilirsiniz.";
-      loginUser = kayitForm.username;
-      kayitForm = {
-        username: "",
-        password: "",
-        email: "",
-        address: "",
-        phone: "",
-      };
-      kayitModu = false;
-    } catch (e) {
-      loginError = e instanceof Error ? e.message : String(e);
-    }
-  }
 
-  let epostaGecerli = $derived.by(() => {
-    const e = kayitForm.email?.trim() || "";
-    if (!e) return null; // boşsa henüz bir şey söyleme
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
-  });
-  //
-  // Sayfa Fonksiyonları
-  //
   async function loadAll() {
     durum.loading = true;
     durum.error = "";
@@ -243,304 +93,8 @@
     }
   }
 
-  async function loadDealers() {
-    try {
-      const res = await fetch(`${API}/api/dealers`, {
-        headers: { Authorization: oturum.token },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      dealers = await res.json();
-    } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
-    }
-  }
-
-  async function loadUsers() {
-    try {
-      const res = await fetch(`${API}/api/users`, {
-        headers: { Authorization: oturum.token },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      users = await res.json();
-    } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
-    }
-  }
-
-  async function loadShop() {
-    if (yukleniyorShop || hepsiYuklendi) {
-      return;
-    }
-    yukleniyorShop = true;
-    try {
-      const res = await fetch(
-        `${API}/api/shop?offset=${shopOffset}&limit=${shopLimit}`,
-        {
-          headers: { Authorization: oturum.token },
-        },
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const yeni = await res.json();
-
-      if (yeni.length < shopLimit) hepsiYuklendi = true;
-
-      shopData = [...shopData, ...yeni];
-      shopOffset += yeni.length;
-    } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
-    } finally {
-      durum.loading = false;
-      yukleniyorShop = false;
-    }
-  }
-
-  function shopSifirla() {
-    shopData = [];
-    shopOffset = 0;
-    hepsiYuklendi = false;
-  }
-
-  $effect(() => {
-    if (durum.aktifSekme !== "magaza" || !sentinel) return;
-
-    const gozlemci = new IntersectionObserver(
-      (girisler) => {
-        if (girisler[0].isIntersecting) {
-          loadShop();
-        }
-      },
-      { rootMargin: "200px" },
-    );
-
-    gozlemci.observe(sentinel);
-
-    return () => gozlemci.disconnect();
-  });
-
-  async function loadProfile() {
-    try {
-      const res = await fetch(`${API}/api/profile`, {
-        headers: { Authorization: oturum.token },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      profil = await res.json();
-    } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
-    }
-  }
-
-  async function profilGuncelle() {
-    try {
-      const res = await fetch(`${API}/api/profile`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: oturum.token,
-        },
-        body: JSON.stringify({
-          address: profil.address,
-          phone: profil.phone,
-          avatar_url: profil.avatar_url,
-        }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      oturum.avatarUrl = profil.avatar_url || "";
-      localStorage.setItem("avatar_url", oturum.avatarUrl);
-      alert("Profil Güncellendi");
-    } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
-    }
-  }
-
-  $effect(() => {
-    if (durum.aktifSekme === "profil") {
-      loadProfile();
-    }
-  });
-  //
-  //Bayi Stok-Fiyat
-  //
-  function islemModalAc(productId = "") {
-    islemUrunId = productId;
-    islemModalAcik = true;
-  }
-  //
-  // Kategori sayfası
-  //
-  function altlariGetir(anaId) {
-    return veri.categories.filter((c) => c.parent_id === anaId);
-  }
-
-  function kategoriDetayAc(kategori) {
-    acikKategori = kategori;
-    kategoriDetayAcik = true;
-  }
-  //
-  // Ürünlerin Fonksiyonları
-  //
-  function urunEkleAc() {
-    duzenlenenUrun = null;
-    urunModalAcik = true;
-  }
-
-  function urunDuzenleAc(p) {
-    duzenlenenUrun = p;
-    urunModalAcik = true;
-  }
-
-  async function deleteProduct(id) {
-    try {
-      const res = await fetch(`${API}/api/products/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: oturum.token },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      await loadAll();
-    } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
-    }
-  }
-  //
-  // Admin onay fonksiyonu
-  //
-  async function loadRequests(filtre = requestFiltre) {
-    try {
-      const res = await fetch(`${API}/api/requests?status=${filtre}`, {
-        headers: { Authorization: oturum.token },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      requests = await res.json();
-    } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
-    }
-  }
-
-  async function talepKarar(id, karar, not = "") {
-    try {
-      const res = await fetch(`${API}/api/requests/${id}/${karar}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: oturum.token,
-        },
-        body: JSON.stringify({ note: not }),
-      });
-      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-      await loadRequests();
-      await loadAll();
-    } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
-    }
-  }
-
-  $effect(() => {
-    if (oturum.role === "Admin" && durum.aktifSekme === "istekler") {
-      loadRequests(requestFiltre);
-    }
-  });
-
-  function redModalAc(id) {
-    redTalepId = id;
-    redModalAcik = true;
-  }
-  //
-  //Bayi Fonksiyonları
-  //
-  async function loadMyStock() {
-    try {
-      const res = await fetch(`${API}/api/my-stock`, {
-        headers: { Authorization: oturum.token },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      veri.myStock = await res.json();
-    } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
-    } finally {
-      durum.loading = false;
-    }
-  }
-
-  async function loadMyMovements() {
-    try {
-      const res = await fetch(`${API}/api/my-stock/movements`, {
-        headers: { Authorization: oturum.token },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      myMovements = await res.json();
-    } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
-    }
-  }
-
-  async function loadMovements() {
-    try {
-      const res = await fetch(`${API}/api/movements`, {
-        headers: { Authorization: oturum.token },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      movements = await res.json();
-    } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
-    }
-  }
-
-  async function loadHistory() {
-    try {
-      const res = await fetch(`${API}/api/my-stock/history`, {
-        headers: { Authorization: oturum.token },
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      history = await res.json();
-      setTimeout(drawChart, 0);
-    } catch (e) {
-      durum.error = e instanceof Error ? e.message : String(e);
-    }
-  }
-  //
-  // Grafik Fonksiyonu
-  //
-  function drawChart() {
-    if (!chartCanvas || !history.length) return;
-
-    if (chartInstance) chartInstance.destroy();
-
-    chartInstance = new Chart(chartCanvas, {
-      type: "bar",
-      data: {
-        labels: history.map((h) =>
-          new Date(h.tarih).toLocaleDateString("tr-TR"),
-        ),
-        datasets: [
-          {
-            label: "Giriş",
-            data: history.map((h) => h.giris),
-            backgroundColor: "#22a722",
-          },
-          {
-            label: "Çıkış",
-            data: history.map((h) => h.cikis),
-            backgroundColor: "#c00",
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        scales: { y: { beginAtZero: true } },
-      },
-    });
-  }
-
-  $effect(() => {
-    if (durum.aktifSekme === "raporlar" && history.length) {
-      setTimeout(drawChart, 0);
-    }
-  });
-  //
-  //Kullanıcı Fonksiyonu
-  //
   onMount(async () => {
     if (!oturum.token) return;
-
     try {
       const res = await fetch(`${API}/api/profile`, {
         headers: { Authorization: oturum.token },
@@ -559,148 +113,21 @@
       logout();
       return;
     }
+
     if (oturum.role === "Bayi") {
       durum.aktifSekme = "anasayfa";
-      loadMyStock();
-      loadMyMovements();
-      loadHistory();
     } else if (oturum.role === "Admin") {
       durum.aktifSekme = "hareketler";
       loadAll();
-      loadMovements();
-      loadDealers();
-      loadUsers();
     } else if (oturum.role === "Kullanici") {
       durum.aktifSekme = "magaza";
-      shopSifirla();
-      loadShop();
     }
   });
 </script>
 
 <main>
   {#if !oturum.token}
-    <div class="login-wrapper">
-      <div class="lava-background">
-        <div class="lava lava-1"></div>
-        <div class="lava lava-2"></div>
-        <div class="lava lava-3"></div>
-        <div class="lava lava-4"></div>
-        <div class="lava lava-5"></div>
-        <div class="lava lava-6"></div>
-        <div class="lava lava-7"></div>
-      </div>
-      <div class="flip-cerceve">
-        <div class="flip-ic" class:donuk={kayitModu}>
-          <div class="flip-yuz flip-on" inert={kayitModu}>
-            <div class="login-card">
-              <div class="avatar">
-                <svg viewBox="0 0 24 24" width="40" height="40" fill="white">
-                  <path
-                    d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-                  />
-                </svg>
-              </div>
-
-              <div class="input-group">
-                <span class="input-icon">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="#888"
-                    ><path
-                      d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
-                    /></svg
-                  >
-                </span>
-                <input placeholder="Kullanıcı Adı" bind:value={loginUser} />
-              </div>
-
-              <div class="input-group">
-                <span class="input-icon">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="#888"
-                    ><path
-                      d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3-9H9V6c0-1.66 1.34-3 3-3s3 1.34 3 3v2z"
-                    /></svg
-                  >
-                </span>
-                <input
-                  type="password"
-                  placeholder="Şifre"
-                  bind:value={loginPass}
-                  onkeydown={(e) => e.key === "Enter" && login()}
-                />
-              </div>
-
-              <button class="login-btn" onclick={login}>Giriş</button>
-              <button
-                class="mod-degistir"
-                onclick={() => {
-                  kayitModu = true;
-                  (loginError = ""), (kayitMesaj = "");
-                }}
-              >
-                Hesabın yok mu? Kayıt Ol
-              </button>
-              {#if kayitMesaj}<p class="basari">{kayitMesaj}</p>{/if}
-              {#if loginError && !kayitModu}<p class="error">
-                  {loginError}
-                </p>{/if}
-            </div>
-          </div>
-
-          <div class="flip-yuz flip-arka" inert={!kayitModu}>
-            <div class="login-card">
-              <h3 class="kayit-baslik">Kayıt Ol</h3>
-              <div class="input-group">
-                <input
-                  placeholder="Kullanıcı Adı"
-                  bind:value={kayitForm.username}
-                />
-              </div>
-              <div class="input-group">
-                <input
-                  type="password"
-                  placeholder="Şifre (en az 6 karakter)"
-                  bind:value={kayitForm.password}
-                />
-              </div>
-              <div class="input-group" class:hatali={epostaGecerli === false}>
-                <input
-                  type="email"
-                  placeholder="E-Posta"
-                  bind:value={kayitForm.email}
-                />
-              </div>
-              {#if epostaGecerli === false}
-                <p class="ipucu-hata">
-                  Geçerli bir E-Posta giriniz. (ornek@site.com)
-                </p>
-              {/if}
-              <div class="input-group">
-                <input placeholder="Adres" bind:value={kayitForm.address} />
-              </div>
-              <div class="input-group">
-                <input placeholder="Telefon" bind:value={kayitForm.phone} />
-              </div>
-              <button class="login-btn" onclick={kayitOl}>Kayıt Ol</button>
-              <button
-                class="mod-degistir"
-                onclick={() => {
-                  kayitModu = false;
-                  loginError = "";
-                }}
-              >
-                Zaten hesabım var -Giriş Yap
-              </button>
-              {#if loginError && kayitModu}<p class="error">
-                  {loginError}
-                </p>{/if}
-            </div>
-          </div>
-        </div>
-        <!-- Ic -->
-      </div>
-      <!-- Cerceve -->
-    </div>
-    <!-- Wrapper -->
+    <Login girisYapildi={girisSonrasi} />
   {:else if karsilama}
     <div class="karsilama-ekran">
       {#if oturum.avatarUrl}
@@ -718,8 +145,9 @@
           onclick={() =>
             (durum.aktifSekme =
               oturum.role === "Admin" ? "hareketler" : "anasayfa")}
-          >INTSHOP</button
         >
+          INTSHOP
+        </button>
 
         <div class="toolbar-sekmeler">
           {#if oturum.role === "Admin"}
@@ -739,10 +167,11 @@
             <button
               class:aktif={durum.aktifSekme === "istekler"}
               onclick={() => (durum.aktifSekme = "istekler")}
-              >İstekler {#if bekleyenSayi > 0}<span class="badge"
-                  >{bekleyenSayi}</span
-                >{/if}</button
             >
+              İstekler {#if bekleyenSayi > 0}<span class="badge"
+                  >{bekleyenSayi}</span
+                >{/if}
+            </button>
             <button
               class:aktif={durum.aktifSekme === "users"}
               onclick={() => (durum.aktifSekme = "users")}>Kullanıcılar</button
@@ -755,6 +184,10 @@
             <button
               class:aktif={durum.aktifSekme === "raporlar"}
               onclick={() => (durum.aktifSekme = "raporlar")}>Raporlar</button
+            >
+            <button
+              class:aktif={durum.aktifSekme === "talepler"}
+              onclick={() => (durum.aktifSekme = "talepler")}>Talepler</button
             >
           {:else if oturum.role === "Kullanici"}
             <button
@@ -793,550 +226,30 @@
           </p>
         </div>
       {:else if durum.aktifSekme === "stok"}
-        <h2>Stok Yönetimi</h2>
-        <div class="tablo-cerceve">
-          <button class="islem-btn1" onclick={() => islemModalAc("")}
-            >Stok/fiyat</button
-          >
-          <table>
-            <thead>
-              <tr
-                ><th>Ürün-Id</th><th>Ürün</th><th>Bayi Fiyatı</th><th
-                  >Kategori</th
-                ><th>Depo Durumu</th><th>Son Güncelleme Tarihi</th><th>İşlem</th
-                ></tr
-              >
-            </thead>
-            <tbody>
-              {#each veri.myStock as p}
-                {@const d = depoDurumu(p.stock)}
-                <tr class:dusuk={p.stock < 10}>
-                  <td>{p.product_id}</td>
-                  <td>{p.name}</td>
-                  <td>{fiyatKolon(p.benim_fiyatim)}</td>
-                  <td>{p.category}</td>
-                  <td>
-                    <div class="depo-bar">
-                      <div
-                        class="depo-dolu {d.sinif}"
-                        style="width: {d.yuzde}%"
-                      ></div>
-                      <span class="depo-yazi">{d.sayi}</span>
-                    </div>
-                    <span class="depo-etiket {d.sinif}">{d.etiket}</span>
-                  </td>
-                  <td class="tarih-hucre"
-                    >{p.son_hareket
-                      ? new Date(p.son_hareket).toLocaleString("tr-TR")
-                      : "-"}</td
-                  >
-                  <td
-                    ><button
-                      class="islem-btn"
-                      onclick={() => islemModalAc(p.product_id)}
-                      >Stok/fiyat</button
-                    ></td
-                  >
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
+        <BayiStok />
       {:else if durum.aktifSekme === "raporlar"}
-        <h2>Raporlar</h2>
-        <div>
-          <h3>Giriş / Çıkış Geçmişi</h3>
-          {#if myMovements.length}
-            <div class="tablo-cerceve">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Tarih</th><th>Ürün</th><th>İşlem</th><th>Miktar</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {#each sayfala(myMovements, "raporlar") as m}
-                    <tr>
-                      <td
-                        >{new Date(m.created_at).toLocaleDateString(
-                          "tr-TR",
-                        )}</td
-                      >
-                      <td>{m.urun}</td>
-                      <td style="color: {m.quantity > 0 ? 'green' : 'red'}"
-                        >{m.quantity > 0 ? "Giriş" : "Çıkış"}</td
-                      >
-                      <td>{Math.abs(m.quantity)}</td>
-                    </tr>
-                  {/each}
-                </tbody>
-              </table>
-              <div class="pagination">
-                <button
-                  onclick={() => sayfaGit("raporlar", -1)}
-                  disabled={(sayfalar.raporlar ?? 1) === 1}>Önceki</button
-                >
-                <span
-                  >Sayfa {sayfalar.raporlar ?? 1} / {toplamSayfa(
-                    myMovements,
-                  )}</span
-                >
-                <button
-                  onclick={() => sayfaGit("raporlar", 1)}
-                  disabled={(sayfalar.raporlar ?? 1) ===
-                    toplamSayfa(myMovements)}>Sonraki</button
-                >
-              </div>
-            </div>
-          {:else}
-            <p>Henüz giriş/çıkış yapılmamış.</p>
-          {/if}
-        </div>
-
-        <div>
-          <h3>Giriş / Çıkış Grafiği</h3>
-          {#if history.length}
-            <div>
-              <canvas bind:this={chartCanvas}></canvas>
-            </div>
-          {/if}
-        </div>
+        <BayiRaporlar />
       {:else if durum.aktifSekme === "kategoriler"}
-        <div class="sekme-baslik">
-          <h2>Kategoriler</h2>
-          <button
-            class="ekle-btn"
-            onclick={() => {
-              kategoriModalAcik = true;
-            }}>+ Yeni Ana Kategori</button
-          >
-        </div>
-
-        {#if anaKategoriler.length}
-          <div class="kategori-kartlari">
-            {#each anaKategoriler as ana}
-              {@const altlar = altlariGetir(ana.id)}
-              <button
-                class="kategori-kart"
-                onclick={() => kategoriDetayAc(ana)}
-              >
-                <div class="kart-ust">
-                  <h3>{ana.name}</h3>
-                  <span class="kart-sayi">{altlar.length}</span>
-                </div>
-
-                <div class="kart-altlar">
-                  {#if altlar.length}
-                    {#each altlar.slice(0, 4) as alt}
-                      <span class="alt-etiket">{alt.name}</span>
-                    {/each}
-                    {#if altlar.length > 4}
-                      <span class="alt-etiket daha"
-                        >+{altlar.length - 4} daha</span
-                      >
-                    {/if}
-                  {:else}
-                    <span class="bos-yazi">Alt Kategori Yok</span>
-                  {/if}
-                </div>
-              </button>
-            {/each}
-          </div>
-        {:else}
-          <p>Kategori Yok</p>
-        {/if}
+        <AdminKategoriler yenile={loadAll}/>
       {:else if durum.aktifSekme === "istekler"}
-        <h2>Bekleyen İstekler</h2>
-        <div class="filtre-satir">
-          <button
-            class:aktif={requestFiltre === "all"}
-            onclick={() => (requestFiltre = "all")}>Hepsi</button
-          >
-          <button
-            class:aktif={requestFiltre === "pending"}
-            onclick={() => (requestFiltre = "pending")}>Bekleyen</button
-          >
-          <button
-            class:aktif={requestFiltre === "approved"}
-            onclick={() => (requestFiltre = "approved")}>Onaylanan</button
-          >
-          <button
-            class:aktif={requestFiltre === "rejected"}
-            onclick={() => (requestFiltre = "rejected")}>Reddedilen</button
-          >
-        </div>
-
-        {#if requests.length}
-          <div class="tablo-cerceve">
-            <table>
-              <thead>
-                <tr>
-                  <th>Bayi</th><th>Ürün</th><th>Eski Fiyat</th><th
-                    >Yeni Fiyat</th
-                  ><th>Aralık</th><th>Tarih</th><th>Durum</th><th>İşlem</th>
-                </tr>
-              </thead>
-              <tbody>
-                {#each sayfala(requests, "istekler") as r}
-                  <tr>
-                    <td>{r.bayi}</td>
-                    <td>{r.urun}</td>
-                    <td>{fiyatKolon(r.old_price)}</td>
-                    <td><strong>{fiyatKolon(r.new_price)}</strong></td>
-                    <td class="kucuk"
-                      >{fiyatKolon(r.alt_sinir)} - {fiyatKolon(r.ust_sinir)}</td
-                    >
-                    <td class="kucuk"
-                      >{new Date(r.created_at).toLocaleString("tr-TR")}</td
-                    >
-                    <td>
-                      {#if r.status === "pending"}
-                        <span class="durum bekliyor">Bekliyor</span>
-                      {:else if r.status === "approved"}
-                        <span class="durum onayli">Onaylandı</span>
-                      {:else if r.status === "rejected"}
-                        <span class="durum redli">Reddedildi</span>
-                      {:else}
-                        <span class="durumlar">{r.status}</span>
-                      {/if}
-                      {#if r.admin_note}<div class="kucuk">
-                          {r.admin_note}
-                        </div>{/if}
-                    </td>
-                    <td>
-                      {#if r.status === "pending"}
-                        <button
-                          class="onay-btn"
-                          onclick={() => talepKarar(r.id, "approve")}
-                          >Onayla</button
-                        >
-                        <button class="red-btn" onclick={() => redModalAc(r.id)}
-                          >Reddet</button
-                        >
-                      {:else}
-                        <span class="kucuk">-</span>
-                      {/if}
-                    </td>
-                  </tr>
-                {/each}
-              </tbody>
-            </table>
-          </div>
-          <div class="pagination">
-            <button
-              onclick={() => sayfaGit("istekler", -1)}
-              disabled={(sayfalar.istekler ?? 1) === 1}>Önceki</button
-            >
-            <span>Sayfa {sayfalar.istekler ?? 1} / {toplamSayfa(requests)}</span
-            >
-            <button
-              onclick={() => sayfaGit("istekler", 1)}
-              disabled={(sayfalar.istekler ?? 1) === toplamSayfa(requests)}
-              >Sonraki</button
-            >
-          </div>
-        {:else}
-          <p>Bu durumda istek yok.</p>
-        {/if}
+        <AdminIstekler sayiDegisti={(n) => (bekleyenSayi = n)} />
       {:else if durum.aktifSekme === "hareketler"}
-        <h2>Bayi hareketleri</h2>
-        {#if movements.length}
-          <div class="tablo-cerceve">
-            <table>
-              <thead>
-                <tr
-                  ><th>Bayi</th><th>Ürün</th><th>İşlem</th><th>Miktar</th><th
-                    >Tarih</th
-                  ></tr
-                >
-              </thead>
-              <tbody>
-                {#each sayfala(movements, "hareketler") as m}
-                  <tr>
-                    <td>{m.bayi}</td>
-                    <td>{m.urun}</td>
-                    <td style="color: {m.quantity > 0 ? 'green' : '#c00'}">
-                      {m.quantity > 0 ? "Giriş" : "Çıkış"}
-                    </td>
-                    <td>{Math.abs(m.quantity)}</td>
-                    <td>{new Date(m.created_at).toLocaleString("tr-TR")}</td>
-                  </tr>
-                {/each}
-              </tbody>
-            </table>
-          </div>
-          <div class="pagination">
-            <button
-              onclick={() => sayfaGit("hareketler", -1)}
-              disabled={(sayfalar.hareketler ?? 1) === 1}>Önceki</button
-            >
-            <span
-              >Sayfa {sayfalar.hareketler ?? 1} / {toplamSayfa(movements)}</span
-            >
-            <button
-              onclick={() => sayfaGit("hareketler", 1)}
-              disabled={(sayfalar.hareketler ?? 1) === toplamSayfa(movements)}
-              >Sonraki</button
-            >
-          </div>
-        {:else}
-          <p>Henüz hareket yok.</p>
-        {/if}
+        <AdminHareketler />
+      {:else if durum.aktifSekme === "talepler"}
+        <BayiTalepler />
       {:else if durum.aktifSekme === "urunler"}
-        <h2>Ürünler</h2>
-        <button class="ekle-btn" onclick={urunEkleAc}>+ Yeni Ürün</button>
-
-        {#if veri.products.length}
-          <div class="tablo-cerceve">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th><th>Resim</th><th>Ürün</th><th>Kategori</th><th
-                    >Stok</th
-                  ><th>Fiyat</th><th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {#each sayfala(veri.products, "urunler") as p}
-                  <tr class:dusuk={p.stock < 10}>
-                    <td>{p.id}</td>
-                    <td>
-                      {#if p.image_url}
-                        <img src={p.image_url} alt={p.name} />
-                      {/if}
-                    </td>
-                    <td>{p.name}</td>
-                    <td
-                      >{p.parent_category
-                        ? `${p.parent_category} › ${p.category}`
-                        : p.category}</td
-                    >
-                    <td>{p.stock}</td>
-                    <td>{fiyatKolon(p.price)}</td>
-                    <td>
-                      <button
-                        class="duzenle-btn"
-                        onclick={() => urunDuzenleAc(p)}>Düzenle</button
-                      >
-                      <button class="sil" onclick={() => deleteProduct(p.id)}
-                        >Sil</button
-                      ></td
-                    >
-                  </tr>
-                {/each}
-              </tbody>
-            </table>
-          </div>
-          <div class="pagination">
-            <button
-              onclick={() => sayfaGit("urunler", -1)}
-              disabled={(sayfalar.urunler ?? 1) === 1}>Önceki</button
-            >
-            <span
-              >Sayfa {sayfalar.urunler ?? 1} / {toplamSayfa(
-                veri.products,
-              )}</span
-            >
-            <button
-              onclick={() => sayfaGit("urunler", 1)}
-              disabled={(sayfalar.urunler ?? 1) === toplamSayfa(veri.products)}
-              >Sonraki</button
-            >
-          </div>
-        {/if}
+        <AdminUrunler yenile={loadAll}/>
       {:else if durum.aktifSekme === "dealers"}
-        <h2>Bayiler</h2>
-        {#if dealers.length}
-          <div class="tablo-cerceve">
-            <table>
-              <thead>
-                <tr
-                  ><th>ID</th><th>Bayi Adı</th><th>Adres</th><th>Telefon</th
-                  ></tr
-                >
-              </thead>
-              <tbody>
-                {#each sayfala(dealers, "dealers") as d}
-                  <tr>
-                    <td>{d.id}</td>
-                    <td>{d.username}</td>
-                    <td>{d.address ?? "-"}</td>
-                    <td>{d.phone ?? "-"}</td>
-                  </tr>
-                {/each}
-              </tbody>
-            </table>
-          </div>
-          <div class="pagination">
-            <button
-              onclick={() => sayfaGit("dealers", -1)}
-              disabled={(sayfalar.dealers ?? 1) === 1}>Önceki</button
-            >
-            <span>Sayfa {sayfalar.dealers ?? 1} / {toplamSayfa(dealers)}</span>
-            <button
-              onclick={() => sayfaGit("dealers", 1)}
-              disabled={(sayfalar.dealers ?? 1) === toplamSayfa(dealers)}
-              >Sonraki</button
-            >
-          </div>
-        {:else}
-          <p>Henüz bayi yok.</p>
-        {/if}
+        <AdminBayiler />
       {:else if durum.aktifSekme === "users"}
-        <h2>Kullanıcılar</h2>
-        <button class="ekle-btn" onclick={() => (kullaniciModalAcik = true)}>
-          + Yeni Kullanıcı</button
-        >
-
-        {#if users.length}
-          <div class="tablo-cerceve">
-            <table>
-              <thead>
-                <tr><th>ID</th><th>Kullanıcı</th><th>Rol</th></tr>
-              </thead>
-              <tbody>
-                {#each sayfala(users, "users") as u}
-                  <tr>
-                    <td>{u.id}</td>
-                    <td>{u.username}</td>
-                    <td>{u.role}</td>
-                  </tr>
-                {/each}
-              </tbody>
-            </table>
-            <div class="pagination">
-              <button
-                onclick={() => sayfaGit("users", -1)}
-                disabled={(sayfalar.users ?? 1) === 1}>Önceki</button
-              >
-              <span>Sayfa {sayfalar.users ?? 1} / {toplamSayfa(users)}</span>
-              <button
-                onclick={() => sayfaGit("users", 1)}
-                disabled={(sayfalar.users ?? 1) === toplamSayfa(users)}
-                >Sonraki</button
-              >
-            </div>
-          </div>
-        {:else}
-          <p>Henüz kullanıcı yok.</p>
-        {/if}
-      {:else if durum.aktifSekme === "magaza"}
-        <h2>Mağaza</h2>
-        {#if shopData.length}
-          <div class="urun-kartlari">
-            {#each shopData as urun}
-              <div class="urun-kart">
-                {#if urun.image_url}
-                  <img
-                    src={urun.image_url}
-                    alt={urun.name}
-                    class="kart-resim"
-                  />
-                {/if}
-                <h3>{urun.name}</h3>
-                <p class="kart-satici">
-                  Satıcı: <strong>{urun.dealer_name}</strong>
-                </p>
-                <p class="kart-fiyat">{fiyatKolon(urun.price)}</p>
-                <p class="kart-stok">Stok: {urun.stock}</p>
-                <button class="sepet-btn">Sepete Ekle</button>
-              </div>
-            {/each}
-          </div>
-          {#if !hepsiYuklendi}
-            <div bind:this={sentinel} class="sentinel">
-              {#if yukleniyorShop}
-                <div class="spinner"></div>
-              {/if}
-            </div>
-          {/if}
-        {:else}
-          <p>Şu an satışta ürün yok.</p>
-        {/if}
+        <AdminKullanicilar />
       {:else if durum.aktifSekme === "profil"}
-        <h2>Profilim</h2>
-        <div class="profil-sayfa">
-          <div class="profil-avatar">
-            {#if profil.avatar_url}
-              <img src={profil.avatar_url} alt="avatar" />
-            {/if}
-          </div>
-
-          <div class="profil-bilgi">
-            <label
-              >Kullanıcı Adı
-              <input value={profil.username} disabled />
-            </label>
-            {#if oturum.role === "Admin"}
-              <label>
-                Rol<input value={profil.role} disabled />
-              </label>
-            {/if}
-            <label
-              >Adres
-              <input bind:value={profil.address} placeholder="Adres" />
-            </label>
-            <label
-              >Telefon
-              <input bind:value={profil.phone} placeholder="Telefon" />
-            </label>
-            <label
-              >Avatar URL
-              <input
-                bind:value={profil.avatar_url}
-                placeholder="/avatars/..."
-              />
-            </label>
-            <button class="ekle-btn" onclick={profilGuncelle}>Kaydet</button>
-          </div>
-        </div>
+        <Profil />
+      {:else if durum.aktifSekme === "magaza"}
+        <Magaza />
       {/if}
     </div>
   {/if}
 
-  {#if durum.error}<p class="error">{durum.error}</p>
-  {/if}
-  <!--  Kullanıcı Ekleme Modalı  -->
-  <KullaniciModal
-    bind:acik={kullaniciModalAcik}
-    eklendi={() => {
-      loadUsers();
-      loadDealers();
-    }}
-  />
-  <!--  Ürün Ekleme Modalı  -->
-  <UrunModal
-    bind:acik={urunModalAcik}
-    urun={duzenlenenUrun}
-    kaydedildi={loadAll}
-  />
-
-  <!-- Kategori Modal-->
-  <KategoriModal bind:acik={kategoriModalAcik} eklendi={loadAll} />
-  <KategoriDetayModal
-    bind:acik={kategoriDetayAcik}
-    kategori={acikKategori}
-    degisti={loadAll}
-  />
-  <!-- Red Modalı -->
-  <RedModal
-    bind:acik={redModalAcik}
-    onay={(sebep) => talepKarar(redTalepId, "reject", sebep)}
-  />
-  <!-- Stok-fiyat Modal -->
-  <IslemModal
-    bind:acik={islemModalAcik}
-    urunId={islemUrunId}
-    tamamlandi={(tur) => {
-      if (tur === "fiyat") {
-        durum.bildirim = "Fiyat talebiniz onaya gönderildi.";
-        setTimeout(() => (durum.bildirim = ""), 4000);
-        loadMyStock();
-      } else {
-        loadMyStock();
-        loadMyMovements();
-        loadHistory();
-      }
-    }}
-  />
+  {#if durum.error}<p class="error">{durum.error}</p>{/if}
 </main>

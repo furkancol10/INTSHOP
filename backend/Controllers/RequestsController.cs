@@ -84,4 +84,50 @@ public class RequestsController : ControllerBase
 
         return Ok(new { id , durum = "reddedildi"});
     }
+    //
+    // BAYİNİN KENDİ TALEPLERİ
+    //
+    [HttpGet("mine")]
+    public async Task<IActionResult> Mine()
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Bayi") return StatusCode(403, "Sadece bayiler");
+
+        var dealerId = await _db.ExecuteScalarAsync<int?>(
+            "SELECT id FROM users WHERE token = @token", new { token });
+        if ( dealerId is null) return Unauthorized();
+
+        var sql = @"
+            SELECT r.id, r.old_price, r.new_price, r.status, r.admin_note,
+                    r.created_at, r.resolved_at, p.name AS urun
+            FROM requests r
+            JOIN products p ON p.id = r.product_id
+            WHERE r.dealer_id = @dealerId
+            ORDER BY r.created_at DESC";
+        var rows = await _db.QueryAsync(sql, new { dealerId = dealerId.Value });
+        return Ok(rows);
+    }
+
+    [HttpPut("{id}/cancel")]
+    public async Task<IActionResult> Cancel(int id)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Bayi") return StatusCode(403, "Sadece bayiler");
+
+        var dealerId = await _db.ExecuteScalarAsync<int?>(
+            "SELECT id FROM users WHERE token = @token", new { token });
+        if (dealerId is null) return Unauthorized();
+
+        var etkilenen = await _db.ExecuteAsync(
+            @"UPDATE requests SET status = 'cancelled', resolved_at = NOW()
+              WHERE id = @id AND dealer_id = @dealerId AND status = 'pending'",
+            new { id, dealerId = dealerId.Value });
+
+        if (etkilenen == 0)
+            return BadRequest("Bu talep iptal edilemez (size ait değil ya da zaten karara bağlanmış)");
+
+        return Ok(new { id, durum = "iptal edildi" }); 
+    }
 }

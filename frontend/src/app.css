@@ -1157,3 +1157,14 @@ sepet-btn:active {
     transform: rotate(360deg);
   }
 }
+
+.rozet {
+  padding: .25rem .6rem;
+  border-radius: 999px;
+  font-size: .8rem;
+  white-space: nowrap;
+}
+.rozet.pending   { background: #fff3cd; color: #856404; }
+.rozet.approved  { background: #d4edda; color: #155724; }
+.rozet.rejected  { background: #f8d7da; color: #721c24; }
+.rozet.cancelled { background: #e2e3e5; color: #383d41; }
