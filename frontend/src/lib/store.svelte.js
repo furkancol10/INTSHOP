@@ -7,6 +7,8 @@ export const oturum = $state({
     avatarUrl: localStorage.getItem("avatar_url") || "",
 });
 
+// let sp = {} 
+
 export const durum= $state({
     aktifSekme : "hareketler",
     error : "",
@@ -57,4 +59,17 @@ export function sayfaGit(sekme, yon) {
 
 export function sayfalariSifirla() {
   for (const k of Object.keys(sayfalar)) delete sayfalar[k];
+}
+
+export function metinAra(dizi, arama, alanlar) {
+  if (!arama) return dizi;
+  const q = arama.toLowerCase();
+  return dizi.filter((o) =>
+    alanlar.some((alan) => String(o[alan] ?? "").toLowerCase().includes(q))
+  );
+}
+
+export function alanEsit(dizi, deger, alan) {
+  if (!deger) return dizi;
+  return dizi.filter((o) => o[alan] === deger);
 }

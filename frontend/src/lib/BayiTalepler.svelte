@@ -3,15 +3,14 @@
     import { API, authHeader, durum, fiyatKolon } from "./store.svelte";
 
     let talepler = $state([]);
-    let filtre = $state("all");
 
     async function loadTalepler() {
         try {
-            const res = await fetch(`${API}/api/requests/mine=${filtre}`, {
+            const res = await fetch(`${API}/api/requests/mine`, {
                 headers: authHeader(),
             });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            requests = await res.json();
+            talepler = await res.json();
         } catch (e) {
             durum.error = e instanceof Error ? e.message : String(e);
         }
@@ -19,7 +18,7 @@
 
     async function iptalEt(id) {
         try {
-            const res = await fetch(`${API}/api/requests/mine/${id}/cancel`, {
+            const res = await fetch(`${API}/api/requests/${id}/cancel`, {
                 method: "PUT",
                 headers: authHeader(),
             });
@@ -29,6 +28,17 @@
         } catch (e) {
             durum.error = e instanceof Error ? e.message : String(e);
         }
+    }
+
+    const durumlar = {
+        pending: "Onay bekliyor",
+        approved: "Onaylandı",
+        rejected: "Reddedildi",
+        cancelled: "İptal edildi",
+    };
+
+    function durumYazi(s) {
+        return durumlar[s] || s;
     }
 
     onMount(loadTalepler);
@@ -56,11 +66,11 @@
                     <td>{fiyatKolon(t.new_price)}</td>
                     <td
                         ><span class="rozet {t.status}"
-                            >{durumYaz(t.status)}</span
+                            >{durumYazi(t.status)}</span
                         ></td
                     >
                     <td>{t.admin_note || "-"}</td>
-                    <td>{new Date(t.created_at).toLocaleDateString("tr-TR")}</td
+                    <td>{new Date(t.created_at).toLocaleString("tr-TR")}</td
                     >
                     <td>
                         {#if t.status === "pending"}

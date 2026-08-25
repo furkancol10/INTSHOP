@@ -6,13 +6,6 @@
     oturum,
     durum,
     veri,
-    authHeader,
-    jsonHeader,
-    fiyatKolon,
-    sayfalar,
-    sayfala,
-    toplamSayfa,
-    sayfaGit,
     sayfalariSifirla,
   } from "./lib/store.svelte.js";
 
@@ -31,19 +24,11 @@
   import Magaza from "./lib/Magaza.svelte";
   import Profil from "./lib/Profil.svelte";
   import BayiTalepler from "./lib/BayiTalepler.svelte";
+  import AdminLoglar from "./lib/AdminLoglar.svelte";
 
   Chart.register(...registerables);
 
   let karsilama = $state(false);
-
-  // Profil Sayfası
-  let profil = $state({
-    username: "",
-    role: "",
-    address: "",
-    phone: "",
-    avatar_url: "",
-  });
 
   // Bayi / Admin / Kullanıcı Verileri
   let bekleyenSayi = $state(0);
@@ -52,7 +37,7 @@
     if (oturum.role === "Bayi") {
       durum.aktifSekme = "anasayfa";
     } else if (oturum.role === "Admin") {
-      durum.aktifSekme = "hareketler";
+      durum.aktifSekme = "loglar";
       await loadAll();
     } else if (oturum.role === "Kullanici") {
       durum.aktifSekme = "magaza";
@@ -61,7 +46,16 @@
     setTimeout(() => (karsilama = false), 1000);
   }
 
-  function logout() {
+  async function logout() {
+    try {
+      await fetch(`${API}/api/logout`, {
+        method: "POST",
+        headers: { Authorization: oturum.token },
+      });
+    } catch {
+      // sunucuya ulaşılamasa bile yerel çıkış yapılmalı
+    }
+
     oturum.token = "";
     oturum.role = "";
     oturum.currentUser = "";
@@ -117,7 +111,7 @@
     if (oturum.role === "Bayi") {
       durum.aktifSekme = "anasayfa";
     } else if (oturum.role === "Admin") {
-      durum.aktifSekme = "hareketler";
+      durum.aktifSekme = "loglar";
       loadAll();
     } else if (oturum.role === "Kullanici") {
       durum.aktifSekme = "magaza";
@@ -128,14 +122,9 @@
 <main>
   {#if !oturum.token}
     <Login girisYapildi={girisSonrasi} />
-  {:else if karsilama}
+  {:else if karsilama}{:else if !oturum.role}
     <div class="karsilama-ekran">
-      {#if oturum.avatarUrl}
-        <img src={oturum.avatarUrl} alt="avatar" class="karsilama-avatar" />
-      {/if}
-      <h1>Hoş Geldiniz, {oturum.currentUser}!</h1>
       <div class="spinner"></div>
-      <p>Sayfa Yükleniyor...</p>
     </div>
   {:else}
     <div class="toolbar">
@@ -144,7 +133,7 @@
           class="toolbar-baslik"
           onclick={() =>
             (durum.aktifSekme =
-              oturum.role === "Admin" ? "hareketler" : "anasayfa")}
+              oturum.role === "Admin" ? "loglar" : "anasayfa")}
         >
           INTSHOP
         </button>
@@ -175,6 +164,10 @@
             <button
               class:aktif={durum.aktifSekme === "users"}
               onclick={() => (durum.aktifSekme = "users")}>Kullanıcılar</button
+            >
+            <button
+              class:aktif={durum.aktifSekme === "hareketler"}
+              onclick={() => (durum.aktifSekme = "hareketler")}>Hareketler</button
             >
           {:else if oturum.role === "Bayi"}
             <button
@@ -225,12 +218,14 @@
             sekmesini kullanın.
           </p>
         </div>
+      {:else if durum.aktifSekme === "loglar"}
+        <AdminLoglar />
       {:else if durum.aktifSekme === "stok"}
         <BayiStok />
       {:else if durum.aktifSekme === "raporlar"}
         <BayiRaporlar />
       {:else if durum.aktifSekme === "kategoriler"}
-        <AdminKategoriler yenile={loadAll}/>
+        <AdminKategoriler yenile={loadAll} />
       {:else if durum.aktifSekme === "istekler"}
         <AdminIstekler sayiDegisti={(n) => (bekleyenSayi = n)} />
       {:else if durum.aktifSekme === "hareketler"}
@@ -238,7 +233,7 @@
       {:else if durum.aktifSekme === "talepler"}
         <BayiTalepler />
       {:else if durum.aktifSekme === "urunler"}
-        <AdminUrunler yenile={loadAll}/>
+        <AdminUrunler yenile={loadAll} />
       {:else if durum.aktifSekme === "dealers"}
         <AdminBayiler />
       {:else if durum.aktifSekme === "users"}

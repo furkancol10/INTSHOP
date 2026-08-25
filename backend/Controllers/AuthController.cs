@@ -1,5 +1,6 @@
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration.UserSecrets;
 using System.Data;
 
 [ApiController]
@@ -9,7 +10,7 @@ public class AuthController : ControllerBase
     private readonly IDbConnection _db;
     public AuthController(IDbConnection db) => _db = db;
 
-    public record RegisterReq(string username, string password, string email ,string role, string? address, string? phone);
+    public record RegisterReq(string username, string password, string email, string role, string? address, string? phone);
     public record LoginReq(string username, string password);
     public record SignupReq(string username, string password, string email, string? address, string? phone);
 
@@ -54,7 +55,11 @@ public class AuthController : ControllerBase
             "UPDATE users SET token = @token WHERE id = @id",
             new { token, id = (int)user.id });
 
-        return Ok(new { token, role = (string)user.role, username = req.username, avatar_url = (string?)user.avatar_url});
+        await _db.ExecuteAsync(
+            "INSERT INTO login_logs (user_id, action) VALUES (@userId, 'login')",
+            new { userId = (int)user.id });
+
+        return Ok(new { token, role = (string)user.role, username = req.username, avatar_url = (string?)user.avatar_url });
     }
 
     [HttpPost("signup")]
@@ -74,7 +79,7 @@ public class AuthController : ControllerBase
                 @"INSERT INTO users(username, password_hash, role, email, address, phone)
                     VALUES (@username, @hash, 'Kullanici', @email, @address, @phone)
                     RETURNING id",
-                new {req.username, hash, req.email, req.address, req.phone });
+                new { req.username, hash, req.email, req.address, req.phone });
             return Ok(new { id, req.username });
         }
         catch (Npgsql.PostgresException pex) when (pex.SqlState == "23505")
@@ -99,4 +104,25 @@ public class AuthController : ControllerBase
             return false;
         }
     }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout()
+    {
+        var token = Request.Headers["Authorization"].ToString();
+
+        var userId = await _db.ExecuteScalarAsync<int?>(
+            "SELECT id FROM users WHERE token = @token", new { token });
+        if (userId is null) return Unauthorized();
+
+        await _db.ExecuteAsync(
+            "INSERT INTO login_logs (user_id, action) VALUES (@userId, 'logout')",
+            new { userId = userId.Value });
+
+        await _db.ExecuteAsync(
+            "UPDATE users SET token = NULL WHERE id = @userId",
+            new { userId = userId.Value });
+
+        return Ok();
+    }
+    
 }

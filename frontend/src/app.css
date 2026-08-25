@@ -332,7 +332,8 @@ h2 {
   padding: .75rem 2rem;
 }
 
-.toolbar-sekmeler, .toolbar-right {
+.toolbar-sekmeler,
+.toolbar-right {
   display: flex;
   align-items: center;
   gap: .5rem;
@@ -358,6 +359,7 @@ h2 {
   font-weight: 600;
   border-radius: 6px;
 }
+
 .toolbar-sekmeler button.aktif::after {
   content: "";
   position: absolute;
@@ -450,6 +452,7 @@ h2 {
   border: 1px solid white;
   border-radius: 8px;
 }
+
 .tablo-cerceve img {
   width: 32px;
   height: 32px;
@@ -463,6 +466,7 @@ table {
   border-collapse: collapse;
   width: 100%;
 }
+
 table tbody tr {
   height: 41px;
 }
@@ -483,6 +487,7 @@ table thead th {
 table tbody tr:nth-child(even) {
   background: lightyellow;
 }
+
 /* ---- Profil Butonu ---- */
 
 .profil-btn {
@@ -1164,7 +1169,51 @@ sepet-btn:active {
   font-size: .8rem;
   white-space: nowrap;
 }
-.rozet.pending   { background: #fff3cd; color: #856404; }
-.rozet.approved  { background: #d4edda; color: #155724; }
-.rozet.rejected  { background: #f8d7da; color: #721c24; }
-.rozet.cancelled { background: #e2e3e5; color: #383d41; }
+
+.rozet.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.rozet.approved {
+  background: #d4edda;
+  color: #155724;
+}
+
+.rozet.rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.rozet.cancelled {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+/*Log filtre*/
+.filtre-cubuk {
+  display: flex;
+  gap: .75rem;
+  align-items: center;
+}
+
+.filtre-cubuk input,
+.filtre-cubuk select {
+  padding: .55rem .8rem;
+  border: 1px solid whitesmoke;
+  border-radius: 8px;
+  font-size: .95rem;
+  background: white;
+}
+
+.filtre-cubuk input {
+  flex: 1;
+  max-width: 320px;
+}
+
+.filtre-cubuk input:focus,
+.filtre-cubuk select:focus {
+  outline: none;
+  border-color: lightseagreen;
+  box-shadow: 0 0 0 3px rgba(43, 179, 163, .15);
+}

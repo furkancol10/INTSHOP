@@ -4,15 +4,27 @@
         API,
         authHeader,
         durum,
+        metinAra,
+        alanEsit,
         sayfalar,
         sayfala,
         toplamSayfa,
         sayfaGit,
     } from "./store.svelte.js";
     import KullaniciModal from "./KullaniciModal.svelte";
+    import FiltreCubuk from "./FiltreCubuk.svelte";
 
     let users = $state([]);
     let modalAcik = $state(false);
+
+    let arama = $state("");
+
+    let filtreli = $derived(metinAra(users, arama, ["username", "role"]));
+
+    $effect(() => {
+        arama;
+        sayfalar.users = 1;
+    });
 
     async function loadUsers() {
         try {
@@ -30,18 +42,21 @@
 </script>
 
 <h2>Kullanıcılar</h2>
-<button class="ekle-btn" onclick={() => (modalAcik = true)}
-    >+ Yeni Kullanıcı</button
->
+<div class="sekme-baslik">
+    <FiltreCubuk bind:arama placeholder="Kullanıcı veya rol ara..."></FiltreCubuk>
+    <button class="ekle-btn" onclick={() => (modalAcik = true)}
+        >+ Yeni Kullanıcı</button
+    >
+</div>
 
-{#if users.length}
+{#if filtreli.length}
     <div class="tablo-cerceve">
         <table>
             <thead>
                 <tr><th>ID</th><th>Kullanıcı</th><th>Rol</th></tr>
             </thead>
             <tbody>
-                {#each sayfala(users, "users") as u}
+                {#each sayfala(filtreli, "users") as u}
                     <tr>
                         <td>{u.id}</td>
                         <td>{u.username}</td>
@@ -56,10 +71,10 @@
             onclick={() => sayfaGit("users", -1)}
             disabled={(sayfalar.users ?? 1) === 1}>Önceki</button
         >
-        <span>Sayfa {sayfalar.users ?? 1} / {toplamSayfa(users)}</span>
+        <span>Sayfa {sayfalar.users ?? 1} / {toplamSayfa(filtreli)}</span>
         <button
             onclick={() => sayfaGit("users", 1)}
-            disabled={(sayfalar.users ?? 1) === toplamSayfa(users)}
+            disabled={(sayfalar.users ?? 1) === toplamSayfa(filtreli)}
             >Sonraki</button
         >
     </div>
