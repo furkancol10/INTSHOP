@@ -1,7 +1,7 @@
 <script>
-  import { veri } from "./store.svelte.js";
-  import KategoriModal from "./KategoriModal.svelte";
-  import KategoriDetayModal from "./KategoriDetayModal.svelte";
+  import { veri } from "../store.svelte.js";
+  import KategoriModal from "../Modals/KategoriModal.svelte";
+  import KategoriDetayModal from "../Modals/KategoriDetayModal.svelte";
 
   let { yenile } = $props();
 

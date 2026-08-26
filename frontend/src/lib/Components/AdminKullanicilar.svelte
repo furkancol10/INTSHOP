@@ -10,9 +10,9 @@
         sayfala,
         toplamSayfa,
         sayfaGit,
-    } from "./store.svelte.js";
-    import KullaniciModal from "./KullaniciModal.svelte";
-    import FiltreCubuk from "./FiltreCubuk.svelte";
+    } from "../store.svelte.js";
+    import KullaniciModal from "../Modals/KullaniciModal.svelte";
+    import FiltreCubuk from "../Components/FiltreCubuk.svelte";
 
     let users = $state([]);
     let modalAcik = $state(false);

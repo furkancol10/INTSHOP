@@ -1,7 +1,7 @@
 <script>
   import { onMount } from "svelte";
-  import { API, authHeader, jsonHeader, durum, fiyatKolon, sayfalar, sayfala, toplamSayfa, sayfaGit } from "./store.svelte.js";
-  import RedModal from "./RedModal.svelte";
+  import { API, authHeader, jsonHeader, durum, fiyatKolon, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
+  import RedModal from "../Modals/RedModal.svelte";
 
   let { sayiDegisti } = $props();
 

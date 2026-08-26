@@ -1217,3 +1217,125 @@ sepet-btn:active {
   border-color: lightseagreen;
   box-shadow: 0 0 0 3px rgba(43, 179, 163, .15);
 }
+
+/*  Sepet Sayfası */
+.sepet-baslik {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid whitesmoke;
+  margin-bottom: 1.25rem;
+}
+.sepet-sayi { font-size: .95rem; color: gray; font-weight: 400; }
+.sepet-bosalt {
+  background: orangered; border: none; color: white;
+  cursor: pointer; font-size: .9rem;
+  border-radius: 7px;
+}
+.sepet-duzen {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap:1.25rem;
+  align-items: start;
+}
+.bayi-karti {
+  background: whitesmoke;
+  border: 1px solid lightsalmon;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+.bayi-basligi {
+  display: flex;
+  justify-content: space-between;
+  padding: .8rem 1rem;
+  background: whitesmoke;
+  border-bottom: 1px solid whitesmoke;
+  font-size: .9rem;
+}
+.ara-toplam { color: orangered; font-weight: 600;}
+.sepet-satir {
+  display: grid;
+  grid-template-columns: 70px 1fr auto auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid whitesmoke;
+}
+.sepet-satir:last-child { border-bottom: none; }
+
+.satir-gorsel img {
+  width: 70px;
+  object-fit: contain;
+  border: 1px solid whitesmoke;
+  border-radius: 6px;
+}
+.gorsel-yok {
+  width: 70px; height: 70px;
+  display: grid; place-items: center;
+  background: whitesmoke; border-radius: 6px; color: whitesmoke;
+}
+
+.satir-bilgi { display: flex; flex-direction: column; gap: 0.25rem;}
+.satir-ad { font-size: .95rem; }
+.satir-birim { font-size: .82rem; color: gray;}
+.stok-uyari { font-size: .78rem; color: crimson;}
+
+.adet-kontrol {
+  display: inline-flex; align-items: center; gap: .4rem;
+  border: 1px solid whitesmoke; border-radius: 20px; padding: .2rem .35rem;
+}
+.adet-kontrol button {
+  width: 26px; height: 26px;
+  border: none; background: none; cursor: pointer;
+  color: orangered; font-size: 1rem; border-radius: 50%;
+}
+.adet-kontrol button:hover:not(:disabled) { background: whitesmoke;}
+.adet-kontrol button:disabled {opacity: .3; cursor: default;}
+.adet-sayi {min-width: 20px; text-align: center; font-size: .9rem; }
+
+.satir-tutar { font-weight: 600; white-space: nowwrap; }
+
+.sepet-ozet {
+  background: white;
+  border: 1px solid lightseagreen;
+  border-radius: 10px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  position: sticky;
+  top: 1rem;
+}
+.ozet-etiket { font-size: .75rem; letter-spacing: .04rem; color: orangered}
+.ozet-tutar { font-size: 1.6rem; font-weight: 700; }
+.ozet-btn {
+  padding: .8rem;
+  border: none; border-radius: 8px;
+  background: orangered; color: white;
+  font-size: .95rem; cursor: pointer;
+}
+.ozet-btn:disabled { background: whitesmoke; color: gray; cursor: not-allowed;}
+.ozet-not { font-size: .78rem; color: gray; text-align: center; margin: 0;}
+
+.sepet-bos { padding: 3rem; text-align: center; color: gray;}
+
+@media (max-width: 860px) {
+  .sepet-duzen { grid-template-columns: 1fr;}
+  .sepet-ozet { position: static; }
+  .sepet-satir { grid-template-columns: 60px 1fr; row-gap: .6rem;}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+

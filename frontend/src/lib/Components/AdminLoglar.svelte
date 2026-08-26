@@ -10,7 +10,7 @@
         sayfala,
         toplamSayfa,
         sayfaGit,
-    } from "./store.svelte.js";
+    } from "../store.svelte.js";
     import FiltreCubuk from "./FiltreCubuk.svelte";
 
     let loglar = $state([]);

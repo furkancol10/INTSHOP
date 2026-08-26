@@ -1,6 +1,6 @@
 <script>
-  import { API, veri, authHeader, durum, fiyatKolon, sayfalar, sayfala, toplamSayfa, sayfaGit } from "./store.svelte.js";
-  import UrunModal from "./UrunModal.svelte";
+  import { API, veri, authHeader, durum, fiyatKolon, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
+  import UrunModal from "../Modals/UrunModal.svelte";
 
   let { yenile } = $props();
 

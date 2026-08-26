@@ -1,5 +1,5 @@
 <script>
-  import { API, veri, jsonHeader, fiyatKolon } from "./store.svelte.js";
+  import { API, veri, jsonHeader, fiyatKolon } from "../store.svelte.js";
 
   let { acik = $bindable(), urunId = "", tamamlandi } = $props();
 

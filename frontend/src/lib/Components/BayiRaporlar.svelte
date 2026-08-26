@@ -1,7 +1,7 @@
 <script>
   import { onMount } from "svelte";
   import { Chart, registerables } from "chart.js";
-  import { API, authHeader, durum, sayfalar, sayfala, toplamSayfa, sayfaGit } from "./store.svelte.js";
+  import { API, authHeader, durum, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
   Chart.register(...registerables);
 
   let myMovements = $state([]);

@@ -1,5 +1,5 @@
 <script>
-  import { API, oturum } from "./store.svelte.js";
+  import { API, oturum } from "../store.svelte.js";
 
   let { girisYapildi } = $props();
 

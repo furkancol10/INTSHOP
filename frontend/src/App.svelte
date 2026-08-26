@@ -7,24 +7,26 @@
     durum,
     veri,
     sayfalariSifirla,
+    sepetYukle,
   } from "./lib/store.svelte.js";
 
   // Modallar
-  import Login from "./lib/Login.svelte";
+  import Login from "./lib/Components/Login.svelte";
 
   // Sayfa Bileşenleri
-  import BayiRaporlar from "./lib/BayiRaporlar.svelte";
-  import BayiStok from "./lib/BayiStok.svelte";
-  import AdminHareketler from "./lib/AdminHareketler.svelte";
-  import AdminKategoriler from "./lib/AdminKategoriler.svelte";
-  import AdminUrunler from "./lib/AdminUrunler.svelte";
-  import AdminBayiler from "./lib/AdminBayiler.svelte";
-  import AdminIstekler from "./lib/AdminIstekler.svelte";
-  import AdminKullanicilar from "./lib/AdminKullanicilar.svelte";
-  import Magaza from "./lib/Magaza.svelte";
-  import Profil from "./lib/Profil.svelte";
-  import BayiTalepler from "./lib/BayiTalepler.svelte";
-  import AdminLoglar from "./lib/AdminLoglar.svelte";
+  import BayiRaporlar from "./lib/Components/BayiRaporlar.svelte";
+  import BayiStok from "./lib/Components/BayiStok.svelte";
+  import AdminHareketler from "./lib/Components/AdminHareketler.svelte";
+  import AdminKategoriler from "./lib/Components/AdminKategoriler.svelte";
+  import AdminUrunler from "./lib/Components/AdminUrunler.svelte";
+  import AdminBayiler from "./lib/Components/AdminBayiler.svelte";
+  import AdminIstekler from "./lib/Components/AdminIstekler.svelte";
+  import AdminKullanicilar from "./lib/Components/AdminKullanicilar.svelte";
+  import Magaza from "./lib/Components/Magaza.svelte";
+  import Profil from "./lib/Components/Profil.svelte";
+  import BayiTalepler from "./lib/Components/BayiTalepler.svelte";
+  import AdminLoglar from "./lib/Components/AdminLoglar.svelte";
+  import Sepet from "./lib/Components/Sepet.svelte";
 
   Chart.register(...registerables);
 
@@ -115,6 +117,7 @@
       loadAll();
     } else if (oturum.role === "Kullanici") {
       durum.aktifSekme = "magaza";
+      sepetYukle();
     }
   });
 </script>
@@ -122,11 +125,14 @@
 <main>
   {#if !oturum.token}
     <Login girisYapildi={girisSonrasi} />
-  {:else if karsilama}{:else if !oturum.role}
-    <div class="karsilama-ekran">
+  {:else if karsilama}<div class="karsilama-ekran">
+      {#if oturum.avatarUrl}
+        <img src={oturum.avatarUrl} alt="avatar" class="karsilama-avatar" />
+      {/if}
+      <h1>Hoş Geldiniz, {oturum.currentUser}!</h1>
       <div class="spinner"></div>
-    </div>
-  {:else}
+      <p>Sayfa Yükleniyor...</p>
+    </div>{:else if !oturum.role}{:else}
     <div class="toolbar">
       <div class="toolbar-ic">
         <button
@@ -167,7 +173,8 @@
             >
             <button
               class:aktif={durum.aktifSekme === "hareketler"}
-              onclick={() => (durum.aktifSekme = "hareketler")}>Hareketler</button
+              onclick={() => (durum.aktifSekme = "hareketler")}
+              >Hareketler</button
             >
           {:else if oturum.role === "Bayi"}
             <button
@@ -186,6 +193,10 @@
             <button
               class:aktif={durum.aktifSekme === "magaza"}
               onclick={() => (durum.aktifSekme = "magaza")}>Mağaza</button
+            >
+            <button
+              class:aktif={durum.aktifSekme === "sepet"}
+              onclick={() => (durum.aktifSekme = "sepet")}>Sepetim</button
             >
           {/if}
         </div>
@@ -242,6 +253,8 @@
         <Profil />
       {:else if durum.aktifSekme === "magaza"}
         <Magaza />
+      {:else if durum.aktifSekme === "sepet"}
+        <Sepet />
       {/if}
     </div>
   {/if}

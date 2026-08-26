@@ -1,6 +1,6 @@
 <script>
   import { onMount } from "svelte";
-  import { API, authHeader, durum, sayfalar, sayfala, toplamSayfa, sayfaGit } from "./store.svelte.js";
+  import { API, authHeader, durum, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
 
   let dealers = $state([]);
 

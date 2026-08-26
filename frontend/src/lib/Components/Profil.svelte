@@ -1,6 +1,6 @@
 <script>
   import { onMount } from "svelte";
-  import { API, oturum, durum, authHeader, jsonHeader } from "./store.svelte.js";
+  import { API, oturum, durum, authHeader, jsonHeader } from "../store.svelte.js";
 
   let profil = $state({
     username: "", role: "", address: "", phone: "", avatar_url: "",

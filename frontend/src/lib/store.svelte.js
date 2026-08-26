@@ -7,8 +7,6 @@ export const oturum = $state({
     avatarUrl: localStorage.getItem("avatar_url") || "",
 });
 
-// let sp = {} 
-
 export const durum= $state({
     aktifSekme : "hareketler",
     error : "",
@@ -29,7 +27,9 @@ export function authHeader() {
 export function jsonHeader() {
     return { "Content-Type": "application/json", Authorization: oturum.token };
 }
-
+//
+// Fiyatlandırma
+//
 export function fiyatKolon(fiyat) {
     if (fiyat === null || fiyat === undefined || fiyat === "") return "-";
     return (
@@ -39,7 +39,9 @@ export function fiyatKolon(fiyat) {
         }) + " ₺"
     );
 }
-
+//
+// Sayfalama
+//
 export const pageSize = 10;
 export const sayfalar = $state({});
 
@@ -60,7 +62,9 @@ export function sayfaGit(sekme, yon) {
 export function sayfalariSifirla() {
   for (const k of Object.keys(sayfalar)) delete sayfalar[k];
 }
-
+//
+// Filtreleme
+//
 export function metinAra(dizi, arama, alanlar) {
   if (!arama) return dizi;
   const q = arama.toLowerCase();
@@ -72,4 +76,31 @@ export function metinAra(dizi, arama, alanlar) {
 export function alanEsit(dizi, deger, alan) {
   if (!deger) return dizi;
   return dizi.filter((o) => o[alan] === deger);
+}
+//
+// Sepet
+//
+export const sepet = $state({ satirlar: [], toplam: 0, adet: 0 });
+
+export async function sepetYukle() {
+    try {
+        const res = await fetch(`${API}/api/cart`, { headers: authHeader() });
+        if (!res.ok) return;
+        const d = await res.json();
+        sepet.satirlar = d.satirlar;
+        sepet.toplam = d.toplam;
+        sepet.adet = d.adet;
+    } catch {
+
+    }
+}
+
+export async function sepeteEkle(product_id, dealer_id) {
+    const res = await fetch(`${API}/api/cart`, {
+        method: "POST",
+        headers: jsonHeader(),
+        body: JSON.stringify({ product_id, dealer_id }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    await sepetYukle();
 }

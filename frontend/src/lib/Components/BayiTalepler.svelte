@@ -1,6 +1,6 @@
 <script>
     import { onMount } from "svelte";
-    import { API, authHeader, durum, fiyatKolon } from "./store.svelte";
+    import { API, authHeader, durum, fiyatKolon } from "../store.svelte";
 
     let talepler = $state([]);
 

@@ -1,7 +1,7 @@
 <script>
   import { onMount } from "svelte";
-  import { API, veri, authHeader, durum, fiyatKolon, sayfalar, sayfala, toplamSayfa, sayfaGit } from "./store.svelte.js";
-  import IslemModal from "./IslemModal.svelte";
+  import { API, veri, authHeader, durum, fiyatKolon, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
+  import islemModal from "../Modals/IslemModal.svelte"
 
   let islemModalAcik = $state(false);
   let islemUrunId = $state("");

@@ -1,5 +1,5 @@
 <script>
-  import { API, oturum, durum, sayfalar, sayfala, toplamSayfa, sayfaGit } from "./store.svelte.js";
+  import { API, oturum, durum, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
 
   let movements = $state([]);
 

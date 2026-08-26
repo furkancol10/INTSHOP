@@ -1,5 +1,5 @@
 <script>
-  import { API, veri, jsonHeader, authHeader } from "./store.svelte.js";
+  import { API, veri, jsonHeader, authHeader } from "../store.svelte.js";
 
   let { acik = $bindable(), kategori, degisti } = $props();
 
