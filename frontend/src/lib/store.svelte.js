@@ -12,6 +12,7 @@ export const durum= $state({
     error : "",
     loading : false,
     bildirim: "",
+    secilenUrunId: null,
 });
 
 export const veri = $state ({

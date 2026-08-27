@@ -24,6 +24,7 @@
   import AdminIstekler from "./lib/Components/AdminIstekler.svelte";
   import AdminKullanicilar from "./lib/Components/AdminKullanicilar.svelte";
   import Magaza from "./lib/Components/Magaza.svelte";
+  import UrunDetay from "./lib/Components/UrunDetay.svelte";
   import Profil from "./lib/Components/Profil.svelte";
   import BayiTalepler from "./lib/Components/BayiTalepler.svelte";
   import AdminLoglar from "./lib/Components/AdminLoglar.svelte";
@@ -254,6 +255,11 @@
         <Profil />
       {:else if durum.aktifSekme === "magaza"}
         <Magaza />
+      {:else if durum.aktifSekme === "urun-detay"}
+        <UrunDetay
+          productId={durum.secilenUrunId}
+          geriDon={() => (durum.aktifSekme = "magaza")}
+        />
       {:else if durum.aktifSekme === "sepet"}
         <Sepet />
       {/if}

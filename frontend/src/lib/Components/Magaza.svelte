@@ -6,8 +6,12 @@
     durum,
     veri,
     fiyatKolon,
-    sepeteEkle,
   } from "../store.svelte.js";
+
+  function detayaGit(productId) {
+    durum.secilenUrunId = productId;
+    durum.aktifSekme = "urun-detay";
+  }
 
   let secilenKategori = $state("");
   let arama = $state("");
@@ -94,7 +98,7 @@
 {#if shopData.length}
   <div class="urun-kartlari">
     {#each shopData as urun}
-      <div class="urun-kart">
+      <button class="urun-kart" onclick={() => detayaGit(urun.product_id)}>
         {#if urun.image_url}
           <img
             src={urun.image_url}
@@ -104,22 +108,14 @@
           />
         {/if}
         <h3>{urun.name}</h3>
-        <p class="kart-satici">Satıcı: <strong>{urun.dealer_name}</strong></p>
+        <p class="kart-satici">
+          En uygun: <strong>{urun.dealer_name}</strong>
+          {#if urun.bayi_sayisi > 1}
+            <span class="kart-bayi-sayisi">+{urun.bayi_sayisi - 1} bayi daha</span>
+          {/if}
+        </p>
         <p class="kart-fiyat">{fiyatKolon(urun.price)}</p>
-        <p class="kart-stok">Stok: {urun.stock}</p>
-        <button
-          class="sepet-btn"
-          onclick={async () => {
-            try {
-              await sepeteEkle(urun.product_id, urun.dealer_id);
-              durum.bildirim = "Ürün sepete eklendi";
-              setTimeout(() => (durum.bildirim = ""), 2000);
-            } catch (e) {
-              durum.error = e.message;
-            }
-          }}>Sepete Ekle</button
-        >
-      </div>
+      </button>
     {/each}
   </div>
   {#if !hepsiYuklendi}

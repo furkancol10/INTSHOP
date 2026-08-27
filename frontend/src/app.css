@@ -639,6 +639,27 @@ table tbody tr:nth-child(even) {
   flex-direction: column;
   gap: .5rem;
   background: white;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow .15s, transform .1s, border-color .15s;
+}
+
+.urun-kart:hover {
+  border-color: lightseagreen;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.urun-kart:active {
+  transform: scale(0.98);
+}
+
+.kart-bayi-sayisi {
+  display: block;
+  font-size: .75rem;
+  color: darkslategrey;
+  font-weight: 400;
 }
 
 .kart-satici {
@@ -704,6 +725,88 @@ sepet-btn:active {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* ---- Ürün Detay ekranı ---- */
+
+.geri-btn {
+  background: none;
+  border: none;
+  color: lightseagreen;
+  font-size: .95rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 1rem;
+}
+
+.geri-btn:hover {
+  text-decoration: underline;
+}
+
+.urun-detay {
+  max-width: 700px;
+}
+
+.detay-ust {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.detay-resim {
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 1px solid whitesmoke;
+  flex-shrink: 0;
+}
+
+.detay-ust h2 {
+  margin: 0 0 .3rem;
+}
+
+.detay-kategori {
+  margin: 0;
+  color: darkslategrey;
+  font-size: .9rem;
+}
+
+.teklif-liste {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+
+.teklif-satir {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  border: 1px solid whitesmoke;
+  border-radius: 12px;
+  padding: .8rem 1rem;
+  background: white;
+}
+
+.teklif-bilgi {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  flex: 1;
+}
+
+.teklif-bayi {
+  font-weight: 600;
+}
+
+.teklif-satir .kart-fiyat {
+  margin: 0;
+}
+
+.teklif-satir .sepet-btn {
+  margin-top: 0;
 }
 
 

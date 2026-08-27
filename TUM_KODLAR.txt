@@ -1,10 +1,12 @@
-# Stok Panel - Tum Proje Kodu (Tek Dosya)
+STOK PANEL - TUM PROJE KODU (TEK DOSYA)
+==========================================
 
 Bu dosya, projedeki tum kaynak kodu tek bir yerde toplamak icin otomatik olarak birlestirilmistir.
 
 Disarida birakilanlar: node_modules, bin/obj, .git, derleme/build ciktilari, gorsel/binary dosyalar, package-lock.json ve .env (gizli anahtarlar icerdigi icin; onun yerine .env.example dahil edildi).
 
-## Icindekiler
+ICINDEKILER
+-----------
 
 - README.md
 - .gitignore
@@ -60,6 +62,7 @@ Disarida birakilanlar: node_modules, bin/obj, .git, derleme/build ciktilari, gor
 - frontend/src/lib/Components/Magaza.svelte
 - frontend/src/lib/Components/Profil.svelte
 - frontend/src/lib/Components/Sepet.svelte
+- frontend/src/lib/Components/UrunDetay.svelte
 - frontend/src/lib/Modals/IslemModal.svelte
 - frontend/src/lib/Modals/KategoriDetayModal.svelte
 - frontend/src/lib/Modals/KategoriModal.svelte
@@ -68,11 +71,10 @@ Disarida birakilanlar: node_modules, bin/obj, .git, derleme/build ciktilari, gor
 - frontend/src/lib/Modals/RedModal.svelte
 - frontend/src/lib/Modals/UrunModal.svelte
 
----
+==========================================
 
-## README.md
+==================== README.md ====================
 
-```markdown
 # INTSHOP — Stok ve Sipariş Yönetim Paneli
 
 Çok rollü bir stok yönetim ve mağaza uygulaması. Admin ürün ve kategori kataloğunu
@@ -446,30 +448,24 @@ kullanılır.
 
 <!-- TODO: Lisans eklemek istiyor musun? MIT yaygın ve basit bir seçim. -->
 
-```
 
-## .gitignore
+==================== .gitignore ====================
 
-```
 bin/
 obj/
 node_modules/
 dist/
 .env
-```
 
-## .env.example
+==================== .env.example ====================
 
-```
 POSTGRES_USER=
 POSTGRES_PASSWORD=
 POSTGRES_DB=
 API_PORT=5081
-```
 
-## docker-compose.yaml
+==================== docker-compose.yaml ====================
 
-```yaml
 services:
   db:
     image: postgres:18
@@ -512,11 +508,9 @@ services:
       - api
 volumes:
   pgdata:
-```
 
-## db/init/01-schema.sql
+==================== db/init/01-schema.sql ====================
 
-```sql
 -- ============================================================
 -- stok-panel — Veritabanı seed dosyası
 -- Veritabanı ilk kez oluşturulduğunda (boş volume) otomatik çalışır.
@@ -562,6 +556,7 @@ CREATE TABLE users (
     password_hash VARCHAR(200) NOT NULL,
     role          VARCHAR(20) NOT NULL,
     token         VARCHAR(200),
+    token_issued_at TIMESTAMPTZ,
     address       VARCHAR(300),
     phone         VARCHAR(20),
     avatar_url    VARCHAR(500),
@@ -600,7 +595,13 @@ INSERT INTO products (name, category_id, stock, price, image_url) VALUES
     ('Sefiller',            6, 120,   249.90, 'https://placehold.co/200x200?text=Sefiller'),
     ('Schogetten Cikolata', 3, 500,    34.90, 'https://placehold.co/200x200?text=Cikolata'),
     ('Amasya Elmasi 1 KG',  3, 300,    49.90, 'https://placehold.co/200x200?text=Elma'),
-    ('ASUS Monitor 24"',    1, 40,   6190.00, 'https://placehold.co/200x200?text=Monitor');
+    ('ASUS Monitor 24"',    1, 40,   6190.00, 'https://placehold.co/200x200?text=Monitor'),
+    ('iPhone 15 Pro',           4, 40,  64999.99, '/products/iphone.jpg'),
+    ('Logitech Kablosuz Mouse', 5, 150,   799.90, '/products/logitech.jpg'),
+    ('MSI Gaming Laptop',       5, 25,  45999.99, '/products/msi.jpg'),
+    ('Dune',                    6, 180,   224.90, '/products/dune.jpg'),
+    ('Findik 1 KG',             3, 300,    89.90, '/products/findik.jpg'),
+    ('Sutlu Cikolata',          3, 400,    59.90, '/products/chocolate.jpg');
 
 
 -- ---------- 4. BAYİ STOKLARI ----------
@@ -707,11 +708,9 @@ CREATE TABLE cart_items (
     added_at   TIMESTAMP DEFAULT NOW(),
     UNIQUE (user_id, product_id, dealer_id)
 );
-```
 
-## db/gercek-sema.sql
+==================== db/gercek-sema.sql ====================
 
-```sql
 --
 -- PostgreSQL database dump
 --
@@ -965,6 +964,7 @@ CREATE TABLE public.users (
     password_hash character varying(200) NOT NULL,
     role character varying(20) NOT NULL,
     token character varying(200),
+    token_issued_at timestamp with time zone,
     address character varying(300),
     phone character varying(20),
     avatar_url character varying(500),
@@ -1232,11 +1232,9 @@ ALTER TABLE ONLY public.stock_movements
 \unrestrict 0nq4wk7DMJJnkydZ1B4X6aL3idtk4cTrCEN4gAllOXyF1uEzIBt5T7gNOgqc6xm
 
 
-```
 
-## backend/StokApi.csproj
+==================== backend/StokApi.csproj ====================
 
-```xml
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
@@ -1254,53 +1252,82 @@ ALTER TABLE ONLY public.stock_movements
 
 </Project>
 
-```
 
-## backend/Program.cs
+==================== backend/Program.cs ====================
 
-```csharp
 using Npgsql;
 using System.Data;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
-builder.Services.AddCors(o => o.AddDefaultPolicy(p=> 
+builder.Services.AddCors(o => o.AddDefaultPolicy(p=>
 p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
 
 builder.Services.AddScoped<IDbConnection>(_ => new NpgsqlConnection(builder.Configuration.GetConnectionString("Default")));
 
+// Giris/kayit denemelerinde brute-force'u zorlastirmak icin IP basina hiz siniri
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            }));
+});
+
 var app = builder.Build();
 
 app.UseCors();
+app.UseRateLimiter();
 
 app.MapControllers();
 
 app.Run();
 
-```
 
-## backend/AuthHelper.cs
+==================== backend/AuthHelper.cs ====================
 
-```csharp
 using Dapper;
 using System.Data;
 
 public static class AuthHelper
 {
+    private static readonly TimeSpan TokenLifetime = TimeSpan.FromHours(12);
+
+    public static async Task<(int Id, string Role)?> GetUser(IDbConnection db, string? token)
+    {
+        if (string.IsNullOrEmpty(token)) return null;
+
+        var u = await db.QueryFirstOrDefaultAsync(
+            "SELECT id, role, token_issued_at FROM users WHERE token = @token", new { token });
+        if (u is null) return null;
+
+        DateTime? issuedAt = u.token_issued_at;
+        if (issuedAt is null || DateTime.UtcNow - issuedAt.Value > TokenLifetime)
+            return null;
+
+        return ((int)u.id, (string)u.role);
+    }
+
     public static async Task<string?> GetRole(IDbConnection db, string? token)
     {
-        if(string.IsNullOrEmpty(token)) return null;
-        return await db.QueryFirstOrDefaultAsync<string?>(
-            "SELECT role FROM users Where token = @token", new { token });
+        var user = await GetUser(db, token);
+        return user?.Role;
     }
 }
-```
 
-## backend/appsettings.json
 
-```json
+==================== backend/appsettings.json ====================
+
 {
   "Logging": {
     "LogLevel": {
@@ -1311,11 +1338,9 @@ public static class AuthHelper
   "AllowedHosts": "*"
 }
 
-```
 
-## backend/appsettings.Development.json
+==================== backend/appsettings.Development.json ====================
 
-```json
 {
   "Logging": {
     "LogLevel": {
@@ -1325,11 +1350,9 @@ public static class AuthHelper
   }
 }
 
-```
 
-## backend/Properties/launchSettings.json
+==================== backend/Properties/launchSettings.json ====================
 
-```json
 ﻿{
   "$schema": "http://json.schemastore.org/launchsettings.json",
   "iisSettings": {
@@ -1372,11 +1395,9 @@ public static class AuthHelper
   }
 }
 
-```
 
-## backend/StokApi.http
+==================== backend/StokApi.http ====================
 
-```
 @StokApi_HostAddress = http://localhost:5077
 
 GET {{StokApi_HostAddress}}/weatherforecast/
@@ -1384,11 +1405,9 @@ Accept: application/json
 
 ###
 
-```
 
-## backend/Dockerfile
+==================== backend/Dockerfile ====================
 
-```dockerfile
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 COPY *.csproj .
@@ -1400,20 +1419,17 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app .
 ENTRYPOINT ["dotnet", "api.dll"]
-```
 
-## backend/.dockerignore
+==================== backend/.dockerignore ====================
 
-```
 bin/
 obj/
-```
 
-## backend/Controllers/AuthController.cs
+==================== backend/Controllers/AuthController.cs ====================
 
-```csharp
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration.UserSecrets;
 using System.Data;
 
@@ -1451,6 +1467,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Login([FromBody] LoginReq req)
     {
         var user = await _db.QueryFirstOrDefaultAsync(
@@ -1466,7 +1483,7 @@ public class AuthController : ControllerBase
 
         var token = Guid.NewGuid().ToString("N");
         await _db.ExecuteAsync(
-            "UPDATE users SET token = @token WHERE id = @id",
+            "UPDATE users SET token = @token, token_issued_at = NOW() WHERE id = @id",
             new { token, id = (int)user.id });
 
         await _db.ExecuteAsync(
@@ -1477,6 +1494,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("signup")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Signup([FromBody] SignupReq req)
     {
         if (string.IsNullOrWhiteSpace(req.username) || string.IsNullOrWhiteSpace(req.password))
@@ -1540,11 +1558,9 @@ public class AuthController : ControllerBase
     }
     
 }
-```
 
-## backend/Controllers/CartController.cs
+==================== backend/Controllers/CartController.cs ====================
 
-```csharp
 using System.Data;
 using System.Data.Common;
 using System.Net.Http.Headers;
@@ -1566,8 +1582,8 @@ public class CartController : ControllerBase
     private async Task<int?> KullaniciId()
     {
         var token = Request.Headers["Authorization"].ToString();
-        return await _db.ExecuteScalarAsync<int?>(
-            "SELECT id FROM users WHERE token = @token", new { token });
+        var user = await AuthHelper.GetUser(_db, token);
+        return user?.Id;
     }
 
     [HttpGet]
@@ -1676,11 +1692,9 @@ public class CartController : ControllerBase
 
 public record SepetEkleReq(int product_id, int dealer_id);
 public record AdetReq(int quantity);
-```
 
-## backend/Controllers/CategoriesController.cs
+==================== backend/Controllers/CategoriesController.cs ====================
 
-```csharp
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
@@ -1698,6 +1712,10 @@ public class CategoriesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role is null) return Unauthorized("Giriş gerekli");
+
         var sql = @"
             SELECT c.id, c.name, c.parent_id,
                    ust.name AS parent_name,
@@ -1751,11 +1769,9 @@ public class CategoriesController : ControllerBase
         return affected > 0 ? Ok() : NotFound();
     }
 }
-```
 
-## backend/Controllers/LogsControllers.cs
+==================== backend/Controllers/LogsControllers.cs ====================
 
-```csharp
 using System.Data;
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
@@ -1784,11 +1800,9 @@ public class LogsController : ControllerBase
         return Ok(rows);        
     }
 }
-```
 
-## backend/Controllers/MovementsController.cs
+==================== backend/Controllers/MovementsController.cs ====================
 
-```csharp
 using Dapper;
 using System.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -1818,11 +1832,9 @@ public class MovementsController : ControllerBase
         return Ok(rows);
     }
 }
-```
 
-## backend/Controllers/ProductsController.cs
+==================== backend/Controllers/ProductsController.cs ====================
 
-```csharp
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
@@ -1841,6 +1853,10 @@ public class ProductsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Admin") return StatusCode(403, "Sadece Admin");
+
         var sql = @"
             SELECT p.id, p.name, p.category_id,
                    c.name AS category,
@@ -1923,11 +1939,9 @@ public class ProductsController : ControllerBase
         return affected > 0 ? Ok() : NotFound();
     }
 }
-```
 
-## backend/Controllers/ProfileController.cs
+==================== backend/Controllers/ProfileController.cs ====================
 
-```csharp
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
@@ -1939,14 +1953,8 @@ public class ProfileController : ControllerBase
     private readonly IDbConnection _db;
     public ProfileController(IDbConnection db) => _db = db;
 
-    private async Task<(int id, string role)?> GetUser(string? token)
-    {
-        if (string.IsNullOrEmpty(token)) return null;
-        var u = await _db.QueryFirstOrDefaultAsync(
-            "SELECT id, role FROM users WHERE token = @token", new { token });
-        if (u is null) return null;
-        return ((int)u.id, (string)u.role);
-    }
+    private Task<(int id, string role)?> GetUser(string? token)
+        => AuthHelper.GetUser(_db, token);
 
     public record ProfileUpdate(string? address, string? phone, string? avatar_url);
 
@@ -1976,11 +1984,9 @@ public class ProfileController : ControllerBase
         return Ok();
     }
 }
-```
 
-## backend/Controllers/RequestsController.cs
+==================== backend/Controllers/RequestsController.cs ====================
 
-```csharp
 using Dapper;
 using System.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -2074,12 +2080,11 @@ public class RequestsController : ControllerBase
     public async Task<IActionResult> Mine()
     {
         var token = Request.Headers["Authorization"].ToString();
-        var role = await AuthHelper.GetRole(_db, token);
-        if (role != "Bayi") return StatusCode(403, "Sadece bayiler");
+        var user = await AuthHelper.GetUser(_db, token);
+        if (user is null) return Unauthorized();
+        if (user.Value.Role != "Bayi") return StatusCode(403, "Sadece bayiler");
 
-        var dealerId = await _db.ExecuteScalarAsync<int?>(
-            "SELECT id FROM users WHERE token = @token", new { token });
-        if ( dealerId is null) return Unauthorized();
+        var dealerId = user.Value.Id;
 
         var sql = @"
             SELECT r.id, r.old_price, r.new_price, r.status, r.admin_note,
@@ -2088,7 +2093,7 @@ public class RequestsController : ControllerBase
             JOIN products p ON p.id = r.product_id
             WHERE r.dealer_id = @dealerId
             ORDER BY r.created_at DESC";
-        var rows = await _db.QueryAsync(sql, new { dealerId = dealerId.Value });
+        var rows = await _db.QueryAsync(sql, new { dealerId });
         return Ok(rows);
     }
 
@@ -2096,17 +2101,16 @@ public class RequestsController : ControllerBase
     public async Task<IActionResult> Cancel(int id)
     {
         var token = Request.Headers["Authorization"].ToString();
-        var role = await AuthHelper.GetRole(_db, token);
-        if (role != "Bayi") return StatusCode(403, "Sadece bayiler");
+        var user = await AuthHelper.GetUser(_db, token);
+        if (user is null) return Unauthorized();
+        if (user.Value.Role != "Bayi") return StatusCode(403, "Sadece bayiler");
 
-        var dealerId = await _db.ExecuteScalarAsync<int?>(
-            "SELECT id FROM users WHERE token = @token", new { token });
-        if (dealerId is null) return Unauthorized();
+        var dealerId = user.Value.Id;
 
         var etkilenen = await _db.ExecuteAsync(
             @"UPDATE requests SET status = 'cancelled', resolved_at = NOW()
               WHERE id = @id AND dealer_id = @dealerId AND status = 'pending'",
-            new { id, dealerId = dealerId.Value });
+            new { id, dealerId });
 
         if (etkilenen == 0)
             return BadRequest("Bu talep iptal edilemez (size ait değil ya da zaten karara bağlanmış)");
@@ -2114,11 +2118,9 @@ public class RequestsController : ControllerBase
         return Ok(new { id, durum = "iptal edildi" }); 
     }
 }
-```
 
-## backend/Controllers/ShopController.cs
+==================== backend/Controllers/ShopController.cs ====================
 
-```csharp
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
@@ -2131,12 +2133,8 @@ public class ShopController : ControllerBase
     private readonly IDbConnection _db;
     public ShopController(IDbConnection db) => _db = db;
 
-    private async Task<string?> GetRole(string? token)
-    {
-        if (string.IsNullOrEmpty(token)) return null;
-        return await _db.QueryFirstOrDefaultAsync<string?>(
-            "SELECT role FROM users WHERE token = @token", new { token });
-    }
+    private Task<string?> GetRole(string? token)
+        => AuthHelper.GetRole(_db, token);
 
     [HttpGet("shop")]
     public async Task<IActionResult> Shop([FromQuery] int offset = 0, [FromQuery] int limit = 20, int? kategori = null, string? arama = null)
@@ -2146,26 +2144,63 @@ public class ShopController : ControllerBase
         if (role is null) return Unauthorized("Giriş gerekli");
         if (role != "Kullanici") return StatusCode(403, "Sadece müşteriler");
 
+        // Her üründen mağaza ekranında tek satır: en ucuz bayi, fiyat eşitse stoğu en yüksek bayi
         var sql= @"
-            SELECT p.id AS product_id, p.name, ds.price, p.image_url,
-                    u.id AS dealer_id, u.username AS dealer_name, ds.stock
-            FROM dealer_stock ds
-            JOIN products p ON p.id = ds.product_id
-            JOIN users u ON u.id = ds.dealer_id
-            WHERE ds.stock > 0 AND ds.price IS NOT NULL
-                AND (@kategori IS NULL OR p.category_id = @kategori)
-                AND (@arama IS NULL OR p.name ILIKE '%' || @arama || '%')
-            ORDER BY p.name, u.username
+            SELECT * FROM (
+                SELECT DISTINCT ON (p.id)
+                    p.id AS product_id, p.name, p.image_url, ds.price, ds.stock,
+                    u.id AS dealer_id, u.username AS dealer_name,
+                    (SELECT COUNT(*) FROM dealer_stock ds2
+                      WHERE ds2.product_id = p.id AND ds2.stock > 0 AND ds2.price IS NOT NULL) AS bayi_sayisi
+                FROM dealer_stock ds
+                JOIN products p ON p.id = ds.product_id
+                JOIN users u ON u.id = ds.dealer_id
+                WHERE ds.stock > 0 AND ds.price IS NOT NULL
+                    AND (@kategori IS NULL OR p.category_id = @kategori)
+                    AND (@arama IS NULL OR p.name ILIKE '%' || @arama || '%')
+                ORDER BY p.id, ds.price ASC, ds.stock DESC
+            ) en_iyi_teklif
+            ORDER BY name
             LIMIT @adet OFFSET @baslangic";
         var rows = await _db.QueryAsync(sql, new { adet = limit, baslangic = offset, kategori, arama = string.IsNullOrWhiteSpace(arama) ? null : arama});
         return Ok(rows);
     }
+
+    // ---------- ÜRÜN DETAYI: bir ürünü satan tüm bayiler ----------
+    [HttpGet("shop/{id}")]
+    public async Task<IActionResult> ShopProduct(int id)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await GetRole(token);
+        if (role is null) return Unauthorized("Giriş gerekli");
+        if (role != "Kullanici") return StatusCode(403, "Sadece müşteriler");
+
+        var sql = @"
+            SELECT p.id AS product_id, p.name, p.image_url, c.name AS category,
+                   u.id AS dealer_id, u.username AS dealer_name, ds.price, ds.stock
+            FROM dealer_stock ds
+            JOIN products p ON p.id = ds.product_id
+            JOIN users u ON u.id = ds.dealer_id
+            LEFT JOIN categories c ON c.id = p.category_id
+            WHERE ds.product_id = @id AND ds.stock > 0 AND ds.price IS NOT NULL
+            ORDER BY ds.price ASC, ds.stock DESC";
+        var teklifler = (await _db.QueryAsync(sql, new { id })).ToList();
+        if (teklifler.Count == 0) return NotFound("Bu ürün şu an satışta değil");
+
+        var ilk = teklifler[0];
+        return Ok(new
+        {
+            product_id = (int)ilk.product_id,
+            name = (string)ilk.name,
+            image_url = (string?)ilk.image_url,
+            category = (string?)ilk.category,
+            teklifler
+        });
+    }
  }
-```
 
-## backend/Controllers/StockController.cs
+==================== backend/Controllers/StockController.cs ====================
 
-```csharp
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
@@ -2178,14 +2213,8 @@ public class StockController : ControllerBase
     private readonly IDbConnection _db;
     public StockController(IDbConnection db) => _db = db;
 
-    private async Task<(int id, string role)?> GetUser(string? token)
-    {
-        if (string.IsNullOrEmpty(token)) return null;
-        var u = await _db.QueryFirstOrDefaultAsync(
-            "SELECT id, role FROM users WHERE token = @token", new { token });
-        if (u is null) return null;
-        return ((int)u.id, (string)u.role);
-    }
+    private Task<(int id, string role)?> GetUser(string? token)
+        => AuthHelper.GetUser(_db, token);
 
     [HttpGet("my-stock")]
     public async Task<IActionResult> MyStock()
@@ -2357,11 +2386,9 @@ public class StockController : ControllerBase
 }
 
 
-```
 
-## backend/Controllers/UsersController.cs
+==================== backend/Controllers/UsersController.cs ====================
 
-```csharp
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
@@ -2399,11 +2426,9 @@ public class UsersController : ControllerBase
         return Ok(rows);
     }
 }
-```
 
-## frontend/package.json
+==================== frontend/package.json ====================
 
-```json
 {
   "name": "app",
   "private": true,
@@ -2424,11 +2449,9 @@ public class UsersController : ControllerBase
   }
 }
 
-```
 
-## frontend/index.html
+==================== frontend/index.html ====================
 
-```html
 <!doctype html>
 <html lang="en">
   <head>
@@ -2443,11 +2466,9 @@ public class UsersController : ControllerBase
   </body>
 </html>
 
-```
 
-## frontend/jsconfig.json
+==================== frontend/jsconfig.json ====================
 
-```json
 {
   "compilerOptions": {
     "moduleResolution": "bundler",
@@ -2482,19 +2503,15 @@ public class UsersController : ControllerBase
   "include": ["src/**/*.d.ts", "src/**/*.js", "src/**/*.svelte"]
 }
 
-```
 
-## frontend/svelte.config.js
+==================== frontend/svelte.config.js ====================
 
-```javascript
 /** @type {import("@sveltejs/vite-plugin-svelte").SvelteConfig} */
 export default {}
 
-```
 
-## frontend/vite.config.js
+==================== frontend/vite.config.js ====================
 
-```javascript
 import { defineConfig } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 
@@ -2509,11 +2526,9 @@ export default defineConfig({
   }
 })
 
-```
 
-## frontend/Dockerfile
+==================== frontend/Dockerfile ====================
 
-```dockerfile
 FROM node:22-alpine
 WORKDIR /app
 COPY package*.json ./
@@ -2521,18 +2536,14 @@ RUN npm ci
 COPY . .
 EXPOSE 5173
 CMD ["npm", "run", "dev"]
-```
 
-## frontend/.dockerignore
+==================== frontend/.dockerignore ====================
 
-```
 node_modules
 dist
-```
 
-## frontend/.gitignore
+==================== frontend/.gitignore ====================
 
-```
 # Logs
 logs
 *.log
@@ -2558,11 +2569,9 @@ dist-ssr
 *.sln
 *.sw?
 
-```
 
-## frontend/README.md
+==================== frontend/README.md ====================
 
-```markdown
 # Svelte + Vite
 
 This template should help get you started developing with Svelte in Vite.
@@ -2607,11 +2616,9 @@ import { writable } from 'svelte/store'
 export default writable(0)
 ```
 
-```
 
-## frontend/src/main.js
+==================== frontend/src/main.js ====================
 
-```javascript
 import { mount } from 'svelte'
 import './app.css'
 import App from './App.svelte'
@@ -2622,11 +2629,9 @@ const app = mount(App, {
 
 export default app
 
-```
 
-## frontend/src/App.svelte
+==================== frontend/src/App.svelte ====================
 
-```svelte
 <script>
   import { onMount } from "svelte";
   import { Chart, registerables } from "chart.js";
@@ -2637,6 +2642,7 @@ export default app
     veri,
     sayfalariSifirla,
     sepetYukle,
+    authHeader,
   } from "./lib/store.svelte.js";
 
   // Modallar
@@ -2652,6 +2658,7 @@ export default app
   import AdminIstekler from "./lib/Components/AdminIstekler.svelte";
   import AdminKullanicilar from "./lib/Components/AdminKullanicilar.svelte";
   import Magaza from "./lib/Components/Magaza.svelte";
+  import UrunDetay from "./lib/Components/UrunDetay.svelte";
   import Profil from "./lib/Components/Profil.svelte";
   import BayiTalepler from "./lib/Components/BayiTalepler.svelte";
   import AdminLoglar from "./lib/Components/AdminLoglar.svelte";
@@ -2705,8 +2712,8 @@ export default app
     durum.error = "";
     try {
       const [pRes, cRes] = await Promise.all([
-        fetch(`${API}/api/products`),
-        fetch(`${API}/api/categories`),
+        fetch(`${API}/api/products`, { headers: authHeader() }),
+        fetch(`${API}/api/categories`, { headers: authHeader() }),
       ]);
       if (!pRes.ok || !cRes.ok) throw new Error("Veri alınamadı");
       veri.products = await pRes.json();
@@ -2882,6 +2889,11 @@ export default app
         <Profil />
       {:else if durum.aktifSekme === "magaza"}
         <Magaza />
+      {:else if durum.aktifSekme === "urun-detay"}
+        <UrunDetay
+          productId={durum.secilenUrunId}
+          geriDon={() => (durum.aktifSekme = "magaza")}
+        />
       {:else if durum.aktifSekme === "sepet"}
         <Sepet />
       {/if}
@@ -2891,11 +2903,9 @@ export default app
   {#if durum.error}<p class="error">{durum.error}</p>{/if}
 </main>
 
-```
 
-## frontend/src/app.css
+==================== frontend/src/app.css ====================
 
-```css
 :root {
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   font-family: var(--sans);
@@ -3537,6 +3547,27 @@ table tbody tr:nth-child(even) {
   flex-direction: column;
   gap: .5rem;
   background: white;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: box-shadow .15s, transform .1s, border-color .15s;
+}
+
+.urun-kart:hover {
+  border-color: lightseagreen;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.urun-kart:active {
+  transform: scale(0.98);
+}
+
+.kart-bayi-sayisi {
+  display: block;
+  font-size: .75rem;
+  color: darkslategrey;
+  font-weight: 400;
 }
 
 .kart-satici {
@@ -3602,6 +3633,88 @@ sepet-btn:active {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* ---- Ürün Detay ekranı ---- */
+
+.geri-btn {
+  background: none;
+  border: none;
+  color: lightseagreen;
+  font-size: .95rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 1rem;
+}
+
+.geri-btn:hover {
+  text-decoration: underline;
+}
+
+.urun-detay {
+  max-width: 700px;
+}
+
+.detay-ust {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.detay-resim {
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 1px solid whitesmoke;
+  flex-shrink: 0;
+}
+
+.detay-ust h2 {
+  margin: 0 0 .3rem;
+}
+
+.detay-kategori {
+  margin: 0;
+  color: darkslategrey;
+  font-size: .9rem;
+}
+
+.teklif-liste {
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+}
+
+.teklif-satir {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  border: 1px solid whitesmoke;
+  border-radius: 12px;
+  padding: .8rem 1rem;
+  background: white;
+}
+
+.teklif-bilgi {
+  display: flex;
+  flex-direction: column;
+  gap: .2rem;
+  flex: 1;
+}
+
+.teklif-bayi {
+  font-weight: 600;
+}
+
+.teklif-satir .kart-fiyat {
+  margin: 0;
+}
+
+.teklif-satir .sepet-btn {
+  margin-top: 0;
 }
 
 
@@ -4272,11 +4385,9 @@ sepet-btn:active {
 
 
 
-```
 
-## frontend/src/lib/store.svelte.js
+==================== frontend/src/lib/store.svelte.js ====================
 
-```javascript
 export const API = import.meta.env.VITE_API_URL ?? "http://localhost:5081";
 
 export const oturum = $state({
@@ -4291,6 +4402,7 @@ export const durum= $state({
     error : "",
     loading : false,
     bildirim: "",
+    secilenUrunId: null,
 });
 
 export const veri = $state ({
@@ -4383,11 +4495,9 @@ export async function sepeteEkle(product_id, dealer_id) {
     if (!res.ok) throw new Error(await res.text());
     await sepetYukle();
 }
-```
 
-## frontend/src/lib/Components/AdminBayiler.svelte
+==================== frontend/src/lib/Components/AdminBayiler.svelte ====================
 
-```svelte
 <script>
   import { onMount } from "svelte";
   import { API, authHeader, durum, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
@@ -4436,11 +4546,9 @@ export async function sepeteEkle(product_id, dealer_id) {
 {:else}
   <p>Henüz bayi yok.</p>
 {/if}
-```
 
-## frontend/src/lib/Components/AdminHareketler.svelte
+==================== frontend/src/lib/Components/AdminHareketler.svelte ====================
 
-```svelte
 <script>
   import { API, oturum, durum, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
 
@@ -4506,11 +4614,9 @@ export async function sepeteEkle(product_id, dealer_id) {
 {:else}
   <p>Henüz hareket yok.</p>
 {/if}
-```
 
-## frontend/src/lib/Components/AdminIstekler.svelte
+==================== frontend/src/lib/Components/AdminIstekler.svelte ====================
 
-```svelte
 <script>
   import { onMount } from "svelte";
   import { API, authHeader, jsonHeader, durum, fiyatKolon, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
@@ -4620,11 +4726,9 @@ export async function sepeteEkle(product_id, dealer_id) {
 {/if}
 
 <RedModal bind:acik={redModalAcik} onay={(sebep) => talepKarar(redTalepId, "reject", sebep)} />
-```
 
-## frontend/src/lib/Components/AdminKategoriler.svelte
+==================== frontend/src/lib/Components/AdminKategoriler.svelte ====================
 
-```svelte
 <script>
   import { veri } from "../store.svelte.js";
   import KategoriModal from "../Modals/KategoriModal.svelte";
@@ -4683,11 +4787,9 @@ export async function sepeteEkle(product_id, dealer_id) {
 
 <KategoriModal bind:acik={modalAcik} eklendi={yenile} />
 <KategoriDetayModal bind:acik={detayAcik} kategori={acikKategori} degisti={yenile} />
-```
 
-## frontend/src/lib/Components/AdminKullanicilar.svelte
+==================== frontend/src/lib/Components/AdminKullanicilar.svelte ====================
 
-```svelte
 <script>
     import { onMount } from "svelte";
     import {
@@ -4774,11 +4876,9 @@ export async function sepeteEkle(product_id, dealer_id) {
 
 <KullaniciModal bind:acik={modalAcik} eklendi={loadUsers} />
 
-```
 
-## frontend/src/lib/Components/AdminLoglar.svelte
+==================== frontend/src/lib/Components/AdminLoglar.svelte ====================
 
-```svelte
 <script>
     import { onMount } from "svelte";
     import {
@@ -4879,11 +4979,9 @@ export async function sepeteEkle(product_id, dealer_id) {
     <p>Henüz log yok.</p>
 {/if}
 
-```
 
-## frontend/src/lib/Components/AdminUrunler.svelte
+==================== frontend/src/lib/Components/AdminUrunler.svelte ====================
 
-```svelte
 <script>
   import { API, veri, authHeader, durum, fiyatKolon, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
   import UrunModal from "../Modals/UrunModal.svelte";
@@ -4958,11 +5056,9 @@ export async function sepeteEkle(product_id, dealer_id) {
 {/if}
 
 <UrunModal bind:acik={modalAcik} urun={duzenlenenUrun} kaydedildi={yenile} />
-```
 
-## frontend/src/lib/Components/BayiRaporlar.svelte
+==================== frontend/src/lib/Components/BayiRaporlar.svelte ====================
 
-```svelte
 <script>
   import { onMount } from "svelte";
   import { Chart, registerables } from "chart.js";
@@ -5060,11 +5156,9 @@ export async function sepeteEkle(product_id, dealer_id) {
     {/if}
   </div>
 </div>
-```
 
-## frontend/src/lib/Components/BayiStok.svelte
+==================== frontend/src/lib/Components/BayiStok.svelte ====================
 
-```svelte
 <script>
   import { onMount } from "svelte";
   import { API, veri, authHeader, durum, fiyatKolon, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
@@ -5158,11 +5252,9 @@ export async function sepeteEkle(product_id, dealer_id) {
     }
   }}
 />
-```
 
-## frontend/src/lib/Components/BayiTalepler.svelte
+==================== frontend/src/lib/Components/BayiTalepler.svelte ====================
 
-```svelte
 <script>
     import { onMount } from "svelte";
     import { API, authHeader, durum, fiyatKolon } from "../store.svelte";
@@ -5253,11 +5345,9 @@ export async function sepeteEkle(product_id, dealer_id) {
     <p>Henüz talebiniz yok.</p>
 {/if}
 
-```
 
-## frontend/src/lib/Components/FiltreCubuk.svelte
+==================== frontend/src/lib/Components/FiltreCubuk.svelte ====================
 
-```svelte
 <!-- FiltreCubuk.svelte -->
 <script>
   let { arama = $bindable(""), placeholder = "Ara...", ekstra } = $props();
@@ -5267,11 +5357,9 @@ export async function sepeteEkle(product_id, dealer_id) {
   <input bind:value={arama} {placeholder} />
   {@render ekstra?.()}
 </div>
-```
 
-## frontend/src/lib/Components/Login.svelte
+==================== frontend/src/lib/Components/Login.svelte ====================
 
-```svelte
 <script>
   import { API, oturum } from "../store.svelte.js";
 
@@ -5421,11 +5509,9 @@ export async function sepeteEkle(product_id, dealer_id) {
     </div>
   </div>
 </div>
-```
 
-## frontend/src/lib/Components/Magaza.svelte
+==================== frontend/src/lib/Components/Magaza.svelte ====================
 
-```svelte
 <script>
   import { onMount } from "svelte";
   import {
@@ -5434,8 +5520,12 @@ export async function sepeteEkle(product_id, dealer_id) {
     durum,
     veri,
     fiyatKolon,
-    sepeteEkle,
   } from "../store.svelte.js";
+
+  function detayaGit(productId) {
+    durum.secilenUrunId = productId;
+    durum.aktifSekme = "urun-detay";
+  }
 
   let secilenKategori = $state("");
   let arama = $state("");
@@ -5497,7 +5587,7 @@ export async function sepeteEkle(product_id, dealer_id) {
   });
 
   onMount(async () => {
-    const res = await fetch(`${API}/api/categories`);
+    const res = await fetch(`${API}/api/categories`, { headers: authHeader() });
     if (res.ok) veri.categories = await res.json();
     await loadShop();
   });
@@ -5508,16 +5598,21 @@ export async function sepeteEkle(product_id, dealer_id) {
   <input bind:value={arama} placeholder="Ürün ara..." />
   <select bind:value={secilenKategori}>
     <option value="">Tüm kategoriler</option>
-    {#each veri.categories as k}
-      <option value={k.id}>{k.name}</option>
-    {/each}
+    {#each veri.categories.filter((k) => !k.parent_id) as ust}
+    <optgroup label={ust.name}>
+      <option value={ust.id}>{ust.name} (tümü)</option>
+      {#each veri.categories.filter((k) => k.parent_id === ust.id) as alt}
+        <option value={alt.id}>{alt.name}</option>
+      {/each}
+    </optgroup>
+  {/each}
   </select>
 </div>
 
 {#if shopData.length}
   <div class="urun-kartlari">
     {#each shopData as urun}
-      <div class="urun-kart">
+      <button class="urun-kart" onclick={() => detayaGit(urun.product_id)}>
         {#if urun.image_url}
           <img
             src={urun.image_url}
@@ -5527,22 +5622,14 @@ export async function sepeteEkle(product_id, dealer_id) {
           />
         {/if}
         <h3>{urun.name}</h3>
-        <p class="kart-satici">Satıcı: <strong>{urun.dealer_name}</strong></p>
+        <p class="kart-satici">
+          En uygun: <strong>{urun.dealer_name}</strong>
+          {#if urun.bayi_sayisi > 1}
+            <span class="kart-bayi-sayisi">+{urun.bayi_sayisi - 1} bayi daha</span>
+          {/if}
+        </p>
         <p class="kart-fiyat">{fiyatKolon(urun.price)}</p>
-        <p class="kart-stok">Stok: {urun.stock}</p>
-        <button
-          class="sepet-btn"
-          onclick={async () => {
-            try {
-              await sepeteEkle(urun.product_id, urun.dealer_id);
-              durum.bildirim = "Ürün sepete eklendi";
-              setTimeout(() => (durum.bildirim = ""), 2000);
-            } catch (e) {
-              durum.error = e.message;
-            }
-          }}>Sepete Ekle</button
-        >
-      </div>
+      </button>
     {/each}
   </div>
   {#if !hepsiYuklendi}
@@ -5554,11 +5641,9 @@ export async function sepeteEkle(product_id, dealer_id) {
   <p>Şu an satışta ürün yok.</p>
 {/if}
 
-```
 
-## frontend/src/lib/Components/Profil.svelte
+==================== frontend/src/lib/Components/Profil.svelte ====================
 
-```svelte
 <script>
   import { onMount } from "svelte";
   import { API, oturum, durum, authHeader, jsonHeader } from "../store.svelte.js";
@@ -5621,11 +5706,9 @@ export async function sepeteEkle(product_id, dealer_id) {
     <button class="ekle-btn" onclick={guncelle}>Kaydet</button>
   </div>
 </div>
-```
 
-## frontend/src/lib/Components/Sepet.svelte
+==================== frontend/src/lib/Components/Sepet.svelte ====================
 
-```svelte
 <script>
     import { onMount } from "svelte";
     import {
@@ -5801,11 +5884,110 @@ export async function sepeteEkle(product_id, dealer_id) {
     onaylandi={sepetiBosalt}
 />
 
-```
 
-## frontend/src/lib/Modals/IslemModal.svelte
+==================== frontend/src/lib/Components/UrunDetay.svelte ====================
 
-```svelte
+<script>
+  import {
+    API,
+    authHeader,
+    durum,
+    fiyatKolon,
+    sepeteEkle,
+  } from "../store.svelte.js";
+
+  let { productId, geriDon } = $props();
+
+  let urun = $state(null);
+  let yukleniyor = $state(false);
+  let hata = $state("");
+  let ekleniyorId = $state(null);
+
+  async function yukle() {
+    if (!productId) return;
+    yukleniyor = true;
+    hata = "";
+    urun = null;
+    try {
+      const res = await fetch(`${API}/api/shop/${productId}`, {
+        headers: authHeader(),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      urun = await res.json();
+    } catch (e) {
+      hata = e instanceof Error ? e.message : String(e);
+    } finally {
+      yukleniyor = false;
+    }
+  }
+
+  $effect(() => {
+    productId;
+    yukle();
+  });
+
+  async function ekle(dealerId) {
+    ekleniyorId = dealerId;
+    try {
+      await sepeteEkle(productId, dealerId);
+      durum.bildirim = "Ürün sepete eklendi";
+      setTimeout(() => (durum.bildirim = ""), 2000);
+    } catch (e) {
+      durum.error = e instanceof Error ? e.message : String(e);
+    } finally {
+      ekleniyorId = null;
+    }
+  }
+</script>
+
+<button class="geri-btn" onclick={geriDon}>← Mağazaya Dön</button>
+
+{#if yukleniyor}
+  <div class="sentinel"><div class="spinner"></div></div>
+{:else if hata}
+  <p class="error">{hata}</p>
+{:else if urun}
+  <div class="urun-detay">
+    <div class="detay-ust">
+      {#if urun.image_url}
+        <img
+          src={urun.image_url}
+          alt={urun.name}
+          class="detay-resim"
+          onerror={(e) => (e.currentTarget.src = "/images/placeholder.png")}
+        />
+      {/if}
+      <div>
+        <h2>{urun.name}</h2>
+        {#if urun.category}<p class="detay-kategori">{urun.category}</p>{/if}
+      </div>
+    </div>
+
+    <h3>Satıcıyı seçin</h3>
+    <div class="teklif-liste">
+      {#each urun.teklifler as t}
+        <div class="teklif-satir">
+          <div class="teklif-bilgi">
+            <span class="teklif-bayi">{t.dealer_name}</span>
+            <span class="kart-stok">Stok: {t.stock}</span>
+          </div>
+          <span class="kart-fiyat">{fiyatKolon(t.price)}</span>
+          <button
+            class="sepet-btn"
+            disabled={ekleniyorId === t.dealer_id}
+            onclick={() => ekle(t.dealer_id)}
+          >
+            {ekleniyorId === t.dealer_id ? "Ekleniyor..." : "Sepete Ekle"}
+          </button>
+        </div>
+      {/each}
+    </div>
+  </div>
+{/if}
+
+
+==================== frontend/src/lib/Modals/IslemModal.svelte ====================
+
 <script>
   import { API, veri, jsonHeader, fiyatKolon } from "../store.svelte.js";
 
@@ -5964,11 +6146,9 @@ export async function sepeteEkle(product_id, dealer_id) {
     </div>
   </div>
 {/if}
-```
 
-## frontend/src/lib/Modals/KategoriDetayModal.svelte
+==================== frontend/src/lib/Modals/KategoriDetayModal.svelte ====================
 
-```svelte
 <script>
   import { API, veri, jsonHeader, authHeader } from "../store.svelte.js";
 
@@ -6055,11 +6235,9 @@ export async function sepeteEkle(product_id, dealer_id) {
     </div>
   </div>
 {/if}
-```
 
-## frontend/src/lib/Modals/KategoriModal.svelte
+==================== frontend/src/lib/Modals/KategoriModal.svelte ====================
 
-```svelte
 <script>
   import { API, jsonHeader } from "../store.svelte.js";
 
@@ -6116,11 +6294,9 @@ export async function sepeteEkle(product_id, dealer_id) {
     </div>
   </div>
 {/if}
-```
 
-## frontend/src/lib/Modals/KullaniciModal.svelte
+==================== frontend/src/lib/Modals/KullaniciModal.svelte ====================
 
-```svelte
 <script>
   import { API, jsonHeader } from "../store.svelte.js";
 
@@ -6192,11 +6368,9 @@ export async function sepeteEkle(product_id, dealer_id) {
     </div>
   </div>
 {/if}
-```
 
-## frontend/src/lib/Modals/OnayModal.svelte
+==================== frontend/src/lib/Modals/OnayModal.svelte ====================
 
-```svelte
 <script>
     let {
         acik = $bindable(false),
@@ -6229,11 +6403,9 @@ export async function sepeteEkle(product_id, dealer_id) {
         </div>
     </div>
 {/if}
-```
 
-## frontend/src/lib/Modals/RedModal.svelte
+==================== frontend/src/lib/Modals/RedModal.svelte ====================
 
-```svelte
 <script>
   let { acik = $bindable(), onay } = $props();
   let sebep = $state("");
@@ -6266,11 +6438,9 @@ export async function sepeteEkle(product_id, dealer_id) {
     </div>
   </div>
 {/if}
-```
 
-## frontend/src/lib/Modals/UrunModal.svelte
+==================== frontend/src/lib/Modals/UrunModal.svelte ====================
 
-```svelte
 <script>
   import { API, veri, jsonHeader } from "../store.svelte.js";
 
@@ -6433,5 +6603,4 @@ export async function sepeteEkle(product_id, dealer_id) {
   </div>
 {/if}
 
-```
 

@@ -82,7 +82,13 @@ INSERT INTO products (name, category_id, stock, price, image_url) VALUES
     ('Sefiller',            6, 120,   249.90, 'https://placehold.co/200x200?text=Sefiller'),
     ('Schogetten Cikolata', 3, 500,    34.90, 'https://placehold.co/200x200?text=Cikolata'),
     ('Amasya Elmasi 1 KG',  3, 300,    49.90, 'https://placehold.co/200x200?text=Elma'),
-    ('ASUS Monitor 24"',    1, 40,   6190.00, 'https://placehold.co/200x200?text=Monitor');
+    ('ASUS Monitor 24"',    1, 40,   6190.00, 'https://placehold.co/200x200?text=Monitor'),
+    ('iPhone 15 Pro',           4, 40,  64999.99, '/products/iphone.jpg'),
+    ('Logitech Kablosuz Mouse', 5, 150,   799.90, '/products/logitech.jpg'),
+    ('MSI Gaming Laptop',       5, 25,  45999.99, '/products/msi.jpg'),
+    ('Dune',                    6, 180,   224.90, '/products/dune.jpg'),
+    ('Findik 1 KG',             3, 300,    89.90, '/products/findik.jpg'),
+    ('Sutlu Cikolata',          3, 400,    59.90, '/products/chocolate.jpg');
 
 
 -- ---------- 4. BAYİ STOKLARI ----------
