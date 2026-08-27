@@ -45,6 +45,8 @@ public class ProductsController : ControllerBase
         var token = Request.Headers["Authorization"].ToString();
         var role = await AuthHelper.GetRole(_db, token);
         if (role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
+        if (!UrlValidator.GuvenliResimUrlMi(p.image_url))
+            return BadRequest("Geçersiz resim adresi (yalnızca https:// veya / ile başlayan yollar kabul edilir)");
 
         var sql = @"
             INSERT INTO products (name, category_id, stock, price, image_url)
@@ -74,6 +76,8 @@ public class ProductsController : ControllerBase
         var token = Request.Headers["Authorization"].ToString();
         var role = await AuthHelper.GetRole(_db, token);
         if (role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
+        if (!UrlValidator.GuvenliResimUrlMi(p.image_url))
+            return BadRequest("Geçersiz resim adresi (yalnızca https:// veya / ile başlayan yollar kabul edilir)");
 
         var affected = await _db.ExecuteAsync(
             @"UPDATE products
@@ -89,16 +93,37 @@ public class ProductsController : ControllerBase
     public async Task<IActionResult> Delete(int id)
     {
         var token = Request.Headers["Authorization"].ToString();
-        var role = await AuthHelper.GetRole(_db, token);
-        if (role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
+        var actor = await AuthHelper.GetUser(_db, token);
+        if (actor is null || actor.Value.Role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
 
-        // Foreign key sırası: önce bağlı kayıtlar
-        await _db.ExecuteAsync("DELETE FROM requests WHERE product_id = @id", new { id });
-        await _db.ExecuteAsync("DELETE FROM stock_movements WHERE product_id = @id", new { id });
-        await _db.ExecuteAsync("DELETE FROM cart_items WHERE product_id = @id", new { id });
-        await _db.ExecuteAsync("DELETE FROM dealer_stock WHERE product_id = @id", new { id });
+        if (_db.State != ConnectionState.Open) _db.Open();
+        using var tx = _db.BeginTransaction();
+        try
+        {
+            // Foreign key sırası: önce bağlı kayıtlar. Hepsi tek transaction'da -
+            // aradaki bir hata yarim silinmis/tutarsiz durum birakmaz (L-07).
+            await _db.ExecuteAsync("DELETE FROM requests WHERE product_id = @id", new { id }, tx);
+            await _db.ExecuteAsync("DELETE FROM stock_movements WHERE product_id = @id", new { id }, tx);
+            await _db.ExecuteAsync("DELETE FROM cart_items WHERE product_id = @id", new { id }, tx);
+            await _db.ExecuteAsync("DELETE FROM dealer_stock WHERE product_id = @id", new { id }, tx);
 
-        var affected = await _db.ExecuteAsync("DELETE FROM products WHERE id = @id", new { id });
-        return affected > 0 ? Ok() : NotFound();
+            var affected = await _db.ExecuteAsync("DELETE FROM products WHERE id = @id", new { id }, tx);
+            if (affected == 0)
+            {
+                tx.Rollback();
+                return NotFound();
+            }
+
+            await AuditLogger.Log(_db, actor.Value.Id, "product_delete", "product", id,
+                null, HttpContext.Connection.RemoteIpAddress?.ToString(), tx);
+
+            tx.Commit();
+            return Ok();
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
     }
 }

@@ -53,29 +53,45 @@ public class StockController : ControllerBase
 
         var dealerId = user.Value.id;
 
-        var current = await _db.QueryFirstOrDefaultAsync<int?>(
-            "SELECT stock FROM dealer_stock WHERE dealer_id = @dealerId AND product_id =@pid",
-            new  { dealerId, pid = req.product_id });
+        if (_db.State != ConnectionState.Open) _db.Open();
+        using var tx = _db.BeginTransaction();
+        try
+        {
+            // Atomik kosullu guncelleme: oku-hesapla-yaz araligindaki yaris koşulunu
+            // (TOCTOU) kapatir - stok eksiye dusecekse UPDATE hic satir etkilemez.
+            var affected = await _db.ExecuteAsync(
+                @"UPDATE dealer_stock SET stock = stock + @change
+                    WHERE dealer_id = @dealerId AND product_id = @pid AND stock + @change >= 0",
+                new { change = req.change, dealerId, pid = req.product_id }, tx);
 
-        if (current is null)
-            return NotFound("Bu ürün sizin stok listenizde yok");
+            if (affected == 0)
+            {
+                var exists = await _db.ExecuteScalarAsync<bool>(
+                    "SELECT EXISTS(SELECT 1 FROM dealer_stock WHERE dealer_id = @dealerId AND product_id = @pid)",
+                    new { dealerId, pid = req.product_id }, tx);
+                tx.Rollback();
+                return exists
+                    ? BadRequest($"Stok eksiye düşemez. Çıkış: {req.change}")
+                    : NotFound("Bu ürün sizin stok listenizde yok");
+            }
 
-        var newStock = current.Value + req.change;
-        if (newStock < 0)
-            return BadRequest($"Stok eksiye düşemez. Mevcut: {current}, çıkış: {req.change}");
+            await _db.ExecuteAsync(
+                @"INSERT INTO stock_movements (dealer_id, product_id, quantity)
+                    VALUES (@dealerId, @pid, @qty)",
+                new { dealerId, pid = req.product_id, qty = req.change }, tx);
 
-        await _db.ExecuteAsync(
-            @"INSERT INTO stock_movements (dealer_id, product_id, quantity)
-                VALUES (@dealerId, @pid, @qty)",
-            new { dealerId, pid = req.product_id, qty = req.change });
+            var newStock = await _db.ExecuteScalarAsync<int>(
+                "SELECT stock FROM dealer_stock WHERE dealer_id = @dealerId AND product_id = @pid",
+                new { dealerId, pid = req.product_id }, tx);
 
-        await _db.ExecuteAsync(
-            @"UPDATE dealer_stock SET stock = @newStock
-                WHERE dealer_id = @dealerId AND product_id = @pid",
-            new { newStock, dealerId, pid = req.product_id });
-        
-        return Ok(new {product_id = req.product_id, newStock, change = req.change});
-        
+            tx.Commit();
+            return Ok(new { product_id = req.product_id, newStock, change = req.change });
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
     }
 
     [HttpGet("my-stock/movements")]
@@ -152,22 +168,36 @@ public class StockController : ControllerBase
         
         if (mevcutFiyat is null && !await UrunListedeMi(dealerId, req.product_id))
             return NotFound("Bu ürün sizin listenizde yok");
-        //
-        //Bekleyen eski talebi iptal et
-        //
-        await _db.ExecuteAsync(
-            @"UPDATE requests SET status = 'cancelled', resolved_at = NOW()
-              WHERE dealer_id = @dealerId AND product_id = @pid
-                AND type = 'price' AND status = 'pending'",
-            new { dealerId, pid = req.product_id });
-        //
-        //Yeni talep oluştur
-        //        
-        var talepId = await _db.ExecuteScalarAsync<int>(
-            @"INSERT INTO requests (dealer_id, product_id, type, old_price, new_price, status) 
-              VALUES (@dealerId, @pid, 'price', @old, @new, 'pending')
-              RETURNING id",
-            new { dealerId, pid = req.product_id, old = mevcutFiyat, @new = req.price });
+
+        if (_db.State != ConnectionState.Open) _db.Open();
+        using var tx = _db.BeginTransaction();
+        int talepId;
+        try
+        {
+            //
+            //Bekleyen eski talebi iptal et
+            //
+            await _db.ExecuteAsync(
+                @"UPDATE requests SET status = 'cancelled', resolved_at = NOW()
+                  WHERE dealer_id = @dealerId AND product_id = @pid
+                    AND type = 'price' AND status = 'pending'",
+                new { dealerId, pid = req.product_id }, tx);
+            //
+            //Yeni talep oluştur
+            //
+            talepId = await _db.ExecuteScalarAsync<int>(
+                @"INSERT INTO requests (dealer_id, product_id, type, old_price, new_price, status)
+                  VALUES (@dealerId, @pid, 'price', @old, @new, 'pending')
+                  RETURNING id",
+                new { dealerId, pid = req.product_id, old = mevcutFiyat, @new = req.price }, tx);
+
+            tx.Commit();
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
 
         return Ok(new { talep_id = talepId, durum = "Onay bekliyor", eski_fiyat = mevcutFiyat, yeni_fiyat = req.price });
     }

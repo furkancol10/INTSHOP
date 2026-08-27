@@ -54,25 +54,24 @@ public class CartController : ControllerBase
         var userId = await KullaniciId();
         if (userId is null) return Unauthorized();
 
-        var stok = await _db.ExecuteScalarAsync<int?>(
-            "SELECT stock FROM dealer_stock WHERE product_id = @productId AND dealer_id = @dealerId",
+        var urunVarMi = await _db.ExecuteScalarAsync<bool>(
+            "SELECT EXISTS(SELECT 1 FROM dealer_stock WHERE product_id = @productId AND dealer_id = @dealerId)",
             new { productId = req.product_id, dealerId = req.dealer_id });
-        if (stok is null) return BadRequest("Bu ürün bu bayide satışta değil");
+        if (!urunVarMi) return BadRequest("Bu ürün bu bayide satışta değil");
 
-        var mevcut = await _db.ExecuteScalarAsync<int?>(
-            @"SELECT quantity FROM cart_items
-              WHERE user_id = @userId AND product_id = @productId AND dealer_id = @dealerId",
-        new { userId = userId.Value, productId = req.product_id, dealerId = req.dealer_id }) ?? 0;
-
-        var yeniadet = mevcut + 1;
-        if (yeniadet > stok.Value) return BadRequest($"Stok yetersiz (mevcut: {stok.Value})");
-
-        await _db.ExecuteAsync(
+        // Stok kontrolu upsert'in kendi WHERE'ine gomulu - okuma ile yazma arasindaki
+        // yaris koşulunu (TOCTOU) kapatir. affected == 0 ise stok yetersiz demektir.
+        var affected = await _db.ExecuteAsync(
             @"INSERT INTO cart_items(user_id, product_id, dealer_id, quantity)
-              VALUES (@userId, @productId, @dealerId, 1)
+              SELECT @userId, @productId, @dealerId, 1
+              WHERE (SELECT stock FROM dealer_stock WHERE product_id = @productId AND dealer_id = @dealerId) >= 1
               ON CONFLICT (user_id, product_id, dealer_id)
-              DO UPDATE SET quantity = cart_items.quantity + 1",
+              DO UPDATE SET quantity = cart_items.quantity + 1
+              WHERE (SELECT stock FROM dealer_stock WHERE product_id = @productId AND dealer_id = @dealerId)
+                    >= cart_items.quantity + 1",
             new { userId = userId.Value, productId = req.product_id, dealerId = req.dealer_id });
+
+        if (affected == 0) return BadRequest("Stok yetersiz");
 
         return Ok(new { eklendi = true });
     }
@@ -84,17 +83,22 @@ public class CartController : ControllerBase
         if (userId is null) return Unauthorized();
         if (req.quantity < 1) return BadRequest("Adet en az 1 olmalı");
 
-        var stok = await _db.ExecuteScalarAsync<int?>(
-            @"SELECT ds.stock FROM cart_items c
-              JOIN dealer_stock ds ON ds.product_id = c.product_id AND ds.dealer_id = c.dealer_id
-              WHERE c.id = @id AND c.user_id = @userId",
-              new { id, userId = userId.Value });
-        if (stok is null) return NotFound();
-        if (req.quantity > stok.Value) return BadRequest($"Stok yetersiz (mevcut: {stok.Value})");
+        var satirVarMi = await _db.ExecuteScalarAsync<bool>(
+            "SELECT EXISTS(SELECT 1 FROM cart_items WHERE id = @id AND user_id = @userId)",
+            new { id, userId = userId.Value });
+        if (!satirVarMi) return NotFound();
 
-        await _db.ExecuteAsync(
-            "UPDATE cart_items SET quantity = @quantity WHERE id = @id AND user_id = @userId",
+        // Stok kontrolu UPDATE'in kendi WHERE'ine gomulu - okuma ile yazma arasindaki
+        // yaris koşulunu (TOCTOU) kapatir.
+        var affected = await _db.ExecuteAsync(
+            @"UPDATE cart_items c SET quantity = @quantity
+              FROM dealer_stock ds
+              WHERE c.id = @id AND c.user_id = @userId
+                AND ds.product_id = c.product_id AND ds.dealer_id = c.dealer_id
+                AND ds.stock >= @quantity",
             new { req.quantity, id, userId = userId.Value });
+
+        if (affected == 0) return BadRequest("Stok yetersiz");
 
         return Ok(new { guncellendi = true });
     }

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 0nq4wk7DMJJnkydZ1B4X6aL3idtk4cTrCEN4gAllOXyF1uEzIBt5T7gNOgqc6xm
+\restrict FwWr1LqDdZeCViUnudXO3WR4qHBnXDXTDTBHgaaqbwdcp6eKcp94iTb5YdYstHD
 
 -- Dumped from database version 18.4 (Debian 18.4-1.pgdg13+1)
 -- Dumped by pg_dump version 18.4 (Debian 18.4-1.pgdg13+1)
@@ -22,6 +22,42 @@ SET row_security = off;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: audit_log; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.audit_log (
+    id integer NOT NULL,
+    actor_id integer,
+    action character varying(50) NOT NULL,
+    target_type character varying(50),
+    target_id integer,
+    details jsonb,
+    ip_address character varying(45),
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: audit_log_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.audit_log_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: audit_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.audit_log_id_seq OWNED BY public.audit_log.id;
+
 
 --
 -- Name: cart_items; Type: TABLE; Schema: public; Owner: -
@@ -107,7 +143,8 @@ CREATE TABLE public.dealer_stock (
 CREATE TABLE public.login_logs (
     id integer NOT NULL,
     user_id integer,
-    action character varying(10) NOT NULL,
+    attempted_username character varying(50),
+    action character varying(20) NOT NULL,
     ip_address character varying(45),
     created_at timestamp without time zone DEFAULT now()
 );
@@ -209,6 +246,42 @@ ALTER SEQUENCE public.requests_id_seq OWNED BY public.requests.id;
 
 
 --
+-- Name: sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sessions (
+    id integer NOT NULL,
+    user_id integer NOT NULL,
+    token_hash character varying(64) NOT NULL,
+    issued_at timestamp with time zone DEFAULT now() NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    revoked_at timestamp with time zone,
+    user_agent character varying(300),
+    ip_address character varying(45)
+);
+
+
+--
+-- Name: sessions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.sessions_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: sessions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.sessions_id_seq OWNED BY public.sessions.id;
+
+
+--
 -- Name: stock_movements; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -250,8 +323,6 @@ CREATE TABLE public.users (
     username character varying(50) NOT NULL,
     password_hash character varying(200) NOT NULL,
     role character varying(20) NOT NULL,
-    token character varying(200),
-    token_issued_at timestamp with time zone,
     address character varying(300),
     phone character varying(20),
     avatar_url character varying(500),
@@ -277,6 +348,13 @@ CREATE SEQUENCE public.users_id_seq
 --
 
 ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
+
+
+--
+-- Name: audit_log id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.audit_log ALTER COLUMN id SET DEFAULT nextval('public.audit_log_id_seq'::regclass);
 
 
 --
@@ -315,6 +393,13 @@ ALTER TABLE ONLY public.requests ALTER COLUMN id SET DEFAULT nextval('public.req
 
 
 --
+-- Name: sessions id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sessions ALTER COLUMN id SET DEFAULT nextval('public.sessions_id_seq'::regclass);
+
+
+--
 -- Name: stock_movements id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -326,6 +411,14 @@ ALTER TABLE ONLY public.stock_movements ALTER COLUMN id SET DEFAULT nextval('pub
 --
 
 ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
+
+
+--
+-- Name: audit_log audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.audit_log
+    ADD CONSTRAINT audit_log_pkey PRIMARY KEY (id);
 
 
 --
@@ -385,6 +478,14 @@ ALTER TABLE ONLY public.requests
 
 
 --
+-- Name: sessions sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sessions
+    ADD CONSTRAINT sessions_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: stock_movements stock_movements_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -414,6 +515,28 @@ ALTER TABLE ONLY public.users
 
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_username_key UNIQUE (username);
+
+
+--
+-- Name: ix_sessions_token_hash; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ix_sessions_token_hash ON public.sessions USING btree (token_hash);
+
+
+--
+-- Name: ix_sessions_user_id_active; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_sessions_user_id_active ON public.sessions USING btree (user_id) WHERE (revoked_at IS NULL);
+
+
+--
+-- Name: audit_log audit_log_actor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.audit_log
+    ADD CONSTRAINT audit_log_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES public.users(id);
 
 
 --
@@ -497,6 +620,14 @@ ALTER TABLE ONLY public.requests
 
 
 --
+-- Name: sessions sessions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sessions
+    ADD CONSTRAINT sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
 -- Name: stock_movements stock_movements_dealer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -516,5 +647,5 @@ ALTER TABLE ONLY public.stock_movements
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 0nq4wk7DMJJnkydZ1B4X6aL3idtk4cTrCEN4gAllOXyF1uEzIBt5T7gNOgqc6xm
+\unrestrict FwWr1LqDdZeCViUnudXO3WR4qHBnXDXTDTBHgaaqbwdcp6eKcp94iTb5YdYstHD
 

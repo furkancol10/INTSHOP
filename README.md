@@ -15,7 +15,7 @@ yönetir, bayiler kendi stok ve fiyatlarını belirler, müşteriler mağazadan 
 - [Özellikler](#özellikler)
 - [Teknoloji Yığını](#teknoloji-yığını)
 - [Kurulum](#kurulum)
-- [Demo Hesapları](#demo-hesapları)
+- [Demo Verisi](#demo-verisi)
 - [Roller ve Yetkiler](#roller-ve-yetkiler)
 - [Ekran Görüntüleri](#ekran-görüntüleri)
 - [Veritabanı Şeması](#veritabanı-şeması)
@@ -72,11 +72,23 @@ docker compose up --build
 
 Servisler ayağa kalktıktan sonra:
 
-- Uygulama: http://localhost:5173
+- Uygulama: http://localhost:5173 (statik build, nginx üzerinden — üretim benzeri)
 - API: http://localhost:5081
 
 Veritabanı ilk açılışta `db/init/01-schema.sql` dosyasıyla otomatik olarak kurulur
-ve örnek verilerle doldurulur.
+(sadece şema + kategori/ürün kataloğu — kullanıcı hesabı yok). Demo hesaplarıyla
+birlikte örnek verilerle doldurmak istersen, bkz. [Demo Verisi](#demo-verisi).
+
+### Hot-reload ile geliştirme
+
+Varsayılan `docker compose up`, frontend'i statik build + nginx ile servis eder
+(değişiklik yapınca yeniden build gerekir). Vite dev sunucusu + hot-reload için:
+
+```bash
+docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up --build
+```
+
+Bu modda DB portu da (`127.0.0.1:5432`) yerel geliştirme için host'a açılır.
 
 ### Ortam değişkenleri
 
@@ -103,16 +115,23 @@ veritabanında çalışır.
 
 ---
 
-## Demo Hesapları
+## Demo Verisi
 
-| Kullanıcı adı | Şifre | Rol |
-|---|---|---|
-| `admin` | `admin123` | Admin |
-| `bayi` | `bayi123` | Bayi |
-| `bayi2` | `bayi123` | Bayi |
-| `bayi3` | `bayi123` | Bayi |
-| `user1` | `user123` | Müşteri |
-| `user2` | `user123` | Müşteri |
+Demo hesapları ve onlara bağlı örnek veriler (bayi stoğu, stok hareketleri,
+fiyat talepleri) artık otomatik kurulmuyor — `db/init/` altındaki dosyalar
+şifreli hiçbir hesap içermiyor. Yerel/geliştirme ortamında istersen elle
+uygulayabilirsin:
+
+```bash
+docker compose exec -T db psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < db/seed/dev-seed.sql
+```
+
+Bu, `db/seed/dev-seed.sql` içindeki demo hesapları (zayıf, bilinen şifrelerle —
+dosyanın kendisinde listeli) ve örnek verileri ekler. **Bu dosyayı asla
+internete açık veya prod/staging bir veritabanına uygulama.**
+
+Prod ortamında ilk admin hesabını, kendi belirleyeceğin güçlü bir şifrenin
+bcrypt hash'iyle elle oluştur (`INSERT INTO users ...`).
 
 ---
 
@@ -164,6 +183,7 @@ erDiagram
     users ||--o{ stock_movements : "kaydeder"
     users ||--o{ login_logs : "üretir"
     users ||--o{ cart_items : "sahiptir"
+    users ||--o{ sessions : "oturum açar"
     categories ||--o{ categories : "üst kategori"
     categories ||--o{ products : "içerir"
     products ||--o{ dealer_stock : "listelenir"
@@ -175,11 +195,21 @@ erDiagram
         varchar username UK
         varchar password_hash
         varchar role
-        varchar token
         varchar address
         varchar phone
         varchar avatar_url
         varchar email UK
+    }
+
+    sessions {
+        int id PK
+        int user_id FK
+        varchar token_hash "SHA-256, ham token hicbir yerde saklanmaz"
+        timestamptz issued_at
+        timestamptz expires_at
+        timestamptz revoked_at
+        varchar user_agent
+        varchar ip_address
     }
 
     categories {
@@ -253,16 +283,26 @@ erDiagram
 
 | Metot | Yol | Rol | Açıklama |
 |---|---|---|---|
-| POST | `/api/login` | — | Giriş yapar, token döndürür |
+| POST | `/api/login` | — | Giriş yapar, token döndürür (IP başına dk'da 5 istekle sınırlı) |
+| POST | `/api/signup` | — | Müşteri olarak kayıt olur (dk'da 5 istekle sınırlı) |
+| POST | `/api/register` | Admin | Admin, Bayi/Kullanıcı/Admin rolünde yeni kullanıcı ekler |
 | POST | `/api/logout` | Herkes | Token'ı geçersiz kılar, log kaydı düşer |
 | GET | `/api/profile` | Herkes | Oturum sahibinin bilgileri |
+| PUT | `/api/profile/password` | Herkes | Şifre değiştirir (mevcut şifreyi doğrular, tüm oturumları iptal eder) |
+
+> Token'lar 12 saat sonra otomatik geçersiz olur. Ham token yalnızca istemciye
+> döner — veritabanında `sessions.token_hash` sütununda yalnızca SHA-256 özeti
+> tutulur. Yeni bir giriş, aynı kullanıcının önceki aktif oturumlarını iptal eder
+> (tek aktif oturum). Çıkış yapmak ilgili oturumu iptal eder (`revoked_at`).
 
 ### Katalog
 
 | Metot | Yol | Rol | Açıklama |
 |---|---|---|---|
-| GET | `/api/products` | — | Ürün listesi |
-| GET | `/api/categories` | — | Kategori listesi |
+| GET | `/api/products` | Admin | Ürün listesi (kâr marjı sınırları dahil) |
+| POST/PUT/DELETE | `/api/products` | Admin | Ürün ekleme / güncelleme / silme |
+| GET | `/api/categories` | Herkes (giriş yapmış) | Kategori listesi |
+| POST/DELETE | `/api/categories` | Admin | Kategori ekleme / silme |
 
 ### Bayi
 
@@ -282,12 +322,14 @@ erDiagram
 | GET | `/api/users` | Admin | Kullanıcı listesi |
 | GET | `/api/movements` | Admin | Stok hareketleri |
 | GET | `/api/logs` | Admin | Giriş / çıkış logları (son 100 kayıt) |
+| GET | `/api/audit` | Admin | Denetim izi — admin eylemleri (kullanıcı oluşturma, talep onay/red, ürün silme) (son 100 kayıt) |
 
 ### Mağaza ve sepet
 
 | Metot | Yol | Rol | Açıklama |
 |---|---|---|---|
-| GET | `/api/shop` | Müşteri | Mağaza listesi. Parametreler: `limit`, `offset`, `kategori`, `arama` |
+| GET | `/api/shop` | Müşteri | Mağaza listesi — ürün başına tek satır (en ucuz, eşitlikte en stoklu bayi). Parametreler: `limit`, `offset`, `kategori`, `arama` |
+| GET | `/api/shop/{id}` | Müşteri | Ürün detayı — o ürünü satan tüm bayiler, fiyata göre artan sırada |
 | GET | `/api/cart` | Müşteri | Sepet içeriği ve toplam tutar |
 | POST | `/api/cart` | Müşteri | Sepete ürün ekler (varsa adedi artırır) |
 | PUT | `/api/cart/{id}` | Müşteri | Satır adedini günceller |
@@ -300,31 +342,39 @@ erDiagram
 
 ```
 stok-panel/
-├── api/                       # .NET 8 Web API
+├── backend/                    # .NET 8 Web API
 │   ├── Controllers/
 │   │   ├── AuthController.cs
 │   │   ├── CartController.cs
-│   │   ├── LogsController.cs
+│   │   ├── LogsControllers.cs
 │   │   ├── RequestsController.cs
 │   │   ├── ShopController.cs
 │   │   └── ...
-│   ├── Program.cs
+│   ├── AuthHelper.cs           # Token dogrulama + rol/kullanici cozumleme (12 saat gecerlilik)
+│   ├── Program.cs              # CORS + rate limiting (login/signup)
 │   └── Dockerfile
 ├── db/
-│   └── init/
-│       └── 01-schema.sql      # Şema + örnek veri (ilk açılışta çalışır)
-├── frontend/                  # Svelte 5 + Vite
+│   ├── init/
+│   │   └── 01-schema.sql       # Şema + kategori/ürün kataloğu (ilk açılışta otomatik çalışır)
+│   ├── seed/
+│   │   └── dev-seed.sql        # Demo hesapları + örnek veri (elle uygulanır, otomatik değil)
+│   └── gercek-sema.sql         # Referans amaçlı guncel şema dökümü
+├── frontend/                   # Svelte 5 + Vite (SPA)
 │   ├── src/
 │   │   ├── lib/
-│   │   │   ├── Components/    # Sayfa bileşenleri
-│   │   │   ├── Modals/        # Modal pencereler
+│   │   │   ├── Components/     # Sayfa bileşenleri
+│   │   │   ├── Modals/         # Modal pencereler
 │   │   │   └── store.svelte.js
 │   │   ├── App.svelte
 │   │   └── app.css
 │   └── Dockerfile
 ├── docker-compose.yaml
-└── .env
+└── .env                        # Git'e dahil değil, .env.example'a bak
 ```
+
+> **Not:** `sveltekit_gecis` branch'inde frontend, dosya tabanlı routing kullanan
+> bir SvelteKit yapısına (`frontend/src/routes/...`) taşınmış durumda — henüz
+> deneme aşamasında, `main`'e karışmamış. Detay için o branch'teki PR'a bak.
 
 ---
 
@@ -347,6 +397,12 @@ tarafı filtreleme yalnızca yüklenmiş ürünleri süzerdi. Filtreler SQL'de
 içinde çeker. Merkezi bir store yalnızca oturum, ortak durum ve sepet için
 kullanılır.
 
+**Mağazada ürün tekilliği.** `/api/shop`, her ürünü tek satırda gösterir;
+birden fazla bayi aynı ürünü satıyorsa `DISTINCT ON` ile en ucuz (eşitlikte
+en stoklu) teklif seçilir. Diğer bayi tekliflerini görmek ve aralarından
+seçim yapmak için ürün detay sayfası (`/api/shop/{id}`) kullanılır — sepete
+ekleme yalnızca oradan yapılabilir.
+
 <!-- TODO: Eklemek istediğin başka kararlar varsa buraya yaz -->
 
 ---
@@ -355,7 +411,16 @@ kullanılır.
 
 - **Sipariş sistemi** — `orders` ve `order_items` tabloları, sepetin siparişe
   dönüşmesi, stok düşürme ve bayi bazlı sipariş bölme
-- **JWT tabanlı kimlik doğrulama** — mevcut GUID token yerine süreli, imzalı token
+- **JWT tabanlı kimlik doğrulama** — mevcut GUID token artık 12 saat sonra
+  otomatik geçersiz oluyor, ama imzalı/self-contained bir token'a (JWT) geçiş
+  hâlâ gündemde
+- **HTTPS / TLS** — uygulama kodu artık reverse proxy arkasında çalışmaya hazır
+  (`UseForwardedHeaders`, `UseHsts`/`UseHttpsRedirection`, config-driven CORS),
+  ama TLS'i gerçekten sonlandıracak proxy (Caddy/nginx/harici) henüz compose'a
+  eklenmedi — bu, ayrı bir deploy kararı olarak bekliyor
+- **SvelteKit'e tam geçiş** — `sveltekit_gecis` branch'inde PoC olarak üç rol
+  için de (Kullanıcı/Bayi/Admin) dosya tabanlı routing'e geçildi; `main`'e
+  alınıp alınmayacağına henüz karar verilmedi
 - **Gerçek sayfalama** — log ve hareket listelerinde istemci tarafı sayfalama
   yerine `LIMIT/OFFSET` ile sunucu tarafı sayfalama
 - **Kargo takibi ve bildirimler**

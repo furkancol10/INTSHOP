@@ -37,39 +37,75 @@ public class RequestsController : ControllerBase
     public async Task<IActionResult> Approve(int id, [FromBody] KararReq? req)
     {
         var token = Request.Headers["Authorization"].ToString();
-        var role = await AuthHelper.GetRole(_db, token);
-        if (role != "Admin") return StatusCode(403, "Sadece Admin");
+        var actor = await AuthHelper.GetUser(_db, token);
+        if (actor is null || actor.Value.Role != "Admin") return StatusCode(403, "Sadece Admin");
 
-        var talep = await _db.QueryFirstOrDefaultAsync(
-            "SELECT dealer_id, product_id, new_price, status FROM requests WHERE id = @id",
-            new { id });
+        if (_db.State != ConnectionState.Open) _db.Open();
+        using var tx = _db.BeginTransaction();
+        try
+        {
+            var talep = await _db.QueryFirstOrDefaultAsync(
+                "SELECT dealer_id, product_id, new_price, status FROM requests WHERE id = @id",
+                new { id }, tx);
 
-        if (talep is null) return NotFound("Talep bulunamadı");
-        if ((string)talep.status != "pending") return BadRequest("Bu talep zaten karara bağlanmış");
+            if (talep is null) { tx.Rollback(); return NotFound("Talep bulunamadı"); }
+            if ((string)talep.status != "pending") { tx.Rollback(); return BadRequest("Bu talep zaten karara bağlanmış"); }
+            if (talep.new_price is null) { tx.Rollback(); return BadRequest("Talepte geçerli bir fiyat yok"); }
 
-        int dealerId = (int)talep.dealer_id;
-        int productId = (int)talep.product_id;
-        decimal yeni_Fiyat = (decimal)talep.new_price;
+            int dealerId = (int)talep.dealer_id;
+            int productId = (int)talep.product_id;
+            decimal yeniFiyat = (decimal)talep.new_price;
 
-        //Fiyat uygula
-        await _db.ExecuteAsync(
-            "UPDATE dealer_stock SET price = @price WHERE dealer_id = @dealerId AND product_id = @pid",
-            new {price = yeni_Fiyat, dealerId, pid = productId }); 
-        //Talebi onayla
-        await _db.ExecuteAsync(
-            "UPDATE requests SET status = 'approved', admin_note = @note, resolved_at = NOW() WHERE id = @id",
-            new { id ,note = req?.note });
+            // Onay aninda fiyat sinirlarini yeniden dogrula - talep olusturulduktan sonra
+            // urunun min/max_oran'i degismis olabilir (L-05).
+            var sinirlar = await _db.QueryFirstOrDefaultAsync(
+                @"SELECT ROUND(p.price * COALESCE(p.min_oran, 80) / 100, 2) AS alt,
+                         ROUND(p.price * COALESCE(p.max_oran, 120) / 100, 2) AS ust
+                  FROM products p WHERE p.id = @pid",
+                new { pid = productId }, tx);
 
+            if (sinirlar is null) { tx.Rollback(); return NotFound("Ürün bulunamadı"); }
+            if (yeniFiyat < (decimal)sinirlar.alt || yeniFiyat > (decimal)sinirlar.ust)
+            {
+                tx.Rollback();
+                return BadRequest($"Fiyat artık geçerli aralıkta değil ({sinirlar.alt} - {sinirlar.ust} ₺). Talebi reddedip bayiden yeni talep istemesini isteyin.");
+            }
 
-        return Ok(new { id, durum = "onaylandi", uygulanan_fiyat = yeni_Fiyat });
+            //Fiyat uygula
+            var etkilenen = await _db.ExecuteAsync(
+                "UPDATE dealer_stock SET price = @price WHERE dealer_id = @dealerId AND product_id = @pid",
+                new { price = yeniFiyat, dealerId, pid = productId }, tx);
+
+            if (etkilenen == 0)
+            {
+                tx.Rollback();
+                return BadRequest("Bu bayinin artık bu üründe stok kaydı yok, fiyat uygulanamadı");
+            }
+
+            //Talebi onayla
+            await _db.ExecuteAsync(
+                "UPDATE requests SET status = 'approved', admin_note = @note, resolved_at = NOW() WHERE id = @id",
+                new { id, note = req?.note }, tx);
+
+            await AuditLogger.Log(_db, actor.Value.Id, "request_approve", "request", id,
+                new { dealerId, productId, yeniFiyat }, HttpContext.Connection.RemoteIpAddress?.ToString(), tx);
+
+            tx.Commit();
+            return Ok(new { id, durum = "onaylandi", uygulanan_fiyat = yeniFiyat });
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
     }
 
     [HttpPut("{id}/reject")]
     public async Task<IActionResult> Reject(int id, [FromBody] KararReq? req)
     {
         var token = Request.Headers["Authorization"].ToString();
-        var role = await AuthHelper.GetRole(_db, token);
-        if (role != "Admin") return StatusCode(403, "Sadece Admin");
+        var actor = await AuthHelper.GetUser(_db, token);
+        if (actor is null || actor.Value.Role != "Admin") return StatusCode(403, "Sadece Admin");
 
         var durum = await _db.ExecuteScalarAsync<string?>(
             "SELECT status FROM requests WHERE id = @id", new { id });
@@ -81,6 +117,9 @@ public class RequestsController : ControllerBase
             @"UPDATE requests SET status = 'rejected', admin_note = @note, resolved_at = NOW()
                 WHERE id = @id",
                 new { id ,note = req?.note });
+
+        await AuditLogger.Log(_db, actor.Value.Id, "request_reject", "request", id,
+            new { note = req?.note }, HttpContext.Connection.RemoteIpAddress?.ToString());
 
         return Ok(new { id , durum = "reddedildi"});
     }

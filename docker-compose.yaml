@@ -5,8 +5,11 @@ services:
        POSTGRES_USER: ${POSTGRES_USER}
        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
        POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5432:5432"
+    # DB'yi host'a acmiyoruz - api zaten ayni compose agi uzerinden "db:5432" ile erisiyor.
+    # Yerel psql erisimi gerekiyorsa: docker compose exec db psql -U $POSTGRES_USER -d $POSTGRES_DB
+    # postgres:18+ imajlari veriyi surum-spesifik alt dizinlerde tutar (pg_ctlcluster
+    # tarzi) ve tek bir mount'un /var/lib/postgresql'e (alt dizinsiz) yapilmasini bekler -
+    # /var/lib/postgresql/data'ya mount etmek (eski surumlerin kalibi) 18+ ile calismiyor.
     volumes:
       - pgdata:/var/lib/postgresql
       - ./db/init:/docker-entrypoint-initdb.d
@@ -24,18 +27,17 @@ services:
     environment:
       ASPNETCORE_URLS: "http://+:8080"
       ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      Cors__AllowedOrigins__0: "${CORS_ALLOWED_ORIGIN:-http://localhost:5173}"
     depends_on:
       - db
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: "${VITE_API_URL:-http://localhost:5081}"
     ports:
-      - "5173:5173"
-    environment:
-      VITE_API_URL: "http://localhost:5081"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - "${FRONTEND_PORT:-5173}:8080"
     depends_on:
       - api
 volumes:

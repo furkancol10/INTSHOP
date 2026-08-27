@@ -17,12 +17,14 @@ public class LogsController : ControllerBase
         if (role != "Admin") return StatusCode(403, "Sadece Admin!");
 
         var sql = @"
-            SELECT l.id, u.username, u.role, l.action, l.ip_address, l.created_at
+            SELECT l.id,
+                   COALESCE(u.username, l.attempted_username) AS username,
+                   u.role, l.action, l.ip_address, l.created_at
             FROM login_logs l
-            JOIN users u ON u.id = l.user_id
+            LEFT JOIN users u ON u.id = l.user_id
             ORDER BY l.created_at DESC
             LIMIT 100";
         var rows = await _db.QueryAsync(sql);
-        return Ok(rows);        
+        return Ok(rows);
     }
 }

@@ -1,0 +1,23 @@
+# Yerel gelistirme icin opsiyonel ek dosya - Vite dev sunucusu + hot reload.
+# Kullanim: docker compose -f docker-compose.yaml -f docker-compose.dev.yaml up
+#
+# docker-compose.yaml tek basina calistirildiginda (varsayilan/prod-benzeri davranis)
+# frontend, statik build + nginx ile servis edilir. Bu dosya frontend servisini
+# gelistirme icin Vite dev sunucusuna cevirir.
+services:
+  frontend:
+    build:
+      context: ./frontend
+      target: build
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: "${VITE_API_URL:-http://localhost:5081}"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  db:
+    ports:
+      - "127.0.0.1:5432:5432"

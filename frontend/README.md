@@ -1,43 +1,42 @@
-# Svelte + Vite
+# INTSHOP Frontend — SvelteKit (deneme)
 
-This template should help get you started developing with Svelte in Vite.
+> Bu klasör `sveltekit_gecis` branch'inde plain Svelte + Vite SPA'dan
+> SvelteKit'e geçiş denemesi olarak yeniden yapılandırıldı. `main`
+> branch'inde hâlâ eski Vite + Svelte 5 yapısı geçerli.
 
-## Recommended IDE Setup
+## Çalıştırma
 
-[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode).
+Kök dizinden `docker compose up` yeterli; bu servis `npm run dev` ile
+`http://localhost:5173` üzerinde ayağa kalkar (komut aynı, SvelteKit de
+Vite üzerinde çalışıyor).
 
-## Need an official Svelte framework?
+## Yapı
 
-Check out [SvelteKit](https://github.com/sveltejs/kit#readme), which is also powered by Vite. Deploy anywhere with its serverless-first approach and adapt to various platforms, with out of the box support for TypeScript, SCSS, and Less, and easily-added support for mdsvex, GraphQL, PostCSS, Tailwind CSS, and more.
+Dosya tabanlı routing kullanılıyor (`src/routes/`):
 
-## Technical considerations
-
-**Why use this over SvelteKit?**
-
-- It brings its own routing solution which might not be preferable for some users.
-- It is first and foremost a framework that just happens to use Vite under the hood, not a Vite app.
-
-This template contains as little as possible to get started with Vite + Svelte, while taking into account the developer experience with regards to HMR and intellisense. It demonstrates capabilities on par with the other `create-vite` templates and is a good starting point for beginners dipping their toes into a Vite + Svelte project.
-
-Should you later need the extended capabilities and extensibility provided by SvelteKit, the template has been structured similarly to SvelteKit so that it is easy to migrate.
-
-**Why include `.vscode/extensions.json`?**
-
-Other templates indirectly recommend extensions via the README, but this file allows VS Code to prompt the user to install the recommended extension upon opening the project.
-
-**Why enable `checkJs` in the JS template?**
-
-It is likely that most cases of changing variable types in runtime are likely to be accidental, rather than deliberate. This provides advanced typechecking out of the box. Should you like to take advantage of the dynamically-typed nature of JavaScript, it is trivial to change the configuration.
-
-**Why is HMR not preserving my local component state?**
-
-HMR state preservation comes with a number of gotchas! It has been disabled by default in both `svelte-hmr` and `@sveltejs/vite-plugin-svelte` due to its often surprising behavior. You can read the details [here](https://github.com/sveltejs/svelte-hmr/tree/master/packages/svelte-hmr#preservation-of-local-state).
-
-If you have state that's important to retain within a component, consider creating an external store which would not be replaced by HMR.
-
-```js
-// store.js
-// An extremely simple external store
-import { writable } from 'svelte/store'
-export default writable(0)
 ```
+src/routes/
+├── +layout.svelte        # Oturum kontrolü, toolbar, role bazlı guard
+├── +page.svelte          # Kök yol — role göre yönlendirme
+├── +error.svelte         # Genel hata sayfası
+├── magaza/                # Müşteri: ürün listesi + [id] ürün detayı
+├── sepet/                 # Müşteri: sepet
+├── bayi/                  # Bayi: stok, raporlar, talepler
+└── admin/                 # Admin: bayiler, ürünler, kategoriler, istekler, kullanıcılar, hareketler, loglar
+```
+
+Sayfa bileşenlerinin çoğu (`src/lib/Components`, `src/lib/Modals`) eski
+yapıdan olduğu gibi taşındı; route dosyaları çoğunlukla bunları saran ince
+sarmalayıcılar.
+
+## Bilinçli kısayollar (PoC kapsamı)
+
+- **SSR kapalı** (`+layout.js` → `ssr = false`). Oturum bilgisi
+  `localStorage`'a bağlı olduğu için sunucu tarafında çökerdi; gerçek bir
+  migration'da bu, oturumun server-side okunabilir hale getirilmesini
+  gerektirir.
+- **Route guard client-side.** `+layout.svelte` içinde, giriş yapan
+  kullanıcının rolüne uygun olmayan bir yola girilirse (`goto` ile) kendi
+  ana sayfasına geri yönlendirilir ve o sayfa hiç render edilmez. Backend
+  zaten her endpoint'te ayrıca rol kontrolü yapıyor; bu yalnızca istemci
+  tarafında da doğru sayfayı göstermek için.

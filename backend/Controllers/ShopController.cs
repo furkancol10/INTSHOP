@@ -21,6 +21,10 @@ public class ShopController : ControllerBase
         if (role is null) return Unauthorized("Giriş gerekli");
         if (role != "Kullanici") return StatusCode(403, "Sadece müşteriler");
 
+        limit = Math.Clamp(limit, 1, 100);
+        offset = Math.Max(offset, 0);
+        if (arama?.Length > 100) return BadRequest("Arama terimi çok uzun");
+
         // Her üründen mağaza ekranında tek satır: en ucuz bayi, fiyat eşitse stoğu en yüksek bayi
         var sql= @"
             SELECT * FROM (
