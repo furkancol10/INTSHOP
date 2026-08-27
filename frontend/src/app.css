@@ -339,17 +339,20 @@ h2 {
   gap: .5rem;
 }
 
-.toolbar-sekmeler button {
+.toolbar-sekmeler button,
+.toolbar-sekmeler a {
   position: relative;
   padding: .5rem 1rem;
   background: transparent;
   color: whitesmoke;
   border: none;
   cursor: pointer;
+  text-decoration: none;
   transition: .2s;
 }
 
-.toolbar-sekmeler button:hover {
+.toolbar-sekmeler button:hover,
+.toolbar-sekmeler a:hover {
   color: whitesmoke;
 }
 
@@ -394,6 +397,7 @@ h2 {
   font-family: inherit;
   color: whitesmoke;
   cursor: pointer;
+  text-decoration: none;
   margin-right: 1.5rem;
   padding: .4rem .7rem;
   border: none;

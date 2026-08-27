@@ -1,4 +1,5 @@
 <script>
+  import { onMount } from "svelte";
   import { API, oturum, durum, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
 
   let movements = $state([]);
@@ -15,11 +16,7 @@
     }
   }
 
-  $effect(() => {
-    if (durum.aktifSekme === "hareketler") {
-      loadMovements();
-    }
-  });
+  onMount(loadMovements);
 </script>
 
 <h2>Bayi Hareketleri</h2>

@@ -13,6 +13,7 @@ export const durum= $state({
     loading : false,
     bildirim: "",
     secilenUrunId: null,
+    bekleyenIstekSayisi: 0,
 });
 
 export const veri = $state ({
@@ -93,6 +94,27 @@ export async function sepetYukle() {
         sepet.adet = d.adet;
     } catch {
 
+    }
+}
+
+//
+// Admin: urun/kategori verisi (Urunler + Kategoriler sekmeleri ortak kullanir)
+//
+export async function loadAdminVeri() {
+    durum.loading = true;
+    durum.error = "";
+    try {
+        const [pRes, cRes] = await Promise.all([
+            fetch(`${API}/api/products`, { headers: authHeader() }),
+            fetch(`${API}/api/categories`, { headers: authHeader() }),
+        ]);
+        if (!pRes.ok || !cRes.ok) throw new Error("Veri alınamadı");
+        veri.products = await pRes.json();
+        veri.categories = await cRes.json();
+    } catch (e) {
+        durum.error = e instanceof Error ? e.message : String(e);
+    } finally {
+        durum.loading = false;
     }
 }
 

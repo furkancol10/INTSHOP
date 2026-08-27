@@ -85,7 +85,7 @@
   <div class="flip-cerceve">
     <div class="flip-ic" class:donuk={kayitModu}>
       <div class="flip-yuz flip-on" inert={kayitModu}>
-        <div class="login-card">
+        <form class="login-card" onsubmit={(e) => { e.preventDefault(); login(); }}>
           <div class="avatar">
             <svg viewBox="0 0 24 24" width="40" height="40" fill="white">
               <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
@@ -103,21 +103,20 @@
             <span class="input-icon">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="#888"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3-9H9V6c0-1.66 1.34-3 3-3s3 1.34 3 3v2z"/></svg>
             </span>
-            <input type="password" placeholder="Şifre" bind:value={loginPass}
-                   onkeydown={(e) => e.key === "Enter" && login()} />
+            <input type="password" placeholder="Şifre" bind:value={loginPass} />
           </div>
 
-          <button class="login-btn" onclick={login}>Giriş</button>
-          <button class="mod-degistir" onclick={() => { kayitModu = true; loginError = ""; kayitMesaj = ""; }}>
+          <button class="login-btn" type="submit">Giriş</button>
+          <button class="mod-degistir" type="button" onclick={() => { kayitModu = true; loginError = ""; kayitMesaj = ""; }}>
             Hesabın yok mu? Kayıt Ol
           </button>
           {#if kayitMesaj}<p class="basari">{kayitMesaj}</p>{/if}
           {#if loginError && !kayitModu}<p class="error">{loginError}</p>{/if}
-        </div>
+        </form>
       </div>
 
       <div class="flip-yuz flip-arka" inert={!kayitModu}>
-        <div class="login-card">
+        <form class="login-card" onsubmit={(e) => { e.preventDefault(); kayitOl(); }}>
           <h3 class="kayit-baslik">Kayıt Ol</h3>
           <div class="input-group">
             <input placeholder="Kullanıcı Adı" bind:value={kayitForm.username} />
@@ -137,12 +136,12 @@
           <div class="input-group">
             <input placeholder="Telefon" bind:value={kayitForm.phone} />
           </div>
-          <button class="login-btn" onclick={kayitOl}>Kayıt Ol</button>
-          <button class="mod-degistir" onclick={() => { kayitModu = false; loginError = ""; }}>
+          <button class="login-btn" type="submit">Kayıt Ol</button>
+          <button class="mod-degistir" type="button" onclick={() => { kayitModu = false; loginError = ""; }}>
             Zaten hesabım var - Giriş Yap
           </button>
           {#if loginError && kayitModu}<p class="error">{loginError}</p>{/if}
-        </div>
+        </form>
       </div>
     </div>
   </div>
