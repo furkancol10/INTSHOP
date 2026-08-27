@@ -19,8 +19,8 @@ public class CartController : ControllerBase
     private async Task<int?> KullaniciId()
     {
         var token = Request.Headers["Authorization"].ToString();
-        return await _db.ExecuteScalarAsync<int?>(
-            "SELECT id FROM users WHERE token = @token", new { token });
+        var user = await AuthHelper.GetUser(_db, token);
+        return user?.Id;
     }
 
     [HttpGet]

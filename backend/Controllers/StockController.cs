@@ -10,14 +10,8 @@ public class StockController : ControllerBase
     private readonly IDbConnection _db;
     public StockController(IDbConnection db) => _db = db;
 
-    private async Task<(int id, string role)?> GetUser(string? token)
-    {
-        if (string.IsNullOrEmpty(token)) return null;
-        var u = await _db.QueryFirstOrDefaultAsync(
-            "SELECT id, role FROM users WHERE token = @token", new { token });
-        if (u is null) return null;
-        return ((int)u.id, (string)u.role);
-    }
+    private Task<(int id, string role)?> GetUser(string? token)
+        => AuthHelper.GetUser(_db, token);
 
     [HttpGet("my-stock")]
     public async Task<IActionResult> MyStock()

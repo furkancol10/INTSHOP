@@ -8,6 +8,7 @@
     veri,
     sayfalariSifirla,
     sepetYukle,
+    authHeader,
   } from "./lib/store.svelte.js";
 
   // Modallar
@@ -76,8 +77,8 @@
     durum.error = "";
     try {
       const [pRes, cRes] = await Promise.all([
-        fetch(`${API}/api/products`),
-        fetch(`${API}/api/categories`),
+        fetch(`${API}/api/products`, { headers: authHeader() }),
+        fetch(`${API}/api/categories`, { headers: authHeader() }),
       ]);
       if (!pRes.ok || !cRes.ok) throw new Error("Veri alınamadı");
       veri.products = await pRes.json();

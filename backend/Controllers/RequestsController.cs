@@ -91,12 +91,11 @@ public class RequestsController : ControllerBase
     public async Task<IActionResult> Mine()
     {
         var token = Request.Headers["Authorization"].ToString();
-        var role = await AuthHelper.GetRole(_db, token);
-        if (role != "Bayi") return StatusCode(403, "Sadece bayiler");
+        var user = await AuthHelper.GetUser(_db, token);
+        if (user is null) return Unauthorized();
+        if (user.Value.Role != "Bayi") return StatusCode(403, "Sadece bayiler");
 
-        var dealerId = await _db.ExecuteScalarAsync<int?>(
-            "SELECT id FROM users WHERE token = @token", new { token });
-        if ( dealerId is null) return Unauthorized();
+        var dealerId = user.Value.Id;
 
         var sql = @"
             SELECT r.id, r.old_price, r.new_price, r.status, r.admin_note,
@@ -105,7 +104,7 @@ public class RequestsController : ControllerBase
             JOIN products p ON p.id = r.product_id
             WHERE r.dealer_id = @dealerId
             ORDER BY r.created_at DESC";
-        var rows = await _db.QueryAsync(sql, new { dealerId = dealerId.Value });
+        var rows = await _db.QueryAsync(sql, new { dealerId });
         return Ok(rows);
     }
 
@@ -113,17 +112,16 @@ public class RequestsController : ControllerBase
     public async Task<IActionResult> Cancel(int id)
     {
         var token = Request.Headers["Authorization"].ToString();
-        var role = await AuthHelper.GetRole(_db, token);
-        if (role != "Bayi") return StatusCode(403, "Sadece bayiler");
+        var user = await AuthHelper.GetUser(_db, token);
+        if (user is null) return Unauthorized();
+        if (user.Value.Role != "Bayi") return StatusCode(403, "Sadece bayiler");
 
-        var dealerId = await _db.ExecuteScalarAsync<int?>(
-            "SELECT id FROM users WHERE token = @token", new { token });
-        if (dealerId is null) return Unauthorized();
+        var dealerId = user.Value.Id;
 
         var etkilenen = await _db.ExecuteAsync(
             @"UPDATE requests SET status = 'cancelled', resolved_at = NOW()
               WHERE id = @id AND dealer_id = @dealerId AND status = 'pending'",
-            new { id, dealerId = dealerId.Value });
+            new { id, dealerId });
 
         if (etkilenen == 0)
             return BadRequest("Bu talep iptal edilemez (size ait değil ya da zaten karara bağlanmış)");

@@ -1,5 +1,6 @@
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration.UserSecrets;
 using System.Data;
 
@@ -37,6 +38,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Login([FromBody] LoginReq req)
     {
         var user = await _db.QueryFirstOrDefaultAsync(
@@ -52,7 +54,7 @@ public class AuthController : ControllerBase
 
         var token = Guid.NewGuid().ToString("N");
         await _db.ExecuteAsync(
-            "UPDATE users SET token = @token WHERE id = @id",
+            "UPDATE users SET token = @token, token_issued_at = NOW() WHERE id = @id",
             new { token, id = (int)user.id });
 
         await _db.ExecuteAsync(
@@ -63,6 +65,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("signup")]
+    [EnableRateLimiting("auth")]
     public async Task<IActionResult> Signup([FromBody] SignupReq req)
     {
         if (string.IsNullOrWhiteSpace(req.username) || string.IsNullOrWhiteSpace(req.password))

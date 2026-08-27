@@ -43,6 +43,7 @@ CREATE TABLE users (
     password_hash VARCHAR(200) NOT NULL,
     role          VARCHAR(20) NOT NULL,
     token         VARCHAR(200),
+    token_issued_at TIMESTAMPTZ,
     address       VARCHAR(300),
     phone         VARCHAR(20),
     avatar_url    VARCHAR(500),

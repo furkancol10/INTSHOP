@@ -69,7 +69,7 @@
   });
 
   onMount(async () => {
-    const res = await fetch(`${API}/api/categories`);
+    const res = await fetch(`${API}/api/categories`, { headers: authHeader() });
     if (res.ok) veri.categories = await res.json();
     await loadShop();
   });
@@ -80,9 +80,14 @@
   <input bind:value={arama} placeholder="Ürün ara..." />
   <select bind:value={secilenKategori}>
     <option value="">Tüm kategoriler</option>
-    {#each veri.categories as k}
-      <option value={k.id}>{k.name}</option>
-    {/each}
+    {#each veri.categories.filter((k) => !k.parent_id) as ust}
+    <optgroup label={ust.name}>
+      <option value={ust.id}>{ust.name} (tümü)</option>
+      {#each veri.categories.filter((k) => k.parent_id === ust.id) as alt}
+        <option value={alt.id}>{alt.name}</option>
+      {/each}
+    </optgroup>
+  {/each}
   </select>
 </div>
 

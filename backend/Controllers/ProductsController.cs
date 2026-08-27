@@ -16,6 +16,10 @@ public class ProductsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Admin") return StatusCode(403, "Sadece Admin");
+
         var sql = @"
             SELECT p.id, p.name, p.category_id,
                    c.name AS category,

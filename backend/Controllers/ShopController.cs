@@ -10,12 +10,8 @@ public class ShopController : ControllerBase
     private readonly IDbConnection _db;
     public ShopController(IDbConnection db) => _db = db;
 
-    private async Task<string?> GetRole(string? token)
-    {
-        if (string.IsNullOrEmpty(token)) return null;
-        return await _db.QueryFirstOrDefaultAsync<string?>(
-            "SELECT role FROM users WHERE token = @token", new { token });
-    }
+    private Task<string?> GetRole(string? token)
+        => AuthHelper.GetRole(_db, token);
 
     [HttpGet("shop")]
     public async Task<IActionResult> Shop([FromQuery] int offset = 0, [FromQuery] int limit = 20, int? kategori = null, string? arama = null)

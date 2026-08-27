@@ -1,0 +1,6437 @@
+# Stok Panel - Tum Proje Kodu (Tek Dosya)
+
+Bu dosya, projedeki tum kaynak kodu tek bir yerde toplamak icin otomatik olarak birlestirilmistir.
+
+Disarida birakilanlar: node_modules, bin/obj, .git, derleme/build ciktilari, gorsel/binary dosyalar, package-lock.json ve .env (gizli anahtarlar icerdigi icin; onun yerine .env.example dahil edildi).
+
+## Icindekiler
+
+- README.md
+- .gitignore
+- .env.example
+- docker-compose.yaml
+- db/init/01-schema.sql
+- db/gercek-sema.sql
+- backend/StokApi.csproj
+- backend/Program.cs
+- backend/AuthHelper.cs
+- backend/appsettings.json
+- backend/appsettings.Development.json
+- backend/Properties/launchSettings.json
+- backend/StokApi.http
+- backend/Dockerfile
+- backend/.dockerignore
+- backend/Controllers/AuthController.cs
+- backend/Controllers/CartController.cs
+- backend/Controllers/CategoriesController.cs
+- backend/Controllers/LogsControllers.cs
+- backend/Controllers/MovementsController.cs
+- backend/Controllers/ProductsController.cs
+- backend/Controllers/ProfileController.cs
+- backend/Controllers/RequestsController.cs
+- backend/Controllers/ShopController.cs
+- backend/Controllers/StockController.cs
+- backend/Controllers/UsersController.cs
+- frontend/package.json
+- frontend/index.html
+- frontend/jsconfig.json
+- frontend/svelte.config.js
+- frontend/vite.config.js
+- frontend/Dockerfile
+- frontend/.dockerignore
+- frontend/.gitignore
+- frontend/README.md
+- frontend/src/main.js
+- frontend/src/App.svelte
+- frontend/src/app.css
+- frontend/src/lib/store.svelte.js
+- frontend/src/lib/Components/AdminBayiler.svelte
+- frontend/src/lib/Components/AdminHareketler.svelte
+- frontend/src/lib/Components/AdminIstekler.svelte
+- frontend/src/lib/Components/AdminKategoriler.svelte
+- frontend/src/lib/Components/AdminKullanicilar.svelte
+- frontend/src/lib/Components/AdminLoglar.svelte
+- frontend/src/lib/Components/AdminUrunler.svelte
+- frontend/src/lib/Components/BayiRaporlar.svelte
+- frontend/src/lib/Components/BayiStok.svelte
+- frontend/src/lib/Components/BayiTalepler.svelte
+- frontend/src/lib/Components/FiltreCubuk.svelte
+- frontend/src/lib/Components/Login.svelte
+- frontend/src/lib/Components/Magaza.svelte
+- frontend/src/lib/Components/Profil.svelte
+- frontend/src/lib/Components/Sepet.svelte
+- frontend/src/lib/Modals/IslemModal.svelte
+- frontend/src/lib/Modals/KategoriDetayModal.svelte
+- frontend/src/lib/Modals/KategoriModal.svelte
+- frontend/src/lib/Modals/KullaniciModal.svelte
+- frontend/src/lib/Modals/OnayModal.svelte
+- frontend/src/lib/Modals/RedModal.svelte
+- frontend/src/lib/Modals/UrunModal.svelte
+
+---
+
+## README.md
+
+```markdown
+# INTSHOP — Stok ve Sipariş Yönetim Paneli
+
+Çok rollü bir stok yönetim ve mağaza uygulaması. Admin ürün ve kategori kataloğunu
+yönetir, bayiler kendi stok ve fiyatlarını belirler, müşteriler mağazadan alışveriş yapar.
+
+> Bu proje bir yaz stajı kapsamında geliştirilmiştir.
+
+<!-- TODO: Ana ekranın görselini buraya koy -->
+![Mağaza ekranı](docs/img/magaza.png)
+
+---
+
+## İçindekiler
+
+- [Özellikler](#özellikler)
+- [Teknoloji Yığını](#teknoloji-yığını)
+- [Kurulum](#kurulum)
+- [Demo Hesapları](#demo-hesapları)
+- [Roller ve Yetkiler](#roller-ve-yetkiler)
+- [Ekran Görüntüleri](#ekran-görüntüleri)
+- [Veritabanı Şeması](#veritabanı-şeması)
+- [API Uçları](#api-uçları)
+- [Klasör Yapısı](#klasör-yapısı)
+- [Tasarım Kararları](#tasarım-kararları)
+- [Gelecek Planları](#gelecek-planları)
+
+---
+
+## Özellikler
+
+**Admin**
+- Ürün, kategori ve kullanıcı yönetimi (CRUD)
+- Bayilerin fiyat değişiklik taleplerini onaylama / reddetme
+- Tüm stok hareketlerini görüntüleme
+- Giriş / çıkış logları (filtreleme ve sayfalama ile)
+
+**Bayi**
+- Kendi stok ve fiyatlarını yönetme
+- Fiyat değişikliği için talep oluşturma
+- Taleplerinin durumunu izleme, bekleyen talebi iptal etme
+- Stok hareket raporları (Chart.js grafikleri)
+
+**Müşteri**
+- Mağazada ürün listeleme (sonsuz kaydırma)
+- Kategori ve isim ile filtreleme
+- Sepete ekleme, adet değiştirme, sepeti boşaltma
+- Aynı ürünü farklı bayilerden ayrı satır olarak sepete ekleyebilme
+
+---
+
+## Teknoloji Yığını
+
+| Katman | Teknoloji |
+|---|---|
+| Backend | .NET 8 Web API, Dapper |
+| Frontend | Svelte 5 (runes), Vite |
+| Veritabanı | PostgreSQL 18 |
+| Çalışma ortamı | Docker Compose |
+| Grafikler | Chart.js |
+
+---
+
+## Kurulum
+
+Tek gereksinim: **Docker Desktop** ve **Git**.
+
+```bash
+git clone https://github.com/furkancol10/stok-panel.git
+cd stok-panel
+docker compose up --build
+```
+
+Servisler ayağa kalktıktan sonra:
+
+- Uygulama: http://localhost:5173
+- API: http://localhost:5081
+
+Veritabanı ilk açılışta `db/init/01-schema.sql` dosyasıyla otomatik olarak kurulur
+ve örnek verilerle doldurulur.
+
+### Ortam değişkenleri
+
+Depoda `.env` dosyası bulunur, varsayılan değerlerle çalışır:
+
+```
+POSTGRES_USER=stok
+POSTGRES_PASSWORD=1111
+POSTGRES_DB=stokdb
+API_PORT=5081
+```
+
+### Sıfırdan kurulum
+
+Veritabanını tamamen sıfırlamak için:
+
+```bash
+docker compose down -v
+docker compose up --build
+```
+
+`-v` bayrağı veri hacmini (volume) siler; seed dosyası yalnızca boş bir
+veritabanında çalışır.
+
+---
+
+## Demo Hesapları
+
+| Kullanıcı adı | Şifre | Rol |
+|---|---|---|
+| `admin` | `admin123` | Admin |
+| `bayi` | `bayi123` | Bayi |
+| `bayi2` | `bayi123` | Bayi |
+| `bayi3` | `bayi123` | Bayi |
+| `user1` | `user123` | Müşteri |
+| `user2` | `user123` | Müşteri |
+
+---
+
+## Roller ve Yetkiler
+
+| İşlem | Admin | Bayi | Müşteri |
+|---|:---:|:---:|:---:|
+| Ürün / kategori yönetimi | ✓ | — | — |
+| Kullanıcı yönetimi | ✓ | — | — |
+| Talepleri onaylama | ✓ | — | — |
+| Giriş loglarını görme | ✓ | — | — |
+| Kendi stoğunu yönetme | — | ✓ | — |
+| Fiyat talebi oluşturma | — | ✓ | — |
+| Mağazadan alışveriş | — | — | ✓ |
+| Sepet işlemleri | — | — | ✓ |
+
+Yetki kontrolü **sunucu tarafında** yapılır. İstemci yalnızca niyet bildirir;
+kullanıcı kimliği token'dan, fiyat bilgisi veritabanından okunur.
+
+---
+
+## Ekran Görüntüleri
+
+<!-- TODO: docs/img/ klasörüne görselleri koy, aşağıdaki yolları güncelle -->
+
+### Mağaza
+![Mağaza](docs/img/magaza.png)
+
+### Sepet
+![Sepet](docs/img/sepet.png)
+
+### Bayi stok yönetimi
+![Bayi stok](docs/img/bayi-stok.png)
+
+### Admin — talep onayı
+![Admin istekler](docs/img/admin-istekler.png)
+
+### Admin — giriş logları
+![Loglar](docs/img/loglar.png)
+
+---
+
+## Veritabanı Şeması
+
+```mermaid
+erDiagram
+    users ||--o{ dealer_stock : "sahiptir"
+    users ||--o{ requests : "oluşturur"
+    users ||--o{ stock_movements : "kaydeder"
+    users ||--o{ login_logs : "üretir"
+    users ||--o{ cart_items : "sahiptir"
+    categories ||--o{ categories : "üst kategori"
+    categories ||--o{ products : "içerir"
+    products ||--o{ dealer_stock : "listelenir"
+    products ||--o{ requests : "konu"
+    products ||--o{ cart_items : "içerir"
+
+    users {
+        int id PK
+        varchar username UK
+        varchar password_hash
+        varchar role
+        varchar token
+        varchar address
+        varchar phone
+        varchar avatar_url
+        varchar email UK
+    }
+
+    categories {
+        int id PK
+        varchar name
+        int parent_id FK
+    }
+
+    products {
+        int id PK
+        varchar name
+        int category_id FK
+        int stock
+        numeric price
+        varchar image_url
+        numeric min_oran
+        numeric max_oran
+    }
+
+    dealer_stock {
+        int dealer_id PK_FK
+        int product_id PK_FK
+        int stock
+        numeric price
+    }
+
+    requests {
+        int id PK
+        int dealer_id FK
+        int product_id FK
+        varchar type
+        numeric old_price
+        numeric new_price
+        varchar status
+        text admin_note
+    }
+
+    stock_movements {
+        int id PK
+        int dealer_id FK
+        int product_id FK
+        int quantity
+        timestamp created_at
+    }
+
+    login_logs {
+        int id PK
+        int user_id FK
+        varchar action
+        varchar ip_address
+        timestamp created_at
+    }
+
+    cart_items {
+        int id PK
+        int user_id FK
+        int product_id FK
+        int dealer_id FK
+        int quantity
+    }
+```
+
+---
+
+## API Uçları
+
+<!-- TODO: Aşağıdaki listeyi controller dosyalarıyla karşılaştırıp doğrula.
+     Eksik veya fazla uç varsa düzelt. -->
+
+### Kimlik doğrulama
+
+| Metot | Yol | Rol | Açıklama |
+|---|---|---|---|
+| POST | `/api/login` | — | Giriş yapar, token döndürür |
+| POST | `/api/logout` | Herkes | Token'ı geçersiz kılar, log kaydı düşer |
+| GET | `/api/profile` | Herkes | Oturum sahibinin bilgileri |
+
+### Katalog
+
+| Metot | Yol | Rol | Açıklama |
+|---|---|---|---|
+| GET | `/api/products` | — | Ürün listesi |
+| GET | `/api/categories` | — | Kategori listesi |
+
+### Bayi
+
+| Metot | Yol | Rol | Açıklama |
+|---|---|---|---|
+| GET | `/api/my-stock` | Bayi | Bayinin kendi stok ve fiyatları |
+| GET | `/api/requests/mine` | Bayi | Bayinin kendi talepleri |
+| PUT | `/api/requests/{id}/cancel` | Bayi | Bekleyen talebi iptal eder |
+
+### Admin
+
+| Metot | Yol | Rol | Açıklama |
+|---|---|---|---|
+| GET | `/api/requests` | Admin | Tüm talepler |
+| PUT | `/api/requests/{id}/approve` | Admin | Talebi onaylar |
+| PUT | `/api/requests/{id}/reject` | Admin | Talebi reddeder |
+| GET | `/api/users` | Admin | Kullanıcı listesi |
+| GET | `/api/movements` | Admin | Stok hareketleri |
+| GET | `/api/logs` | Admin | Giriş / çıkış logları (son 100 kayıt) |
+
+### Mağaza ve sepet
+
+| Metot | Yol | Rol | Açıklama |
+|---|---|---|---|
+| GET | `/api/shop` | Müşteri | Mağaza listesi. Parametreler: `limit`, `offset`, `kategori`, `arama` |
+| GET | `/api/cart` | Müşteri | Sepet içeriği ve toplam tutar |
+| POST | `/api/cart` | Müşteri | Sepete ürün ekler (varsa adedi artırır) |
+| PUT | `/api/cart/{id}` | Müşteri | Satır adedini günceller |
+| DELETE | `/api/cart/{id}` | Müşteri | Satırı siler |
+| DELETE | `/api/cart` | Müşteri | Sepeti boşaltır |
+
+---
+
+## Klasör Yapısı
+
+```
+stok-panel/
+├── api/                       # .NET 8 Web API
+│   ├── Controllers/
+│   │   ├── AuthController.cs
+│   │   ├── CartController.cs
+│   │   ├── LogsController.cs
+│   │   ├── RequestsController.cs
+│   │   ├── ShopController.cs
+│   │   └── ...
+│   ├── Program.cs
+│   └── Dockerfile
+├── db/
+│   └── init/
+│       └── 01-schema.sql      # Şema + örnek veri (ilk açılışta çalışır)
+├── frontend/                  # Svelte 5 + Vite
+│   ├── src/
+│   │   ├── lib/
+│   │   │   ├── Components/    # Sayfa bileşenleri
+│   │   │   ├── Modals/        # Modal pencereler
+│   │   │   └── store.svelte.js
+│   │   ├── App.svelte
+│   │   └── app.css
+│   └── Dockerfile
+├── docker-compose.yaml
+└── .env
+```
+
+---
+
+## Tasarım Kararları
+
+**Sepet fiyatı kopyalanmaz.** `cart_items` tablosunda fiyat kolonu yoktur; fiyat
+okunurken `dealer_stock` ile birleştirilerek alınır. Böylece bayi fiyatı
+değiştirdiğinde iki farklı gerçek oluşmaz.
+
+**Aynı ürün, farklı bayi.** `cart_items` üzerindeki
+`UNIQUE (user_id, product_id, dealer_id)` kısıtı sayesinde aynı ürün farklı
+bayilerden ayrı satırlar olarak sepete eklenebilir; aynı üçlü tekrar eklendiğinde
+ise `ON CONFLICT DO UPDATE` ile adet artar.
+
+**Mağaza filtrelemesi sunucuda.** Mağazada sonsuz kaydırma olduğu için istemci
+tarafı filtreleme yalnızca yüklenmiş ürünleri süzerdi. Filtreler SQL'de
+`(@param IS NULL OR koşul)` kalıbıyla opsiyonel hale getirilmiştir.
+
+**Bileşen başına veri yükleme.** Her sekme bileşeni kendi verisini `onMount`
+içinde çeker. Merkezi bir store yalnızca oturum, ortak durum ve sepet için
+kullanılır.
+
+<!-- TODO: Eklemek istediğin başka kararlar varsa buraya yaz -->
+
+---
+
+## Gelecek Planları
+
+- **Sipariş sistemi** — `orders` ve `order_items` tabloları, sepetin siparişe
+  dönüşmesi, stok düşürme ve bayi bazlı sipariş bölme
+- **JWT tabanlı kimlik doğrulama** — mevcut GUID token yerine süreli, imzalı token
+- **Gerçek sayfalama** — log ve hareket listelerinde istemci tarafı sayfalama
+  yerine `LIMIT/OFFSET` ile sunucu tarafı sayfalama
+- **Kargo takibi ve bildirimler**
+- **Tailwind CSS'e geçiş** — mevcut özel CSS yerine yardımcı sınıf tabanlı sistem
+- **Servis katmanı** — controller'lar büyüdükçe iş mantığının `Services/` altına
+  taşınması
+- **Ürün özellikleri için JSONB** — kategoriye göre değişen özniteliklerin
+  esnek şekilde saklanması
+
+---
+
+## Lisans
+
+<!-- TODO: Lisans eklemek istiyor musun? MIT yaygın ve basit bir seçim. -->
+
+```
+
+## .gitignore
+
+```
+bin/
+obj/
+node_modules/
+dist/
+.env
+```
+
+## .env.example
+
+```
+POSTGRES_USER=
+POSTGRES_PASSWORD=
+POSTGRES_DB=
+API_PORT=5081
+```
+
+## docker-compose.yaml
+
+```yaml
+services:
+  db:
+    image: postgres:18
+    environment:
+       POSTGRES_USER: ${POSTGRES_USER}
+       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+       POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./db/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  api:
+    build: ./backend
+    ports:
+      - "${API_PORT}:8080"
+    environment:
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: "http://localhost:5081"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - api
+volumes:
+  pgdata:
+```
+
+## db/init/01-schema.sql
+
+```sql
+-- ============================================================
+-- stok-panel — Veritabanı seed dosyası
+-- Veritabanı ilk kez oluşturulduğunda (boş volume) otomatik çalışır.
+--
+-- Tablolar foreign key sırasına göre kurulur:
+--   categories, users -> products -> dealer_stock, stock_movements,
+--   requests, login_logs, cart_items
+--
+-- Demo kullanıcıları (BCrypt hash'li şifreler):
+--   admin / admin123   (Admin)
+--   bayi  / bayi123    (Bayi)
+--   bayi2 / bayi123    (Bayi)
+--   bayi3 / bayi123    (Bayi)
+--   user1 / user123    (Kullanici)
+--   user2 / user123    (Kullanici)
+-- ============================================================
+
+
+-- ---------- 1. KATEGORİLER ----------
+-- parent_id: alt kategori desteği (NULL = üst kategori)
+CREATE TABLE categories (
+    id        SERIAL PRIMARY KEY,
+    name      VARCHAR(100) NOT NULL,
+    parent_id INT REFERENCES categories(id)
+);
+
+INSERT INTO categories (name, parent_id) VALUES
+    ('Elektronik', NULL),
+    ('Kitap',      NULL),
+    ('Gıda',       NULL);
+
+-- Alt kategoriler (üstteki id'lere bağlı)
+INSERT INTO categories (name, parent_id) VALUES
+    ('Telefon',   1),
+    ('Bilgisayar', 1),
+    ('Roman',     2);
+
+
+-- ---------- 2. KULLANICILAR ----------
+CREATE TABLE users (
+    id            SERIAL PRIMARY KEY,
+    username      VARCHAR(50) UNIQUE NOT NULL,
+    password_hash VARCHAR(200) NOT NULL,
+    role          VARCHAR(20) NOT NULL,
+    token         VARCHAR(200),
+    address       VARCHAR(300),
+    phone         VARCHAR(20),
+    avatar_url    VARCHAR(500),
+    email         VARCHAR(200) UNIQUE
+);
+
+INSERT INTO users (username, password_hash, role, address, phone, avatar_url, email) VALUES
+    ('admin', '$2a$11$/HEWwh0XFN2vBgwD7DsbFOoxQPtvtw5ChTTOi2c0i0uLReO8d4JH2', 'Admin',     NULL,                NULL,             NULL, 'admin@intshop.local'),
+    ('bayi',  '$2a$11$4nMDaYWhemDQOc5K5.C4a.gJxn89kekAOjcTAfWz/MTt0wDb7hoz2', 'Bayi',      'Istanbul, Tuzla',   '0532 111 22 33', NULL, 'bayi@intshop.local'),
+    ('bayi2', '$2a$11$4nMDaYWhemDQOc5K5.C4a.gJxn89kekAOjcTAfWz/MTt0wDb7hoz2', 'Bayi',      'Istanbul, Kartal',  '0532 111 44 55', NULL, 'bayi2@intshop.local'),
+    ('bayi3', '$2a$11$nUeo6B4.gwLflsYYzOOo0evbBnv6C17FFJn6/9FcrZNDhBDVIhFN2', 'Bayi',      'Istanbul, Kadikoy', '0538 666 77 88', NULL, 'bayi3@intshop.local'),
+    ('user1', '$2a$11$KM/OVZMbSJPZYNrU60ZSpuIKl1jQ15buBKlSgqI3yKifLwhuKf13q', 'Kullanici', 'Ankara, Cankaya',   '0533 222 33 44', NULL, 'user1@intshop.local'),
+    ('user2', '$2a$11$KM/OVZMbSJPZYNrU60ZSpuIKl1jQ15buBKlSgqI3yKifLwhuKf13q', 'Kullanici', 'Izmir, Bornova',    '0534 555 66 77', NULL, 'user2@intshop.local');
+
+
+-- ---------- 3. ÜRÜNLER ----------
+-- min_oran / max_oran: bayinin taban fiyata gore uygulayabilecegi
+-- yuzde araligi (80 = %80 alt sinir, 120 = %120 ust sinir)
+CREATE TABLE products (
+    id          SERIAL PRIMARY KEY,
+    name        VARCHAR(150) NOT NULL,
+    category_id INT REFERENCES categories(id),
+    stock       INT NOT NULL DEFAULT 0,
+    price       NUMERIC(10,2) NOT NULL,
+    created_at  TIMESTAMP DEFAULT NOW(),
+    image_url   VARCHAR(500),
+    min_oran    NUMERIC(5,2) DEFAULT 80,
+    max_oran    NUMERIC(5,2) DEFAULT 120
+);
+
+INSERT INTO products (name, category_id, stock, price, image_url) VALUES
+    ('Samsung Galaxy S24',  4, 50,  32999.99, 'https://placehold.co/200x200?text=Galaxy+S24'),
+    ('Lenovo IdeaPad 3',    5, 30,  18999.99, 'https://placehold.co/200x200?text=IdeaPad+3'),
+    ('Philips Kulaklik',    1, 100,   899.99, 'https://placehold.co/200x200?text=Kulaklik'),
+    ('Anna Karenina',       6, 200,   199.90, 'https://placehold.co/200x200?text=Anna+Karenina'),
+    ('Sefiller',            6, 120,   249.90, 'https://placehold.co/200x200?text=Sefiller'),
+    ('Schogetten Cikolata', 3, 500,    34.90, 'https://placehold.co/200x200?text=Cikolata'),
+    ('Amasya Elmasi 1 KG',  3, 300,    49.90, 'https://placehold.co/200x200?text=Elma'),
+    ('ASUS Monitor 24"',    1, 40,   6190.00, 'https://placehold.co/200x200?text=Monitor');
+
+
+-- ---------- 4. BAYİ STOKLARI ----------
+-- price: bayinin kendi satis fiyati. NULL ise urun magazada gorunmez.
+CREATE TABLE dealer_stock (
+    dealer_id  INT REFERENCES users(id),
+    product_id INT REFERENCES products(id),
+    stock      INT NOT NULL DEFAULT 0,
+    price      NUMERIC(10,2),
+    PRIMARY KEY (dealer_id, product_id)
+);
+
+-- Her bayiye her urunden stok + taban fiyatin %90-%110 arasinda satis fiyati
+INSERT INTO dealer_stock (dealer_id, product_id, stock, price)
+SELECT u.id,
+       p.id,
+       (20 + floor(random() * 80))::int,
+        ROUND((p.price * (0.90 + random() * 0.20))::numeric, 2)
+FROM users u
+CROSS JOIN products p
+WHERE u.role = 'Bayi';
+
+
+-- ---------- 5. STOK HAREKETLERİ ----------
+CREATE TABLE stock_movements (
+    id         SERIAL PRIMARY KEY,
+    dealer_id  INT REFERENCES users(id),
+    product_id INT REFERENCES products(id),
+    quantity   INT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Ornek hareketler — 'bayi' kullanicisi icin, gecmis tarihlere yayilmis
+INSERT INTO stock_movements (dealer_id, product_id, quantity, created_at)
+SELECT u.id, v.product_id, v.quantity, NOW() - (v.days_ago || ' days')::interval
+FROM users u
+CROSS JOIN (VALUES
+    (1,  50, 6),
+    (1, -20, 6),
+    (2,  30, 5),
+    (3, -15, 4),
+    (1,  40, 3),
+    (2, -10, 2),
+    (4,  25, 1)
+) AS v(product_id, quantity, days_ago)
+WHERE u.username = 'bayi';
+
+
+-- ---------- 6. FİYAT TALEPLERİ ----------
+-- Bayi fiyat degisikligi ister, admin onaylar/reddeder.
+-- status: pending | approved | rejected | cancelled
+CREATE TABLE requests (
+    id          SERIAL PRIMARY KEY,
+    dealer_id   INT REFERENCES users(id),
+    product_id  INT REFERENCES products(id),
+    type        VARCHAR(20) NOT NULL DEFAULT 'price',
+    old_price   NUMERIC(10,2),
+    new_price   NUMERIC(10,2),
+    status      VARCHAR(20) NOT NULL DEFAULT 'pending',
+    admin_note  TEXT,
+    created_at  TIMESTAMP DEFAULT NOW(),
+    resolved_at TIMESTAMP
+);
+
+-- Demo talepler: her durumdan en az bir ornek
+INSERT INTO requests (dealer_id, product_id, old_price, new_price, status, admin_note, created_at, resolved_at)
+SELECT u.id, v.product_id, v.old_price, v.new_price, v.status, v.admin_note,
+       NOW() - (v.days_ago || ' days')::interval,
+       CASE WHEN v.status = 'pending' THEN NULL
+            ELSE NOW() - (v.days_ago || ' days')::interval + interval '2 hours'
+       END
+FROM users u
+CROSS JOIN (VALUES
+    (1, 32999.99, 34500.00, 'approved',  'Uygun fiyat',        5),
+    (3,   899.99,  1200.00, 'rejected',  'Fiyat cok yuksek',   4),
+    (4,   199.90,   185.00, 'approved',  NULL,                 3),
+    (6,    34.90,    39.90, 'cancelled', NULL,                 2),
+    (8,  6190.00,  6450.00, 'pending',   NULL,                 1)
+) AS v(product_id, old_price, new_price, status, admin_note, days_ago)
+WHERE u.username = 'bayi';
+
+
+-- ---------- 7. GİRİŞ / ÇIKIŞ LOGLARI ----------
+-- action: login | logout
+CREATE TABLE login_logs (
+    id         SERIAL PRIMARY KEY,
+    user_id    INT REFERENCES users(id),
+    action     VARCHAR(10) NOT NULL,
+    ip_address VARCHAR(45),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+
+-- ---------- 8. SEPET ----------
+-- UNIQUE (user_id, product_id, dealer_id):
+-- ayni urun farkli bayilerden ayri satir olarak eklenebilir,
+-- ayni ucluden ikinci kayit acilmaz — adet artar (ON CONFLICT).
+CREATE TABLE cart_items (
+    id         SERIAL PRIMARY KEY,
+    user_id    INT NOT NULL REFERENCES users(id),
+    product_id INT NOT NULL REFERENCES products(id),
+    dealer_id  INT NOT NULL REFERENCES users(id),
+    quantity   INT NOT NULL DEFAULT 1,
+    added_at   TIMESTAMP DEFAULT NOW(),
+    UNIQUE (user_id, product_id, dealer_id)
+);
+```
+
+## db/gercek-sema.sql
+
+```sql
+--
+-- PostgreSQL database dump
+--
+
+\restrict 0nq4wk7DMJJnkydZ1B4X6aL3idtk4cTrCEN4gAllOXyF1uEzIBt5T7gNOgqc6xm
+
+-- Dumped from database version 18.4 (Debian 18.4-1.pgdg13+1)
+-- Dumped by pg_dump version 18.4 (Debian 18.4-1.pgdg13+1)
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET transaction_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: cart_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cart_items (
+    id integer NOT NULL,
+    user_id integer NOT NULL,
+    product_id integer NOT NULL,
+    dealer_id integer NOT NULL,
+    quantity integer DEFAULT 1 NOT NULL,
+    added_at timestamp without time zone DEFAULT now()
+);
+
+
+--
+-- Name: cart_items_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.cart_items_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: cart_items_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.cart_items_id_seq OWNED BY public.cart_items.id;
+
+
+--
+-- Name: categories; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.categories (
+    id integer NOT NULL,
+    name character varying(100) NOT NULL,
+    parent_id integer
+);
+
+
+--
+-- Name: categories_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.categories_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: categories_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.categories_id_seq OWNED BY public.categories.id;
+
+
+--
+-- Name: dealer_stock; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dealer_stock (
+    dealer_id integer NOT NULL,
+    product_id integer NOT NULL,
+    stock integer DEFAULT 0 NOT NULL,
+    price numeric(10,2)
+);
+
+
+--
+-- Name: login_logs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.login_logs (
+    id integer NOT NULL,
+    user_id integer,
+    action character varying(10) NOT NULL,
+    ip_address character varying(45),
+    created_at timestamp without time zone DEFAULT now()
+);
+
+
+--
+-- Name: login_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.login_logs_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: login_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.login_logs_id_seq OWNED BY public.login_logs.id;
+
+
+--
+-- Name: products; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.products (
+    id integer NOT NULL,
+    name character varying(150) NOT NULL,
+    category_id integer,
+    stock integer DEFAULT 0 NOT NULL,
+    price numeric(10,2) NOT NULL,
+    created_at timestamp without time zone DEFAULT now(),
+    image_url character varying(500),
+    min_oran numeric(5,2) DEFAULT 80,
+    max_oran numeric(5,2) DEFAULT 120
+);
+
+
+--
+-- Name: products_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.products_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: products_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.products_id_seq OWNED BY public.products.id;
+
+
+--
+-- Name: requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.requests (
+    id integer NOT NULL,
+    dealer_id integer,
+    product_id integer,
+    type character varying(20) DEFAULT 'price'::character varying NOT NULL,
+    old_price numeric(10,2),
+    new_price numeric(10,2),
+    status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
+    admin_note text,
+    created_at timestamp without time zone DEFAULT now(),
+    resolved_at timestamp without time zone
+);
+
+
+--
+-- Name: requests_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.requests_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: requests_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.requests_id_seq OWNED BY public.requests.id;
+
+
+--
+-- Name: stock_movements; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.stock_movements (
+    id integer NOT NULL,
+    dealer_id integer,
+    product_id integer,
+    quantity integer NOT NULL,
+    created_at timestamp without time zone DEFAULT now()
+);
+
+
+--
+-- Name: stock_movements_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.stock_movements_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: stock_movements_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.stock_movements_id_seq OWNED BY public.stock_movements.id;
+
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.users (
+    id integer NOT NULL,
+    username character varying(50) NOT NULL,
+    password_hash character varying(200) NOT NULL,
+    role character varying(20) NOT NULL,
+    token character varying(200),
+    address character varying(300),
+    phone character varying(20),
+    avatar_url character varying(500),
+    email character varying(200)
+);
+
+
+--
+-- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.users_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
+
+
+--
+-- Name: cart_items id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cart_items ALTER COLUMN id SET DEFAULT nextval('public.cart_items_id_seq'::regclass);
+
+
+--
+-- Name: categories id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.categories ALTER COLUMN id SET DEFAULT nextval('public.categories_id_seq'::regclass);
+
+
+--
+-- Name: login_logs id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.login_logs ALTER COLUMN id SET DEFAULT nextval('public.login_logs_id_seq'::regclass);
+
+
+--
+-- Name: products id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.products ALTER COLUMN id SET DEFAULT nextval('public.products_id_seq'::regclass);
+
+
+--
+-- Name: requests id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.requests ALTER COLUMN id SET DEFAULT nextval('public.requests_id_seq'::regclass);
+
+
+--
+-- Name: stock_movements id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_movements ALTER COLUMN id SET DEFAULT nextval('public.stock_movements_id_seq'::regclass);
+
+
+--
+-- Name: users id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
+
+
+--
+-- Name: cart_items cart_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cart_items
+    ADD CONSTRAINT cart_items_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: cart_items cart_items_user_id_product_id_dealer_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cart_items
+    ADD CONSTRAINT cart_items_user_id_product_id_dealer_id_key UNIQUE (user_id, product_id, dealer_id);
+
+
+--
+-- Name: categories categories_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.categories
+    ADD CONSTRAINT categories_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: dealer_stock dealer_stock_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dealer_stock
+    ADD CONSTRAINT dealer_stock_pkey PRIMARY KEY (dealer_id, product_id);
+
+
+--
+-- Name: login_logs login_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.login_logs
+    ADD CONSTRAINT login_logs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: products products_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.products
+    ADD CONSTRAINT products_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: requests requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.requests
+    ADD CONSTRAINT requests_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: stock_movements stock_movements_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_movements
+    ADD CONSTRAINT stock_movements_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_email_key UNIQUE (email);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: users users_username_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_username_key UNIQUE (username);
+
+
+--
+-- Name: cart_items cart_items_dealer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cart_items
+    ADD CONSTRAINT cart_items_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.users(id);
+
+
+--
+-- Name: cart_items cart_items_product_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cart_items
+    ADD CONSTRAINT cart_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id);
+
+
+--
+-- Name: cart_items cart_items_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cart_items
+    ADD CONSTRAINT cart_items_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: categories categories_parent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.categories
+    ADD CONSTRAINT categories_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.categories(id);
+
+
+--
+-- Name: dealer_stock dealer_stock_dealer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dealer_stock
+    ADD CONSTRAINT dealer_stock_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.users(id);
+
+
+--
+-- Name: dealer_stock dealer_stock_product_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dealer_stock
+    ADD CONSTRAINT dealer_stock_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id);
+
+
+--
+-- Name: login_logs login_logs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.login_logs
+    ADD CONSTRAINT login_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id);
+
+
+--
+-- Name: products products_category_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.products
+    ADD CONSTRAINT products_category_id_fkey FOREIGN KEY (category_id) REFERENCES public.categories(id);
+
+
+--
+-- Name: requests requests_dealer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.requests
+    ADD CONSTRAINT requests_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.users(id);
+
+
+--
+-- Name: requests requests_product_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.requests
+    ADD CONSTRAINT requests_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id);
+
+
+--
+-- Name: stock_movements stock_movements_dealer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_movements
+    ADD CONSTRAINT stock_movements_dealer_id_fkey FOREIGN KEY (dealer_id) REFERENCES public.users(id);
+
+
+--
+-- Name: stock_movements stock_movements_product_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_movements
+    ADD CONSTRAINT stock_movements_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.products(id);
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+\unrestrict 0nq4wk7DMJJnkydZ1B4X6aL3idtk4cTrCEN4gAllOXyF1uEzIBt5T7gNOgqc6xm
+
+
+```
+
+## backend/StokApi.csproj
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BCrypt.Net-Next" Version="4.2.0" />
+    <PackageReference Include="Dapper" Version="2.1.79" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+</Project>
+
+```
+
+## backend/Program.cs
+
+```csharp
+using Npgsql;
+using System.Data;
+
+var builder = WebApplication.CreateBuilder(args);
+// Add services to the container.
+
+builder.Services.AddControllers();
+builder.Services.AddCors(o => o.AddDefaultPolicy(p=> 
+p.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
+
+builder.Services.AddScoped<IDbConnection>(_ => new NpgsqlConnection(builder.Configuration.GetConnectionString("Default")));
+
+var app = builder.Build();
+
+app.UseCors();
+
+app.MapControllers();
+
+app.Run();
+
+```
+
+## backend/AuthHelper.cs
+
+```csharp
+using Dapper;
+using System.Data;
+
+public static class AuthHelper
+{
+    public static async Task<string?> GetRole(IDbConnection db, string? token)
+    {
+        if(string.IsNullOrEmpty(token)) return null;
+        return await db.QueryFirstOrDefaultAsync<string?>(
+            "SELECT role FROM users Where token = @token", new { token });
+    }
+}
+```
+
+## backend/appsettings.json
+
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*"
+}
+
+```
+
+## backend/appsettings.Development.json
+
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  }
+}
+
+```
+
+## backend/Properties/launchSettings.json
+
+```json
+﻿{
+  "$schema": "http://json.schemastore.org/launchsettings.json",
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:44788",
+      "sslPort": 44312
+    }
+  },
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "applicationUrl": "http://localhost:5077",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "https": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "applicationUrl": "https://localhost:7299;http://localhost:5077",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
+
+```
+
+## backend/StokApi.http
+
+```
+@StokApi_HostAddress = http://localhost:5077
+
+GET {{StokApi_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+```
+
+## backend/Dockerfile
+
+```dockerfile
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+COPY *.csproj .
+RUN dotnet restore
+COPY . .
+RUN dotnet publish -c Release -o /app /p:AssemblyName=api
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+WORKDIR /app
+COPY --from=build /app .
+ENTRYPOINT ["dotnet", "api.dll"]
+```
+
+## backend/.dockerignore
+
+```
+bin/
+obj/
+```
+
+## backend/Controllers/AuthController.cs
+
+```csharp
+using Dapper;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration.UserSecrets;
+using System.Data;
+
+[ApiController]
+[Route("api")]
+public class AuthController : ControllerBase
+{
+    private readonly IDbConnection _db;
+    public AuthController(IDbConnection db) => _db = db;
+
+    public record RegisterReq(string username, string password, string email, string role, string? address, string? phone);
+    public record LoginReq(string username, string password);
+    public record SignupReq(string username, string password, string email, string? address, string? phone);
+
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterReq req)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Admin") return StatusCode(403, "Sadece Admin kullanıcı ekleyebilir!");
+
+        var hash = BCrypt.Net.BCrypt.HashPassword(req.password);
+        try
+        {
+            var id = await _db.ExecuteScalarAsync<int>(
+                @"INSERT INTO users (username, password_hash, email, role, address, phone)
+                  VALUES (@username, @hash, @email, @role, @address, @phone) RETURNING id",
+                new { req.username, hash, req.email, req.role, req.address, req.phone });
+            return Ok(new { id, req.username, req.email, req.role });
+        }
+        catch
+        {
+            return BadRequest("Bu kullanıcı adı zaten var");
+        }
+    }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginReq req)
+    {
+        var user = await _db.QueryFirstOrDefaultAsync(
+            "SELECT id, password_hash, role, avatar_url FROM users WHERE username = @username",
+            new { req.username });
+
+        if (user is null)
+            return Unauthorized("Kullanıcı bulunamadı");
+
+        bool ok = BCrypt.Net.BCrypt.Verify(req.password, (string)user.password_hash);
+        if (!ok)
+            return Unauthorized("Şifre hatalı");
+
+        var token = Guid.NewGuid().ToString("N");
+        await _db.ExecuteAsync(
+            "UPDATE users SET token = @token WHERE id = @id",
+            new { token, id = (int)user.id });
+
+        await _db.ExecuteAsync(
+            "INSERT INTO login_logs (user_id, action) VALUES (@userId, 'login')",
+            new { userId = (int)user.id });
+
+        return Ok(new { token, role = (string)user.role, username = req.username, avatar_url = (string?)user.avatar_url });
+    }
+
+    [HttpPost("signup")]
+    public async Task<IActionResult> Signup([FromBody] SignupReq req)
+    {
+        if (string.IsNullOrWhiteSpace(req.username) || string.IsNullOrWhiteSpace(req.password))
+            return BadRequest("Kullanıcı adı ve şifre zorunlu !");
+        if (req.password.Length < 6)
+            return BadRequest("Şifre en az 6 karakter olmalı !");
+        if (string.IsNullOrWhiteSpace(req.email) || !EpostaGecerliMi(req.email))
+            return BadRequest("Geçerli bir e-posta adresi giriniz!");
+
+        var hash = BCrypt.Net.BCrypt.HashPassword(req.password);
+        try
+        {
+            var id = await _db.ExecuteScalarAsync<int>(
+                @"INSERT INTO users(username, password_hash, role, email, address, phone)
+                    VALUES (@username, @hash, 'Kullanici', @email, @address, @phone)
+                    RETURNING id",
+                new { req.username, hash, req.email, req.address, req.phone });
+            return Ok(new { id, req.username });
+        }
+        catch (Npgsql.PostgresException pex) when (pex.SqlState == "23505")
+        {
+            return BadRequest("Bu kullanıcı adı veya e-posta zaten kullanılıyor");
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, "Kayıt sırasında bir hata oluştu");
+        }
+    }
+
+    private static bool EpostaGecerliMi(string eposta)
+    {
+        try
+        {
+            var adres = new System.Net.Mail.MailAddress(eposta.Trim());
+            return adres.Address == eposta.Trim();
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout()
+    {
+        var token = Request.Headers["Authorization"].ToString();
+
+        var userId = await _db.ExecuteScalarAsync<int?>(
+            "SELECT id FROM users WHERE token = @token", new { token });
+        if (userId is null) return Unauthorized();
+
+        await _db.ExecuteAsync(
+            "INSERT INTO login_logs (user_id, action) VALUES (@userId, 'logout')",
+            new { userId = userId.Value });
+
+        await _db.ExecuteAsync(
+            "UPDATE users SET token = NULL WHERE id = @userId",
+            new { userId = userId.Value });
+
+        return Ok();
+    }
+    
+}
+```
+
+## backend/Controllers/CartController.cs
+
+```csharp
+using System.Data;
+using System.Data.Common;
+using System.Net.Http.Headers;
+using Dapper;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
+
+
+
+namespace StokApi.Controllers;
+
+[ApiController]
+[Route("api/cart")]
+public class CartController : ControllerBase
+{
+    private readonly IDbConnection _db;
+    public CartController(IDbConnection db) => _db = db;
+
+    private async Task<int?> KullaniciId()
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        return await _db.ExecuteScalarAsync<int?>(
+            "SELECT id FROM users WHERE token = @token", new { token });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Get()
+    {
+        var userId = await KullaniciId();
+        if (userId is null) return Unauthorized();
+
+        var sql = @"
+            SELECT c.id, c.product_id, c.dealer_id, c.quantity,
+                    p.name AS urun, p.image_url,
+                    d.username AS bayi,
+                    ds.price, ds.stock,
+                    (ds.price * c.quantity) AS satir_tutar
+            FROM cart_items c
+            JOIN products p ON p.id = c.product_id
+            JOIN users d ON d.id = c.dealer_id
+            JOIN dealer_stock ds ON ds.product_id = c.product_id AND ds.dealer_id = c.dealer_id
+            WHERE c.user_id = @userId
+            ORDER BY c.added_at DESC";
+
+        var satirlar = (await _db.QueryAsync(sql, new { userId = userId.Value })).ToList();
+
+        decimal toplam = satirlar.Sum(s => (decimal)s.satir_tutar);
+        return Ok(new { satirlar, toplam, adet = satirlar.Count });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Ekle([FromBody] SepetEkleReq req)
+    {
+        var userId = await KullaniciId();
+        if (userId is null) return Unauthorized();
+
+        var stok = await _db.ExecuteScalarAsync<int?>(
+            "SELECT stock FROM dealer_stock WHERE product_id = @productId AND dealer_id = @dealerId",
+            new { productId = req.product_id, dealerId = req.dealer_id });
+        if (stok is null) return BadRequest("Bu ürün bu bayide satışta değil");
+
+        var mevcut = await _db.ExecuteScalarAsync<int?>(
+            @"SELECT quantity FROM cart_items
+              WHERE user_id = @userId AND product_id = @productId AND dealer_id = @dealerId",
+        new { userId = userId.Value, productId = req.product_id, dealerId = req.dealer_id }) ?? 0;
+
+        var yeniadet = mevcut + 1;
+        if (yeniadet > stok.Value) return BadRequest($"Stok yetersiz (mevcut: {stok.Value})");
+
+        await _db.ExecuteAsync(
+            @"INSERT INTO cart_items(user_id, product_id, dealer_id, quantity)
+              VALUES (@userId, @productId, @dealerId, 1)
+              ON CONFLICT (user_id, product_id, dealer_id)
+              DO UPDATE SET quantity = cart_items.quantity + 1",
+            new { userId = userId.Value, productId = req.product_id, dealerId = req.dealer_id });
+
+        return Ok(new { eklendi = true });
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> AdetGuncelle(int id, [FromBody] AdetReq req)
+    {
+        var userId = await KullaniciId();
+        if (userId is null) return Unauthorized();
+        if (req.quantity < 1) return BadRequest("Adet en az 1 olmalı");
+
+        var stok = await _db.ExecuteScalarAsync<int?>(
+            @"SELECT ds.stock FROM cart_items c
+              JOIN dealer_stock ds ON ds.product_id = c.product_id AND ds.dealer_id = c.dealer_id
+              WHERE c.id = @id AND c.user_id = @userId",
+              new { id, userId = userId.Value });
+        if (stok is null) return NotFound();
+        if (req.quantity > stok.Value) return BadRequest($"Stok yetersiz (mevcut: {stok.Value})");
+
+        await _db.ExecuteAsync(
+            "UPDATE cart_items SET quantity = @quantity WHERE id = @id AND user_id = @userId",
+            new { req.quantity, id, userId = userId.Value });
+
+        return Ok(new { guncellendi = true });
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Sil(int id)
+    {
+        var userId = await KullaniciId();
+        if (userId is null) return Unauthorized();
+
+        var etkilenen = await _db.ExecuteAsync(
+            "DELETE FROM cart_items WHERE id = @id AND user_id = @userId",
+            new { id, userId = userId.Value });
+        if (etkilenen == 0) return NotFound();
+
+        return Ok(new { silindi = true });
+    }
+
+    [HttpDelete]
+    public async Task<IActionResult> Bosalt()
+    {
+        var userId = await KullaniciId();
+        if (userId is null) return Unauthorized();
+
+        await _db.ExecuteAsync(
+            "DELETE FROM cart_items WHERE user_id = @userId",
+            new { userId = userId.Value });
+
+        return Ok(new { bosaltildi = true });
+    }
+}
+
+public record SepetEkleReq(int product_id, int dealer_id);
+public record AdetReq(int quantity);
+```
+
+## backend/Controllers/CategoriesController.cs
+
+```csharp
+using Dapper;
+using Microsoft.AspNetCore.Mvc;
+using System.Data;
+
+[ApiController]
+[Route("api/categories")]
+public class CategoriesController : ControllerBase
+{
+    private readonly IDbConnection _db;
+    public CategoriesController(IDbConnection db) => _db = db;
+
+    public record NewCategory(string name, int? parent_id);
+
+    // ---------- KATEGORİLERİ LİSTELE (hiyerarşik) ----------
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        var sql = @"
+            SELECT c.id, c.name, c.parent_id,
+                   ust.name AS parent_name,
+                   (SELECT COUNT(*) FROM categories alt WHERE alt.parent_id = c.id) AS alt_sayisi
+            FROM categories c
+            LEFT JOIN categories ust ON ust.id = c.parent_id
+            ORDER BY COALESCE(c.parent_id, c.id), c.id";
+        var rows = await _db.QueryAsync(sql);
+        return Ok(rows);
+    }
+
+    // ---------- KATEGORİ EKLE ----------
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] NewCategory c)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
+
+        if (string.IsNullOrWhiteSpace(c.name))
+            return BadRequest("Kategori adı zorunlu");
+
+        var id = await _db.ExecuteScalarAsync<int>(
+            "INSERT INTO categories (name, parent_id) VALUES (@name, @parent_id) RETURNING id",
+            new { c.name, c.parent_id });
+
+        return Ok(new { id, c.name, c.parent_id });
+    }
+
+    // ---------- KATEGORİ SİL ----------
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
+
+        // Alt kategorisi var mı?
+        var altSayisi = await _db.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM categories WHERE parent_id = @id", new { id });
+        if (altSayisi > 0)
+            return BadRequest("Bu kategorinin alt kategorileri var, önce onları silin");
+
+        // Ürünü var mı?
+        var urunSayisi = await _db.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM products WHERE category_id = @id", new { id });
+        if (urunSayisi > 0)
+            return BadRequest($"Bu kategoride {urunSayisi} ürün var, önce onları taşıyın");
+
+        var affected = await _db.ExecuteAsync("DELETE FROM categories WHERE id = @id", new { id });
+        return affected > 0 ? Ok() : NotFound();
+    }
+}
+```
+
+## backend/Controllers/LogsControllers.cs
+
+```csharp
+using System.Data;
+using Dapper;
+using Microsoft.AspNetCore.Mvc;
+
+[ApiController]
+[Route("api/logs")]
+public class LogsController : ControllerBase
+{
+    private readonly IDbConnection _db;
+    public LogsController(IDbConnection db) => _db = db;
+
+    [HttpGet]
+    public async Task<IActionResult> Logs()
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Admin") return StatusCode(403, "Sadece Admin!");
+
+        var sql = @"
+            SELECT l.id, u.username, u.role, l.action, l.ip_address, l.created_at
+            FROM login_logs l
+            JOIN users u ON u.id = l.user_id
+            ORDER BY l.created_at DESC
+            LIMIT 100";
+        var rows = await _db.QueryAsync(sql);
+        return Ok(rows);        
+    }
+}
+```
+
+## backend/Controllers/MovementsController.cs
+
+```csharp
+using Dapper;
+using System.Data;
+using Microsoft.AspNetCore.Mvc;
+
+[ApiController]
+[Route("api/[controller]")]
+public class MovementsController : ControllerBase
+{
+    private readonly IDbConnection _db;
+    public MovementsController(IDbConnection db) => _db = db;
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if(role != "Admin") return StatusCode(403, "Sadece Admin");
+
+        var sql = @"
+            SELECT sm.id, u.username AS bayi, p.name AS urun,
+                   sm.quantity, sm.created_at
+            FROM stock_movements sm
+            JOIN users u ON u.id = sm.dealer_id
+            JOIN products p ON p.id = sm.product_id
+            ORDER BY sm.created_at DESC, sm.id DESC";
+        var rows = await _db.QueryAsync(sql);
+        return Ok(rows);
+    }
+}
+```
+
+## backend/Controllers/ProductsController.cs
+
+```csharp
+using Dapper;
+using Microsoft.AspNetCore.Mvc;
+using System.Data;
+
+[ApiController]
+[Route("api/products")]
+public class ProductsController : ControllerBase
+{
+    private readonly IDbConnection _db;
+    public ProductsController(IDbConnection db) => _db = db;
+
+    public record NewProduct(string name, int category_id, int stock, decimal price, string? image_url);
+    public record UpdateProduct(string name, int category_id, decimal price, string? image_url);
+
+    // ---------- ÜRÜNLERİ LİSTELE ----------
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        var sql = @"
+            SELECT p.id, p.name, p.category_id,
+                   c.name AS category,
+                   ust.name AS parent_category,
+                   p.stock, p.price, p.image_url,
+                   p.min_oran, p.max_oran,
+                   ROUND(p.price * COALESCE(p.min_oran, 80) / 100, 2) AS alt_sinir,
+                   ROUND(p.price * COALESCE(p.max_oran, 120) / 100, 2) AS ust_sinir,
+                   (SELECT COALESCE(SUM(ds.stock), 0) FROM dealer_stock ds
+                     WHERE ds.product_id = p.id) AS toplam_stok
+            FROM products p
+            JOIN categories c ON c.id = p.category_id
+            LEFT JOIN categories ust ON ust.id = c.parent_id
+            ORDER BY p.id";
+        var rows = await _db.QueryAsync(sql);
+        return Ok(rows);
+    }
+
+    // ---------- ÜRÜN EKLE ----------
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] NewProduct p)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
+
+        var sql = @"
+            INSERT INTO products (name, category_id, stock, price, image_url)
+            VALUES (@name, @category_id, @stock, @price, @image_url)
+            RETURNING id";
+        var id = await _db.ExecuteScalarAsync<int>(sql, p);
+
+        // Yeni ürün için tüm bayilere 0 stoklu satır aç
+        await _db.ExecuteAsync(
+            @"INSERT INTO dealer_stock (dealer_id, product_id, stock)
+              SELECT u.id, @productId, 0
+              FROM users u
+              WHERE u.role = 'Bayi'
+                AND NOT EXISTS (
+                  SELECT 1 FROM dealer_stock ds
+                  WHERE ds.dealer_id = u.id AND ds.product_id = @productId
+                )",
+            new { productId = id });
+
+        return Ok(new { id });
+    }
+
+    // ---------- ÜRÜN GÜNCELLE ----------
+    [HttpPut("{id}")]
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateProduct p)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
+
+        var affected = await _db.ExecuteAsync(
+            @"UPDATE products
+              SET name = @name, category_id = @category_id, price = @price, image_url = @image_url
+              WHERE id = @id",
+            new { id, p.name, p.category_id, p.price, p.image_url });
+
+        return affected > 0 ? Ok() : NotFound();
+    }
+
+    // ---------- ÜRÜN SİL ----------
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
+
+        // Foreign key sırası: önce bağlı kayıtlar
+        await _db.ExecuteAsync("DELETE FROM requests WHERE product_id = @id", new { id });
+        await _db.ExecuteAsync("DELETE FROM stock_movements WHERE product_id = @id", new { id });
+        await _db.ExecuteAsync("DELETE FROM cart_items WHERE product_id = @id", new { id });
+        await _db.ExecuteAsync("DELETE FROM dealer_stock WHERE product_id = @id", new { id });
+
+        var affected = await _db.ExecuteAsync("DELETE FROM products WHERE id = @id", new { id });
+        return affected > 0 ? Ok() : NotFound();
+    }
+}
+```
+
+## backend/Controllers/ProfileController.cs
+
+```csharp
+using Dapper;
+using Microsoft.AspNetCore.Mvc;
+using System.Data;
+
+[ApiController]
+[Route("api")]
+public class ProfileController : ControllerBase
+{
+    private readonly IDbConnection _db;
+    public ProfileController(IDbConnection db) => _db = db;
+
+    private async Task<(int id, string role)?> GetUser(string? token)
+    {
+        if (string.IsNullOrEmpty(token)) return null;
+        var u = await _db.QueryFirstOrDefaultAsync(
+            "SELECT id, role FROM users WHERE token = @token", new { token });
+        if (u is null) return null;
+        return ((int)u.id, (string)u.role);
+    }
+
+    public record ProfileUpdate(string? address, string? phone, string? avatar_url);
+
+    [HttpGet("profile")]
+    public async Task<IActionResult> GetProfile()
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var user = await GetUser(token);
+        if (user is null) return Unauthorized("Giriş gerekli");
+
+        var data = await _db.QueryFirstOrDefaultAsync(
+            "SELECT id, username, role, address, phone, avatar_url FROM users WHERE id = @id",
+            new { id = user.Value.id });
+        return Ok(data);
+    }
+
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfile([FromBody] ProfileUpdate p)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var user = await GetUser(token);
+        if (user is null) return Unauthorized("Giriş gerekli");
+
+        await _db.ExecuteAsync(
+            "UPDATE users SET address = @address, phone = @phone, avatar_url = @avatar_url WHERE id = @id",
+            new { p.address, p.phone, p.avatar_url, id = user.Value.id });
+        return Ok();
+    }
+}
+```
+
+## backend/Controllers/RequestsController.cs
+
+```csharp
+using Dapper;
+using System.Data;
+using Microsoft.AspNetCore.Mvc;
+
+[ApiController]
+[Route("api/requests")]
+public class RequestsController : ControllerBase
+{
+    private readonly IDbConnection _db;
+    public RequestsController(IDbConnection db) => _db = db;
+
+    public record KararReq(string? note);
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll([FromQuery] string status = "pending")
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Admin") return StatusCode(403, "Sadece Admin");
+
+        var sql = @"
+            SELECT r.id, r.type, r.old_price, r.new_price, r.status, r.admin_note, r.created_at, r.resolved_at,
+                u.username AS bayi, p.name AS urun,
+                ROUND(p.price * COALESCE(p.min_oran, 80) / 100, 2) AS alt_sinir,
+                ROUND(p.price * COALESCE(p.max_oran, 120) / 100, 2) AS ust_sinir,
+                p.price AS referans_fiyat
+            FROM requests r
+            JOIN users u ON u.id = r.dealer_id
+            JOIN products p ON p.id = r.product_id
+            WHERE (@status = 'all' OR r.status = @status)
+            ORDER BY r.created_at DESC";
+        var rows = await _db.QueryAsync(sql, new { status });
+        return Ok(rows);
+    }
+
+    [HttpPut("{id}/approve")]
+    public async Task<IActionResult> Approve(int id, [FromBody] KararReq? req)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Admin") return StatusCode(403, "Sadece Admin");
+
+        var talep = await _db.QueryFirstOrDefaultAsync(
+            "SELECT dealer_id, product_id, new_price, status FROM requests WHERE id = @id",
+            new { id });
+
+        if (talep is null) return NotFound("Talep bulunamadı");
+        if ((string)talep.status != "pending") return BadRequest("Bu talep zaten karara bağlanmış");
+
+        int dealerId = (int)talep.dealer_id;
+        int productId = (int)talep.product_id;
+        decimal yeni_Fiyat = (decimal)talep.new_price;
+
+        //Fiyat uygula
+        await _db.ExecuteAsync(
+            "UPDATE dealer_stock SET price = @price WHERE dealer_id = @dealerId AND product_id = @pid",
+            new {price = yeni_Fiyat, dealerId, pid = productId }); 
+        //Talebi onayla
+        await _db.ExecuteAsync(
+            "UPDATE requests SET status = 'approved', admin_note = @note, resolved_at = NOW() WHERE id = @id",
+            new { id ,note = req?.note });
+
+
+        return Ok(new { id, durum = "onaylandi", uygulanan_fiyat = yeni_Fiyat });
+    }
+
+    [HttpPut("{id}/reject")]
+    public async Task<IActionResult> Reject(int id, [FromBody] KararReq? req)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Admin") return StatusCode(403, "Sadece Admin");
+
+        var durum = await _db.ExecuteScalarAsync<string?>(
+            "SELECT status FROM requests WHERE id = @id", new { id });
+
+        if(durum is null) return NotFound("Talep bulunamadı");
+        if ( durum != "pending") return BadRequest("Bu talep zaten karara bağlanmış");
+
+        await _db.ExecuteAsync(
+            @"UPDATE requests SET status = 'rejected', admin_note = @note, resolved_at = NOW()
+                WHERE id = @id",
+                new { id ,note = req?.note });
+
+        return Ok(new { id , durum = "reddedildi"});
+    }
+    //
+    // BAYİNİN KENDİ TALEPLERİ
+    //
+    [HttpGet("mine")]
+    public async Task<IActionResult> Mine()
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Bayi") return StatusCode(403, "Sadece bayiler");
+
+        var dealerId = await _db.ExecuteScalarAsync<int?>(
+            "SELECT id FROM users WHERE token = @token", new { token });
+        if ( dealerId is null) return Unauthorized();
+
+        var sql = @"
+            SELECT r.id, r.old_price, r.new_price, r.status, r.admin_note,
+                    r.created_at, r.resolved_at, p.name AS urun
+            FROM requests r
+            JOIN products p ON p.id = r.product_id
+            WHERE r.dealer_id = @dealerId
+            ORDER BY r.created_at DESC";
+        var rows = await _db.QueryAsync(sql, new { dealerId = dealerId.Value });
+        return Ok(rows);
+    }
+
+    [HttpPut("{id}/cancel")]
+    public async Task<IActionResult> Cancel(int id)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Bayi") return StatusCode(403, "Sadece bayiler");
+
+        var dealerId = await _db.ExecuteScalarAsync<int?>(
+            "SELECT id FROM users WHERE token = @token", new { token });
+        if (dealerId is null) return Unauthorized();
+
+        var etkilenen = await _db.ExecuteAsync(
+            @"UPDATE requests SET status = 'cancelled', resolved_at = NOW()
+              WHERE id = @id AND dealer_id = @dealerId AND status = 'pending'",
+            new { id, dealerId = dealerId.Value });
+
+        if (etkilenen == 0)
+            return BadRequest("Bu talep iptal edilemez (size ait değil ya da zaten karara bağlanmış)");
+
+        return Ok(new { id, durum = "iptal edildi" }); 
+    }
+}
+```
+
+## backend/Controllers/ShopController.cs
+
+```csharp
+using Dapper;
+using Microsoft.AspNetCore.Mvc;
+using System.Data;
+using System.Runtime.InteropServices;
+
+[ApiController]
+[Route("api")]
+public class ShopController : ControllerBase
+{
+    private readonly IDbConnection _db;
+    public ShopController(IDbConnection db) => _db = db;
+
+    private async Task<string?> GetRole(string? token)
+    {
+        if (string.IsNullOrEmpty(token)) return null;
+        return await _db.QueryFirstOrDefaultAsync<string?>(
+            "SELECT role FROM users WHERE token = @token", new { token });
+    }
+
+    [HttpGet("shop")]
+    public async Task<IActionResult> Shop([FromQuery] int offset = 0, [FromQuery] int limit = 20, int? kategori = null, string? arama = null)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await GetRole(token);
+        if (role is null) return Unauthorized("Giriş gerekli");
+        if (role != "Kullanici") return StatusCode(403, "Sadece müşteriler");
+
+        var sql= @"
+            SELECT p.id AS product_id, p.name, ds.price, p.image_url,
+                    u.id AS dealer_id, u.username AS dealer_name, ds.stock
+            FROM dealer_stock ds
+            JOIN products p ON p.id = ds.product_id
+            JOIN users u ON u.id = ds.dealer_id
+            WHERE ds.stock > 0 AND ds.price IS NOT NULL
+                AND (@kategori IS NULL OR p.category_id = @kategori)
+                AND (@arama IS NULL OR p.name ILIKE '%' || @arama || '%')
+            ORDER BY p.name, u.username
+            LIMIT @adet OFFSET @baslangic";
+        var rows = await _db.QueryAsync(sql, new { adet = limit, baslangic = offset, kategori, arama = string.IsNullOrWhiteSpace(arama) ? null : arama});
+        return Ok(rows);
+    }
+ }
+```
+
+## backend/Controllers/StockController.cs
+
+```csharp
+using Dapper;
+using Microsoft.AspNetCore.Mvc;
+using System.Data;
+using System.Reflection.Metadata.Ecma335;
+
+[ApiController]
+[Route("api")]
+public class StockController : ControllerBase
+{
+    private readonly IDbConnection _db;
+    public StockController(IDbConnection db) => _db = db;
+
+    private async Task<(int id, string role)?> GetUser(string? token)
+    {
+        if (string.IsNullOrEmpty(token)) return null;
+        var u = await _db.QueryFirstOrDefaultAsync(
+            "SELECT id, role FROM users WHERE token = @token", new { token });
+        if (u is null) return null;
+        return ((int)u.id, (string)u.role);
+    }
+
+    [HttpGet("my-stock")]
+    public async Task<IActionResult> MyStock()
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var user = await GetUser(token);
+        if (user is null) return Unauthorized("Giriş Gerekli !");
+        if (user.Value.role != "Bayi") return StatusCode(403, "Sadece bayiler");
+
+        var sql = @"
+            SELECT p.id AS product_id, p.name, c.name AS category,
+                   p.price AS referans_fiyat,
+                   ds.price AS benim_fiyatim,
+                   ds.stock,
+                   ROUND(p.price * COALESCE(p.min_oran, 80) / 100, 2) AS alt_sinir,
+                   ROUND(p.price * COALESCE(p.max_oran, 120) / 100, 2) AS ust_sinir,
+                   ROUND(p.price * 1.05, 2) AS onerilen,
+                   (SELECT MAX(sm.created_at) FROM stock_movements sm
+                     WHERE sm.dealer_id = ds.dealer_id
+                       AND sm.product_id = ds.product_id) AS son_hareket
+            FROM dealer_stock ds
+            JOIN products p ON p.id = ds.product_id
+            JOIN categories c ON c.id = p.category_id
+            WHERE ds.dealer_id = @dealerId
+            ORDER BY p.name";
+        var rows = await _db.QueryAsync(sql, new { dealerId = user.Value.id });
+        return Ok(rows);
+    }
+
+    public record MovementReq(int product_id, int change);
+
+    [HttpPost("my-stock/movement")]
+    public async Task<IActionResult> AddMovement([FromBody] MovementReq req)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var user = await GetUser(token);
+        if(user is null) return Unauthorized("Giriş Gerekli");
+        if(user.Value.role != "Bayi") return StatusCode(403, "Sadece bayiler");
+
+        var dealerId = user.Value.id;
+
+        var current = await _db.QueryFirstOrDefaultAsync<int?>(
+            "SELECT stock FROM dealer_stock WHERE dealer_id = @dealerId AND product_id =@pid",
+            new  { dealerId, pid = req.product_id });
+
+        if (current is null)
+            return NotFound("Bu ürün sizin stok listenizde yok");
+
+        var newStock = current.Value + req.change;
+        if (newStock < 0)
+            return BadRequest($"Stok eksiye düşemez. Mevcut: {current}, çıkış: {req.change}");
+
+        await _db.ExecuteAsync(
+            @"INSERT INTO stock_movements (dealer_id, product_id, quantity)
+                VALUES (@dealerId, @pid, @qty)",
+            new { dealerId, pid = req.product_id, qty = req.change });
+
+        await _db.ExecuteAsync(
+            @"UPDATE dealer_stock SET stock = @newStock
+                WHERE dealer_id = @dealerId AND product_id = @pid",
+            new { newStock, dealerId, pid = req.product_id });
+        
+        return Ok(new {product_id = req.product_id, newStock, change = req.change});
+        
+    }
+
+    [HttpGet("my-stock/movements")]
+    public async Task<IActionResult> MyMovements()
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var user = await GetUser(token);
+        if (user is null) return Unauthorized("Giriş Gerekli!");
+        if (user.Value.role != "Bayi") return StatusCode(403, "Sadece bayiler");
+
+        var sql = @"
+            SELECT p.name AS urun, sm.quantity, sm.created_at
+            FROM stock_movements sm
+            JOIN products p ON p.id = sm.product_id
+            JOIN categories c ON c.id = p.category_id
+            WHERE sm.dealer_id = @dealerId
+            ORDER BY sm.created_at DESC, sm.id DESC";
+        
+        var rows = await _db.QueryAsync(sql, new { dealerId = user.Value.id });
+        return Ok(rows);
+    }
+
+    [HttpGet("my-stock/history")]
+    public async Task<IActionResult> History()
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var user = await GetUser(token);
+        if (user is null) return Unauthorized("Giriş Gerekli!");
+        if (user.Value.role != "Bayi") return StatusCode(403, "Sadece bayiler");
+
+        var sql = @"
+            SELECT
+                DATE(created_at) AS tarih,
+                COALESCE(SUM(CASE WHEN quantity > 0 THEN quantity ELSE 0 END), 0) AS giris,
+                COALESCE(SUM(CASE WHEN quantity < 0 THEN -quantity ELSE 0 END), 0) AS cikis
+            FROM stock_movements
+            WHERE dealer_id = @dealerId
+            GROUP BY DATE(created_at)
+            ORDER BY tarih";
+        
+        var rows = await _db.QueryAsync(sql, new { dealerId = user.Value.id });
+        return Ok(rows);
+    }
+
+    public record PriceReq(int product_id, decimal price);
+
+    [HttpPut("my-stock/price")]
+    public async Task<IActionResult> UpdatePrice([FromBody] PriceReq req)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var user = await GetUser(token);
+        if (user is null) return Unauthorized("Giriş Gerekli");
+        if (user.Value.role != "Bayi") return StatusCode(403, "Sadece bayiler");
+
+        var dealerId = user.Value.id;
+
+        var alt = await _db.ExecuteScalarAsync<decimal?>(
+            "SELECT ROUND(p.price * COALESCE(p.min_oran, 80) / 100, 2) FROM products p WHERE p.id = @pid",
+            new { pid = req.product_id });
+
+        var ust = await _db.ExecuteScalarAsync<decimal?>(
+            "SELECT ROUND(p.price * COALESCE(p.max_oran, 120) / 100, 2) FROM products p WHERE p.id = @pid",
+            new { pid = req.product_id });
+
+        if (alt is null || ust is null)
+            return NotFound("Ürün bulunamadı ya da fiyat sınırları tanımsız");
+
+        if (req.price < alt.Value || req.price > ust.Value)
+            return BadRequest($"Fiyat {alt.Value} - {ust.Value} ₺ aralığında olmalı. Girilen: {req.price} ₺");
+
+        var mevcutFiyat = await _db.ExecuteScalarAsync<decimal?>(
+            "SELECT price FROM dealer_stock WHERE dealer_id = @dealerId AND product_id = @pid",
+            new { dealerId, pid = req.product_id});
+        
+        if (mevcutFiyat is null && !await UrunListedeMi(dealerId, req.product_id))
+            return NotFound("Bu ürün sizin listenizde yok");
+        //
+        //Bekleyen eski talebi iptal et
+        //
+        await _db.ExecuteAsync(
+            @"UPDATE requests SET status = 'cancelled', resolved_at = NOW()
+              WHERE dealer_id = @dealerId AND product_id = @pid
+                AND type = 'price' AND status = 'pending'",
+            new { dealerId, pid = req.product_id });
+        //
+        //Yeni talep oluştur
+        //        
+        var talepId = await _db.ExecuteScalarAsync<int>(
+            @"INSERT INTO requests (dealer_id, product_id, type, old_price, new_price, status) 
+              VALUES (@dealerId, @pid, 'price', @old, @new, 'pending')
+              RETURNING id",
+            new { dealerId, pid = req.product_id, old = mevcutFiyat, @new = req.price });
+
+        return Ok(new { talep_id = talepId, durum = "Onay bekliyor", eski_fiyat = mevcutFiyat, yeni_fiyat = req.price });
+    }
+
+    private async Task<bool> UrunListedeMi (int dealerId, int product_id)
+    {
+        var sayi = await _db.ExecuteScalarAsync<int>(
+            "SELECT COUNT(*) FROM dealer_stock WHERE dealer_id = @dealerId AND product_id = @pid",
+            new { dealerId, pid = product_id });
+        return sayi > 0;
+        
+    }
+}
+
+
+```
+
+## backend/Controllers/UsersController.cs
+
+```csharp
+using Dapper;
+using Microsoft.AspNetCore.Mvc;
+using System.Data;
+
+[ApiController]
+[Route("api")]
+public class UsersController : ControllerBase
+{
+    private readonly IDbConnection _db;
+    public UsersController(IDbConnection db) => _db = db;
+
+    [HttpGet("dealers")]
+    public async Task<IActionResult> GetDealers()
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Admin") return StatusCode(403, "Sadece Admin!");
+
+        var rows = await _db.QueryAsync(
+            "SELECT id, username, address, phone FROM users WHERE role = 'Bayi' ORDER BY username"
+        );
+        return Ok(rows);
+    }
+
+    [HttpGet("users")]
+    public async Task<IActionResult> GetUsers()
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role != "Admin") return StatusCode(403, "Sadece Admin!");
+
+        var rows = await _db.QueryAsync(
+            "SELECT id, username, role FROM users ORDER BY id"
+        );
+        return Ok(rows);
+    }
+}
+```
+
+## frontend/package.json
+
+```json
+{
+  "name": "app",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
+    "svelte": "^5.56.4",
+    "vite": "^8.1.1"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1"
+  }
+}
+
+```
+
+## frontend/index.html
+
+```html
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>app</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
+
+```
+
+## frontend/jsconfig.json
+
+```json
+{
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "target": "ESNext",
+    "module": "ESNext",
+    /**
+     * svelte-preprocess cannot figure out whether you have
+     * a value or a type, so tell TypeScript to enforce using
+     * `import type` instead of `import` for Types.
+     */
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    /**
+     * To have warnings / errors of the Svelte compiler at the
+     * correct position, enable source maps by default.
+     */
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "types": ["vite/client"],
+    "skipLibCheck": true,
+    /**
+     * Typecheck JS in `.svelte` and `.js` files by default.
+     * Disable this if you'd like to use dynamic types.
+     */
+    "checkJs": false
+  },
+  /**
+   * Use global.d.ts instead of compilerOptions.types
+   * to avoid limiting type declarations.
+   */
+  "include": ["src/**/*.d.ts", "src/**/*.js", "src/**/*.svelte"]
+}
+
+```
+
+## frontend/svelte.config.js
+
+```javascript
+/** @type {import("@sveltejs/vite-plugin-svelte").SvelteConfig} */
+export default {}
+
+```
+
+## frontend/vite.config.js
+
+```javascript
+import { defineConfig } from 'vite'
+import { svelte } from '@sveltejs/vite-plugin-svelte'
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [svelte()],
+  server: {
+    host: '0.0.0.0',
+    port:5173,
+    strictPort: true,
+    watch: { usePolling: true }
+  }
+})
+
+```
+
+## frontend/Dockerfile
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+EXPOSE 5173
+CMD ["npm", "run", "dev"]
+```
+
+## frontend/.dockerignore
+
+```
+node_modules
+dist
+```
+
+## frontend/.gitignore
+
+```
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+```
+
+## frontend/README.md
+
+```markdown
+# Svelte + Vite
+
+This template should help get you started developing with Svelte in Vite.
+
+## Recommended IDE Setup
+
+[VS Code](https://code.visualstudio.com/) + [Svelte](https://marketplace.visualstudio.com/items?itemName=svelte.svelte-vscode).
+
+## Need an official Svelte framework?
+
+Check out [SvelteKit](https://github.com/sveltejs/kit#readme), which is also powered by Vite. Deploy anywhere with its serverless-first approach and adapt to various platforms, with out of the box support for TypeScript, SCSS, and Less, and easily-added support for mdsvex, GraphQL, PostCSS, Tailwind CSS, and more.
+
+## Technical considerations
+
+**Why use this over SvelteKit?**
+
+- It brings its own routing solution which might not be preferable for some users.
+- It is first and foremost a framework that just happens to use Vite under the hood, not a Vite app.
+
+This template contains as little as possible to get started with Vite + Svelte, while taking into account the developer experience with regards to HMR and intellisense. It demonstrates capabilities on par with the other `create-vite` templates and is a good starting point for beginners dipping their toes into a Vite + Svelte project.
+
+Should you later need the extended capabilities and extensibility provided by SvelteKit, the template has been structured similarly to SvelteKit so that it is easy to migrate.
+
+**Why include `.vscode/extensions.json`?**
+
+Other templates indirectly recommend extensions via the README, but this file allows VS Code to prompt the user to install the recommended extension upon opening the project.
+
+**Why enable `checkJs` in the JS template?**
+
+It is likely that most cases of changing variable types in runtime are likely to be accidental, rather than deliberate. This provides advanced typechecking out of the box. Should you like to take advantage of the dynamically-typed nature of JavaScript, it is trivial to change the configuration.
+
+**Why is HMR not preserving my local component state?**
+
+HMR state preservation comes with a number of gotchas! It has been disabled by default in both `svelte-hmr` and `@sveltejs/vite-plugin-svelte` due to its often surprising behavior. You can read the details [here](https://github.com/sveltejs/svelte-hmr/tree/master/packages/svelte-hmr#preservation-of-local-state).
+
+If you have state that's important to retain within a component, consider creating an external store which would not be replaced by HMR.
+
+```js
+// store.js
+// An extremely simple external store
+import { writable } from 'svelte/store'
+export default writable(0)
+```
+
+```
+
+## frontend/src/main.js
+
+```javascript
+import { mount } from 'svelte'
+import './app.css'
+import App from './App.svelte'
+
+const app = mount(App, {
+  target: document.getElementById('app'),
+})
+
+export default app
+
+```
+
+## frontend/src/App.svelte
+
+```svelte
+<script>
+  import { onMount } from "svelte";
+  import { Chart, registerables } from "chart.js";
+  import {
+    API,
+    oturum,
+    durum,
+    veri,
+    sayfalariSifirla,
+    sepetYukle,
+  } from "./lib/store.svelte.js";
+
+  // Modallar
+  import Login from "./lib/Components/Login.svelte";
+
+  // Sayfa Bileşenleri
+  import BayiRaporlar from "./lib/Components/BayiRaporlar.svelte";
+  import BayiStok from "./lib/Components/BayiStok.svelte";
+  import AdminHareketler from "./lib/Components/AdminHareketler.svelte";
+  import AdminKategoriler from "./lib/Components/AdminKategoriler.svelte";
+  import AdminUrunler from "./lib/Components/AdminUrunler.svelte";
+  import AdminBayiler from "./lib/Components/AdminBayiler.svelte";
+  import AdminIstekler from "./lib/Components/AdminIstekler.svelte";
+  import AdminKullanicilar from "./lib/Components/AdminKullanicilar.svelte";
+  import Magaza from "./lib/Components/Magaza.svelte";
+  import Profil from "./lib/Components/Profil.svelte";
+  import BayiTalepler from "./lib/Components/BayiTalepler.svelte";
+  import AdminLoglar from "./lib/Components/AdminLoglar.svelte";
+  import Sepet from "./lib/Components/Sepet.svelte";
+
+  Chart.register(...registerables);
+
+  let karsilama = $state(false);
+
+  // Bayi / Admin / Kullanıcı Verileri
+  let bekleyenSayi = $state(0);
+
+  async function girisSonrasi() {
+    if (oturum.role === "Bayi") {
+      durum.aktifSekme = "anasayfa";
+    } else if (oturum.role === "Admin") {
+      durum.aktifSekme = "loglar";
+      await loadAll();
+    } else if (oturum.role === "Kullanici") {
+      durum.aktifSekme = "magaza";
+    }
+    karsilama = true;
+    setTimeout(() => (karsilama = false), 1000);
+  }
+
+  async function logout() {
+    try {
+      await fetch(`${API}/api/logout`, {
+        method: "POST",
+        headers: { Authorization: oturum.token },
+      });
+    } catch {
+      // sunucuya ulaşılamasa bile yerel çıkış yapılmalı
+    }
+
+    oturum.token = "";
+    oturum.role = "";
+    oturum.currentUser = "";
+    oturum.avatarUrl = "";
+    durum.aktifSekme = "anasayfa";
+    veri.products = [];
+    veri.myStock = [];
+    veri.categories = [];
+    sayfalariSifirla();
+    localStorage.clear();
+    location.reload();
+  }
+
+  async function loadAll() {
+    durum.loading = true;
+    durum.error = "";
+    try {
+      const [pRes, cRes] = await Promise.all([
+        fetch(`${API}/api/products`),
+        fetch(`${API}/api/categories`),
+      ]);
+      if (!pRes.ok || !cRes.ok) throw new Error("Veri alınamadı");
+      veri.products = await pRes.json();
+      veri.categories = await cRes.json();
+    } catch (e) {
+      durum.error = e instanceof Error ? e.message : String(e);
+    } finally {
+      durum.loading = false;
+    }
+  }
+
+  onMount(async () => {
+    if (!oturum.token) return;
+    try {
+      const res = await fetch(`${API}/api/profile`, {
+        headers: { Authorization: oturum.token },
+      });
+      if (!res.ok) {
+        logout();
+        return;
+      }
+      const p = await res.json();
+      oturum.role = p.role;
+      oturum.currentUser = p.username;
+      oturum.avatarUrl = p.avatar_url || "";
+      localStorage.setItem("username", oturum.currentUser);
+      localStorage.setItem("avatar_url", oturum.avatarUrl);
+    } catch {
+      logout();
+      return;
+    }
+
+    if (oturum.role === "Bayi") {
+      durum.aktifSekme = "anasayfa";
+    } else if (oturum.role === "Admin") {
+      durum.aktifSekme = "loglar";
+      loadAll();
+    } else if (oturum.role === "Kullanici") {
+      durum.aktifSekme = "magaza";
+      sepetYukle();
+    }
+  });
+</script>
+
+<main>
+  {#if !oturum.token}
+    <Login girisYapildi={girisSonrasi} />
+  {:else if karsilama}<div class="karsilama-ekran">
+      {#if oturum.avatarUrl}
+        <img src={oturum.avatarUrl} alt="avatar" class="karsilama-avatar" />
+      {/if}
+      <h1>Hoş Geldiniz, {oturum.currentUser}!</h1>
+      <div class="spinner"></div>
+      <p>Sayfa Yükleniyor...</p>
+    </div>{:else if !oturum.role}{:else}
+    <div class="toolbar">
+      <div class="toolbar-ic">
+        <button
+          class="toolbar-baslik"
+          onclick={() =>
+            (durum.aktifSekme =
+              oturum.role === "Admin" ? "loglar" : "anasayfa")}
+        >
+          INTSHOP
+        </button>
+
+        <div class="toolbar-sekmeler">
+          {#if oturum.role === "Admin"}
+            <button
+              class:aktif={durum.aktifSekme === "dealers"}
+              onclick={() => (durum.aktifSekme = "dealers")}>Bayiler</button
+            >
+            <button
+              class:aktif={durum.aktifSekme === "urunler"}
+              onclick={() => (durum.aktifSekme = "urunler")}>Ürünler</button
+            >
+            <button
+              class:aktif={durum.aktifSekme === "kategoriler"}
+              onclick={() => (durum.aktifSekme = "kategoriler")}
+              >Kategoriler</button
+            >
+            <button
+              class:aktif={durum.aktifSekme === "istekler"}
+              onclick={() => (durum.aktifSekme = "istekler")}
+            >
+              İstekler {#if bekleyenSayi > 0}<span class="badge"
+                  >{bekleyenSayi}</span
+                >{/if}
+            </button>
+            <button
+              class:aktif={durum.aktifSekme === "users"}
+              onclick={() => (durum.aktifSekme = "users")}>Kullanıcılar</button
+            >
+            <button
+              class:aktif={durum.aktifSekme === "hareketler"}
+              onclick={() => (durum.aktifSekme = "hareketler")}
+              >Hareketler</button
+            >
+          {:else if oturum.role === "Bayi"}
+            <button
+              class:aktif={durum.aktifSekme === "stok"}
+              onclick={() => (durum.aktifSekme = "stok")}>Stok</button
+            >
+            <button
+              class:aktif={durum.aktifSekme === "raporlar"}
+              onclick={() => (durum.aktifSekme = "raporlar")}>Raporlar</button
+            >
+            <button
+              class:aktif={durum.aktifSekme === "talepler"}
+              onclick={() => (durum.aktifSekme = "talepler")}>Talepler</button
+            >
+          {:else if oturum.role === "Kullanici"}
+            <button
+              class:aktif={durum.aktifSekme === "magaza"}
+              onclick={() => (durum.aktifSekme = "magaza")}>Mağaza</button
+            >
+            <button
+              class:aktif={durum.aktifSekme === "sepet"}
+              onclick={() => (durum.aktifSekme = "sepet")}>Sepetim</button
+            >
+          {/if}
+        </div>
+
+        <div class="toolbar-right">
+          <button
+            class="profil-btn"
+            onclick={() => (durum.aktifSekme = "profil")}
+          >
+            {#if oturum.avatarUrl}
+              <img src={oturum.avatarUrl} alt="avatar" class="toolbar-avatar" />
+            {/if}
+            <span>{oturum.currentUser}</span>
+          </button>
+          <button class="cikis-btn" onclick={logout}>Çıkış</button>
+        </div>
+      </div>
+    </div>
+
+    {#if durum.bildirim}
+      <div class="bildirim">{durum.bildirim}</div>
+    {/if}
+
+    <div class="sekme-icerik">
+      {#if durum.aktifSekme === "anasayfa"}
+        <div class="hosgeldin">
+          <h1>Hoş Geldiniz, {oturum.currentUser}!</h1>
+          <p>
+            Stok işlemleriniz için "Stok", raporlarınız için "Raporlar"
+            sekmesini kullanın.
+          </p>
+        </div>
+      {:else if durum.aktifSekme === "loglar"}
+        <AdminLoglar />
+      {:else if durum.aktifSekme === "stok"}
+        <BayiStok />
+      {:else if durum.aktifSekme === "raporlar"}
+        <BayiRaporlar />
+      {:else if durum.aktifSekme === "kategoriler"}
+        <AdminKategoriler yenile={loadAll} />
+      {:else if durum.aktifSekme === "istekler"}
+        <AdminIstekler sayiDegisti={(n) => (bekleyenSayi = n)} />
+      {:else if durum.aktifSekme === "hareketler"}
+        <AdminHareketler />
+      {:else if durum.aktifSekme === "talepler"}
+        <BayiTalepler />
+      {:else if durum.aktifSekme === "urunler"}
+        <AdminUrunler yenile={loadAll} />
+      {:else if durum.aktifSekme === "dealers"}
+        <AdminBayiler />
+      {:else if durum.aktifSekme === "users"}
+        <AdminKullanicilar />
+      {:else if durum.aktifSekme === "profil"}
+        <Profil />
+      {:else if durum.aktifSekme === "magaza"}
+        <Magaza />
+      {:else if durum.aktifSekme === "sepet"}
+        <Sepet />
+      {/if}
+    </div>
+  {/if}
+
+  {#if durum.error}<p class="error">{durum.error}</p>{/if}
+</main>
+
+```
+
+## frontend/src/app.css
+
+```css
+:root {
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--sans);
+  color-scheme: light;
+  --icerik-genislik: 1440px;
+}
+
+body {
+  margin: 0;
+  background: #f5f6f8;
+}
+
+h1,
+h2 {
+  font-weight: 600;
+}
+
+
+/* ---- Login ekranı ---- */
+.login-wrapper {
+  text-align: center;
+  align-items: center;
+  display: flex;
+  min-height: 100vh;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgb(153, 0, 255), blue, lightseagreen, lightblue);
+}
+
+.login-card {
+  position: relative;
+  z-index: 10;
+  background: whitesmoke;
+  backdrop-filter: blur(10px);
+  padding: 2.5rem 2rem;
+  border-radius: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  align-items: center;
+}
+
+.avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: .5rem;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  background: #ededed;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.input-icon {
+  padding: 0 .6rem;
+  display: flex;
+  align-items: center;
+}
+
+.input-group input {
+  flex: 1;
+  padding: .7rem .5rem;
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  outline: none;
+}
+
+.login-btn {
+  width: 100%;
+  padding: .8rem;
+  background: #888;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background .2s ease, transform .1s ease;
+}
+
+.login-btn:hover {
+  background: #6d6d6d;
+}
+
+.login-btn:active {
+  transform: scale(0.85);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.error {
+  color: #c00;
+  font-size: .85rem;
+  margin: 0;
+}
+
+/* ---- Lav Animasyonları ----*/
+.lava-background {
+  position: absolute;
+  inset: 0;
+  filter: blur(25px) contrast(19);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.lava {
+  position: absolute;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+}
+
+.lava-1 {
+  width: 240px;
+  height: 240px;
+  background: red;
+  left: 12%;
+  animation: yuz1 14s ease-in-out infinite;
+}
+
+.lava-2 {
+  width: 180px;
+  height: 180px;
+  background: cyan;
+  left: 30%;
+  animation: yuz2 18s ease-in-out infinite;
+}
+
+.lava-3 {
+  width: 300px;
+  height: 300px;
+  background: #7c3aed;
+  left: 55%;
+  animation: yuz3 22s ease-in-out infinite;
+}
+
+.lava-4 {
+  width: 150px;
+  height: 150px;
+  background: orange;
+  left: 12%;
+  animation: yuz1 14s ease-in-out infinite reverse;
+}
+
+.lava-5 {
+  width: 200px;
+  height: 200px;
+  background: cyan;
+  left: 30%;
+  animation: yuz2 18s ease-in-out infinite reverse;
+}
+
+.lava-6 {
+  width: 130px;
+  height: 130px;
+  background: red;
+  left: 88%;
+  animation: yuz3 12s ease-in-out infinite;
+}
+
+@keyframes yuz1 {
+
+  0%,
+  100% {
+    top: 110%;
+    transform: scale(1);
+  }
+
+  35% {
+    top: 40%;
+    transform: scale(1.25);
+  }
+
+  55% {
+    top: 15%;
+    transform: scale(0.85);
+  }
+
+  80% {
+    top: -20%;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes yuz2 {
+
+  0%,
+  100% {
+    top: -25%;
+    transform: scale(0.9);
+  }
+
+  30% {
+    top: 30%;
+    transform: scale(1.3);
+  }
+
+  60% {
+    top: 65%;
+    transform: scale(0.8);
+  }
+
+  85% {
+    top: 105%;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes yuz3 {
+
+  0%,
+  100% {
+    top: 100%;
+    transform: scale(1.1);
+  }
+
+  25% {
+    top: 55%;
+    transform: scale(0.75);
+  }
+
+  50% {
+    top: 20%;
+    transform: scale(1.35);
+  }
+
+  75% {
+    top: -15%;
+    transform: scale(0.95);
+  }
+}
+
+/* ---- Kayıt Ol ---- */
+.kayit-baslik {
+  perspective: 1200px;
+  width: 100%;
+}
+
+.flip-cerceve {
+  perspective: 1200px;
+  position: relative;
+  z-index: 1;
+  width: 340px;
+  min-height: 520px;
+}
+
+.flip-ic {
+  position: relative;
+  width: 100%;
+  transition: transform .7s cubic-bezier(.4, .2, .2, 1);
+  transform-style: preserve-3d;
+}
+
+.flip-ic.donuk {
+  transform: rotateY(180deg);
+}
+
+.flip-yuz {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.flip-arka {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  transform: rotateY(180deg);
+}
+
+.mod-degistir {
+  background: none;
+  border: none;
+  color: black;
+  font-size: .85rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: .3rem;
+}
+
+.mod-degistir:hover {
+  color: #b80000
+}
+
+.basari {
+  color: green;
+  font-size: .85rem;
+  margin: 0;
+  text-align: center;
+}
+
+.input-group.hatali {
+  border: 1px solid crimson;
+}
+
+.ipucu-hata {
+  margin: -.6rem 0 0;
+  font-size: .8rem;
+  color: crimson;
+  align-self: flex-start;
+}
+
+/* ---- Dashboard ekranı ---- */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: 0;
+  background: lightseagreen;
+  color: whitesmoke;
+}
+
+
+
+.toolbar-ic {
+  justify-content: space-between;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: .75rem 2rem;
+}
+
+.toolbar-sekmeler,
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.toolbar-sekmeler button {
+  position: relative;
+  padding: .5rem 1rem;
+  background: transparent;
+  color: whitesmoke;
+  border: none;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.toolbar-sekmeler button:hover {
+  color: whitesmoke;
+}
+
+.toolbar-sekmeler button.aktif {
+  background: whitesmoke;
+  color: lightseagreen;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+.toolbar-sekmeler button.aktif::after {
+  content: "";
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: -.75rem;
+  height: 3px;
+  background: whitesmoke;
+  border-radius: 5px;
+}
+
+.toolbar button {
+  padding: .5rem 1rem;
+  background: transparent;
+  color: whitesmoke;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .95rem;
+}
+
+.toolbar button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: whitesmoke;
+  transform: scale(1.15);
+}
+
+.toolbar-baslik {
+  background: none;
+  font-weight: 700;
+  font-size: 1.2rem;
+  font-family: inherit;
+  color: whitesmoke;
+  cursor: pointer;
+  margin-right: 1.5rem;
+  padding: .4rem .7rem;
+  border: none;
+  border-radius: 8px;
+  letter-spacing: .5px;
+  transition: background .2s ease, transform .1s;
+}
+
+.toolbar-spacer {
+  flex: 1;
+}
+
+.toolbar-user {
+  color: whitesmoke;
+  font-size: .9rem;
+  margin-right: .5rem;
+}
+
+.cikis-btn {
+  background: coral !important;
+  color: white !important;
+}
+
+.sekme-icerik {
+  padding: 2rem 1.5rem;
+  margin: 0 auto;
+  max-width: var(--icerik-genislik);
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.pagination button {
+  padding: .5rem 1rem;
+  background: lightseagreen;
+  color: whitesmoke;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  background: gray;
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.tablo-cerceve {
+  min-height: calc(10*50px + 30px);
+  overflow-x: auto;
+  overflow-y: auto;
+  border: 1px solid white;
+  border-radius: 8px;
+}
+
+.tablo-cerceve img {
+  width: 32px;
+  height: 32px;
+  position: center;
+  object-fit: cover;
+  border-radius: 4px;
+  display: block;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+table tbody tr {
+  height: 41px;
+}
+
+table th,
+table td {
+  border-radius: 5px;
+  border: 1px solid whitesmoke;
+  padding: .4rem;
+  text-align: center;
+}
+
+table thead th {
+  background: coral;
+  font-weight: 600;
+}
+
+table tbody tr:nth-child(even) {
+  background: lightyellow;
+}
+
+/* ---- Profil Butonu ---- */
+
+.profil-btn {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: .3rem 2rem;
+  border-radius: 8px;
+  transition: background .2s;
+}
+
+.profil-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.toolbar-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* ---- Modal ekranı ---- */
+
+.modal-arkaplan {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+  box-shadow: 0 8px 32px rgba(255, 255, 255, 0.2);
+}
+
+.modal h3 {
+  margin: 0 0 .5rem;
+}
+
+.modal-input,
+.modal select {
+  padding: .6rem;
+  border: 1px solid lightgray;
+  border-radius: 6px;
+  font-size: .8rem;
+}
+
+.modal-butonlar {
+  display: flex;
+  gap: .5rem;
+  justify-content: flex-end;
+  margin-top: .5rem;
+}
+
+.ekle-btn {
+  background: lightseagreen;
+  color: white;
+  border: none;
+  padding: .5rem 1rem;
+  margin-bottom: .6rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.iptal-btn {
+  background: white;
+  border: none;
+  padding: .5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.buyuk-modal {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 700px;
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
+}
+
+.buyuk-modal h2 {
+  margin: 0;
+}
+
+.buyuk-modal label {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  font-weight: 600;
+  color: #444;
+}
+
+.buyuk-modal input,
+.buyuk-modal select {
+  padding: .7rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: normal;
+}
+
+.duzenle-btn {
+  align-items: center;
+  background: #f0ad4e;
+  color: white;
+  border: none;
+  padding: .3rem .7rem;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: .3rem;
+}
+
+.buyuk-modal .modal-butonlar {
+  margin-top: auto;
+}
+
+/* ---- Mağaza ekranı ---- */
+
+.urun-kartlari {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1.5rem;
+}
+
+.urun-kart {
+  border: 1px solid whitesmoke;
+  border-radius: 18px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+  background: white;
+}
+
+.kart-satici {
+  margin: 0;
+  font-size: .9rem;
+  color: darkorange;
+}
+
+.kart-stok {
+  margin: 0;
+  font-size: .8rem;
+  color: darkslategrey;
+}
+
+.kart-resim {
+  width: 100%;
+  height: 160px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.sepet-btn {
+  margin-top: auto;
+  align-items: right;
+  padding: .4rem;
+  background: lightseagreen;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: .95rem;
+  cursor: pointer;
+  transition: background .2s, transform .1s;
+}
+
+.sepet-btn:hover {
+  background: seagreen;
+}
+
+sepet-btn:active {
+  transform: scale(0.97);
+}
+
+.urun-kart h3 {
+  margin: 0;
+}
+
+.kart-fiyat {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: midnightblue;
+  margin: 0;
+}
+
+.urun-kart select {
+  padding: .5rem;
+  border: 1px solid whitesmoke;
+  border-radius: 6px;
+  width: 100%;
+}
+
+.sentinel {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* ---- Profil Sayfası ---- */
+
+.profil-sayfa {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  max-width: 600px;
+}
+
+.profil-avatar img {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid whitesmoke;
+}
+
+.profil-bilgi {
+  flex: 1;
+  min-width: 250px;
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+}
+
+.profil-bilgi label {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  font-weight: 600;
+  color: darkgray;
+}
+
+.profil-bilgi input {
+  padding: .6rem;
+  border: 1px solid whitesmoke;
+  border-radius: 6px;
+  font-weight: normal;
+}
+
+.profil-bilgi input:disabled {
+  background: white;
+  color: gray;
+}
+
+/* ---- Stok-Fiyat Modal ----*/
+.modal-bilgi {
+  margin: 0;
+  font-size: .9rem;
+  color: darkgray;
+}
+
+.modal label {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+  font-weight: 600;
+  color: darkgray;
+}
+
+.modal label select,
+.modal label input {
+  font-weight: normal;
+}
+
+.fiyat-input {
+  padding: .4rem;
+  border: 2px solid whitesmoke;
+  border-radius: 6px;
+}
+
+.fiyat-input.iyi {
+  border-color: green;
+}
+
+.fiyat-input.sinirda {
+  border-color: orange;
+}
+
+.fiyat-input.disarida {
+  border-color: red;
+}
+
+.fiyat-ipucu {
+  font-size: .75rem;
+  color: gray;
+  margin-top: .3rem;
+}
+
+.bildirim {
+  position: fixed;
+  top: 70px;
+  right: 20px;
+  background: green;
+  color: white;
+  padding: .8rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .2);
+  z-index: 200;
+}
+
+/* ---- Stok Ekranı ---- */
+.depo-bar {
+  position: relative;
+  width: 100%;
+  max-width: 180px;
+  height: 22px;
+  background: lightgray;
+  border-radius: 11px;
+  overflow: hidden;
+}
+
+.depo-dolu {
+  height: 100%;
+  border-radius: 11px;
+  transition: width .4s ease;
+}
+
+.depo-dolu.bos {
+  background: gray;
+}
+
+.depo-dolu.kritik {
+  background: red;
+}
+
+.depo-dolu.az {
+  background: orange;
+}
+
+.depo-dolu.normal {
+  background: yellow;
+}
+
+.depo-dolu.bol {
+  background: green;
+}
+
+.depo-etiket {
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.depo-yazi {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .75rem;
+  font-weight: 700;
+  color: black;
+}
+
+.islem-btn,
+.islem-btn1 {
+  padding: .45rem;
+  background: lightseagreen;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: .85rem;
+  cursor: pointer;
+  transition: background .2s, transform .1s;
+}
+
+.islem-btn1 {
+  margin-bottom: .6rem;
+  padding: .65rem;
+  width: 100px;
+}
+
+.islem-btn:hover {
+  background: seagreen;
+}
+
+.islem-btn:active {
+  background: scale(0.96);
+}
+
+.tarih-hucre {
+  font-size: .8rem;
+  color: gray;
+  white-space: nowwrap;
+}
+
+/* ---- Onay Ekranı ---- */
+.filtre-satir {
+  display: flex;
+  gap: .5rem;
+  margin-bottom: 1rem;
+}
+
+.filtre-satir button {
+  padding: .4rem .9rem;
+  background: lightseagreen;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: .85rem;
+}
+
+.filtre-satir button.aktif {
+  background: seagreen;
+  color: white;
+}
+
+.durum {
+  display: inline-block;
+  padding: .2rem .6rem;
+  border-radius: 12px;
+  font-size: .75rem;
+  font-weight: 600;
+}
+
+.durum.bekliyor {
+  background: lightpink;
+  color: brown;
+}
+
+.durum.onayli {
+  background: lightpink;
+  color: green;
+}
+
+.durum.redli {
+  background: lightpink;
+  color: darkred;
+}
+
+.kucuk {
+  font-size: .75rem;
+  color: gray
+}
+
+.onay-btn {
+  background: seagreen;
+  color: white;
+  border: none;
+  padding: .35rem .7rem;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-right: .3rem;
+}
+
+.red-btn {
+  background: red;
+  color: white;
+  border: none;
+  padding: .35rem .7rem;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.badge {
+  background: coral;
+  color: white;
+  border-radius: 10px;
+  padding: .1rem .4rem;
+  font-size: .7rem;
+  margin-left: .3rem;
+}
+
+/*---- Kategori Sayfası ----*/
+.sekme-baslik {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.2rem;
+}
+
+.sekme-baslik h2 {
+  margin: 0;
+}
+
+.kategori-kartlari {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.2rem
+}
+
+.kategori-kart {
+  background: lightblue;
+  border: 1px solid gray;
+  border-radius: 12px;
+  padding: 1.2rem;
+  text-align: center;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+  transition: box-shadow .2s, transform .1s, border-color .2s;
+  display: flex;
+  flex-direction: column;
+  gap: .8rem;
+}
+
+.kategori-kart:hover {
+  border-color: lightseagreen;
+  box-shadow: 0 9px 16px rgba(255, 255, 255, 0.08);
+  transform: scale(1.1);
+}
+
+.kategori-kart:active {
+  transform: scale(.99);
+}
+
+.kart-ust {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kart-ust h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.kart-sayi {
+  background: lightseagreen;
+  color: white;
+  border-radius: 12px;
+  padding: .15rem .55rem;
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+.kart-altlar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem;
+}
+
+.alt-etiket {
+  background: color-mix(lightseagreen 20%, orange 80%);
+  color: black;
+  padding: .25rem .6rem;
+  border-radius: 6px;
+  font-size: .8rem;
+}
+
+.alt-etiket.daha {
+  background: whitesmoke;
+  color: gray;
+  font-style: italic;
+}
+
+.bos-yazi {
+  color: gray;
+  font-size: .85rem;
+}
+
+/*---- Kategori Modal İçi ----*/
+.kategori-detay-modal {
+  background: whitesmoke;
+  padding: 2.5rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 700px;
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
+}
+
+.sil {
+  border-radius: 5px;
+  text-align: right;
+  background: orangered;
+  width: 30px;
+}
+
+.modal-bilgi {
+  background: whitesmoke;
+  color: gray;
+  text-align: left;
+}
+
+.alt-liste {
+  display: flex;
+  flex-direction: column;
+  gap: .4rem;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.alt-satir {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .6rem.8rem;
+  background: lightblue;
+  border-radius: 8px;
+}
+
+.alt-ekle-satir {
+  display: flex;
+  gap: .5rem;
+  margin-top: .5rem;
+}
+
+.alt-ekle-satir input {
+  flex: 1;
+  padding: .6rem;
+  border: 1px solid lightseagreen;
+  border-radius: 6px;
+}
+
+/* ---- Karşılama Ekranı ---- */
+.karsilama-ekran {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.2rem;
+  background: repeating-radial-gradient(circle, blue, lightseagreen, lightblue, whitesmoke);
+  color: white;
+}
+
+.karsilama-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 4px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 8px 32px rgba(255, 255, 255, 0.2);
+}
+
+.karsilama-ekran h1 {
+  margin: 0;
+  font-size: 2rem;
+  text-shadow: 0 2px 8px rgba(255, 255, 255, 0.2);
+}
+
+.karsilama-ekran p {
+  margin: 0;
+  opacity: .9;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: don 0.8s linear infinite;
+}
+
+@keyframes don {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rozet {
+  padding: .25rem .6rem;
+  border-radius: 999px;
+  font-size: .8rem;
+  white-space: nowrap;
+}
+
+.rozet.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.rozet.approved {
+  background: #d4edda;
+  color: #155724;
+}
+
+.rozet.rejected {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.rozet.cancelled {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+/*Log filtre*/
+.filtre-cubuk {
+  display: flex;
+  gap: .75rem;
+  align-items: center;
+}
+
+.filtre-cubuk input,
+.filtre-cubuk select {
+  padding: .55rem .8rem;
+  margin-bottom: .5rem;
+  border: 1px solid whitesmoke;
+  border-radius: 8px;
+  font-size: .95rem;
+  background: white;
+}
+
+.filtre-cubuk input {
+  flex: 1;
+  max-width: 320px;
+}
+
+.filtre-cubuk input:focus,
+.filtre-cubuk select:focus {
+  outline: none;
+  border-color: lightseagreen;
+  box-shadow: 0 0 0 3px rgba(43, 179, 163, .15);
+}
+
+/*  Sepet Sayfası */
+.sepet-baslik {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid whitesmoke;
+  margin-bottom: 1.25rem;
+}
+.sepet-sayi { font-size: .95rem; color: gray; font-weight: 400; }
+.sepet-bosalt {
+  background: orangered; border: none; color: white;
+  cursor: pointer; font-size: .9rem;
+  border-radius: 7px;
+}
+.sepet-duzen {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap:1.25rem;
+  align-items: start;
+}
+.bayi-karti {
+  background: whitesmoke;
+  border: 1px solid lightsalmon;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+.bayi-basligi {
+  display: flex;
+  justify-content: space-between;
+  padding: .8rem 1rem;
+  background: whitesmoke;
+  border-bottom: 1px solid whitesmoke;
+  font-size: .9rem;
+}
+.ara-toplam { color: orangered; font-weight: 600;}
+.sepet-satir {
+  display: grid;
+  grid-template-columns: 70px 1fr auto auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid whitesmoke;
+}
+.sepet-satir:last-child { border-bottom: none; }
+
+.satir-gorsel img {
+  width: 70px;
+  object-fit: contain;
+  border: 1px solid whitesmoke;
+  border-radius: 6px;
+}
+.gorsel-yok {
+  width: 70px; height: 70px;
+  display: grid; place-items: center;
+  background: whitesmoke; border-radius: 6px; color: whitesmoke;
+}
+
+.satir-bilgi { display: flex; flex-direction: column; gap: 0.25rem;}
+.satir-ad { font-size: .95rem; }
+.satir-birim { font-size: .82rem; color: gray;}
+.stok-uyari { font-size: .78rem; color: crimson;}
+
+.adet-kontrol {
+  display: inline-flex; align-items: center; gap: .4rem;
+  border: 1px solid whitesmoke; border-radius: 20px; padding: .2rem .35rem;
+}
+.adet-kontrol button {
+  width: 26px; height: 26px;
+  border: none; background: none; cursor: pointer;
+  color: orangered; font-size: 1rem; border-radius: 50%;
+}
+.adet-kontrol button:hover:not(:disabled) { background: whitesmoke;}
+.adet-kontrol button:disabled {opacity: .3; cursor: default;}
+.adet-sayi {min-width: 20px; text-align: center; font-size: .9rem; }
+
+.satir-tutar { font-weight: 600; white-space: nowwrap; }
+
+.sepet-ozet {
+  background: white;
+  border: 1px solid lightseagreen;
+  border-radius: 10px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: .6rem;
+  position: sticky;
+  top: 1rem;
+}
+.ozet-etiket { font-size: .75rem; letter-spacing: .04rem; color: orangered}
+.ozet-tutar { font-size: 1.6rem; font-weight: 700; }
+.ozet-btn {
+  padding: .8rem;
+  border: none; border-radius: 8px;
+  background: orangered; color: white;
+  font-size: .95rem; cursor: pointer;
+}
+.ozet-btn:disabled { background: whitesmoke; color: gray; cursor: not-allowed;}
+.ozet-not { font-size: .78rem; color: gray; text-align: center; margin: 0;}
+
+.sepet-bos { padding: 3rem; text-align: center; color: gray;}
+
+@media (max-width: 860px) {
+  .sepet-duzen { grid-template-columns: 1fr;}
+  .sepet-ozet { position: static; }
+  .sepet-satir { grid-template-columns: 60px 1fr; row-gap: .6rem;}
+}
+
+
+.onay-kutu { max-width: 380px; }
+.onay-mesaj { color: #5a6472; font-size: .92rem; line-height: 1.5; }
+.onay-butonlar {
+  display: flex; gap: .6rem; justify-content: flex-end; margin-top: 1.2rem;
+}
+.vazgec-btn {
+  padding: .55rem 1.1rem; border: 1px solid #d5d9e0;
+  border-radius: 8px; background: white; cursor: pointer;
+}
+.onay-btn {
+  padding: .55rem 1.1rem; border: none;
+  border-radius: 8px; background: #c0392b; color: white; cursor: pointer;
+}
+
+.modal-arka {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+}
+
+.modal-kutu {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  min-width: 320px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .2);
+}
+
+/*   Görsel URL    */
+.onizleme {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  border: 1px solid #e8ebef;
+  border-radius: 8px;
+  margin-top: .5rem;
+}
+
+
+
+
+
+```
+
+## frontend/src/lib/store.svelte.js
+
+```javascript
+export const API = import.meta.env.VITE_API_URL ?? "http://localhost:5081";
+
+export const oturum = $state({
+    token: localStorage.getItem("token") || "",
+    role:"",
+    currentUser: localStorage.getItem("username") || "",
+    avatarUrl: localStorage.getItem("avatar_url") || "",
+});
+
+export const durum= $state({
+    aktifSekme : "hareketler",
+    error : "",
+    loading : false,
+    bildirim: "",
+});
+
+export const veri = $state ({
+    products: [],
+    categories: [],
+    myStock: [],
+});
+
+export function authHeader() {
+    return { Authorization: oturum.token };
+}
+
+export function jsonHeader() {
+    return { "Content-Type": "application/json", Authorization: oturum.token };
+}
+//
+// Fiyatlandırma
+//
+export function fiyatKolon(fiyat) {
+    if (fiyat === null || fiyat === undefined || fiyat === "") return "-";
+    return (
+        Number(fiyat).toLocaleString("tr-TR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }) + " ₺"
+    );
+}
+//
+// Sayfalama
+//
+export const pageSize = 10;
+export const sayfalar = $state({});
+
+export function sayfala(dizi, sekme) {
+    const s = sayfalar[sekme] ?? 1;
+    return dizi.slice((s-1) * pageSize, s * pageSize);
+}
+
+export function toplamSayfa(dizi) {
+    return Math.max(1, Math.ceil(dizi.length / pageSize));
+}
+
+export function sayfaGit(sekme, yon) {
+    const su = sayfalar[sekme] ?? 1;
+    sayfalar[sekme] = su + yon;
+}
+
+export function sayfalariSifirla() {
+  for (const k of Object.keys(sayfalar)) delete sayfalar[k];
+}
+//
+// Filtreleme
+//
+export function metinAra(dizi, arama, alanlar) {
+  if (!arama) return dizi;
+  const q = arama.toLowerCase();
+  return dizi.filter((o) =>
+    alanlar.some((alan) => String(o[alan] ?? "").toLowerCase().includes(q))
+  );
+}
+
+export function alanEsit(dizi, deger, alan) {
+  if (!deger) return dizi;
+  return dizi.filter((o) => o[alan] === deger);
+}
+//
+// Sepet
+//
+export const sepet = $state({ satirlar: [], toplam: 0, adet: 0 });
+
+export async function sepetYukle() {
+    try {
+        const res = await fetch(`${API}/api/cart`, { headers: authHeader() });
+        if (!res.ok) return;
+        const d = await res.json();
+        sepet.satirlar = d.satirlar;
+        sepet.toplam = d.toplam;
+        sepet.adet = d.adet;
+    } catch {
+
+    }
+}
+
+export async function sepeteEkle(product_id, dealer_id) {
+    const res = await fetch(`${API}/api/cart`, {
+        method: "POST",
+        headers: jsonHeader(),
+        body: JSON.stringify({ product_id, dealer_id }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    await sepetYukle();
+}
+```
+
+## frontend/src/lib/Components/AdminBayiler.svelte
+
+```svelte
+<script>
+  import { onMount } from "svelte";
+  import { API, authHeader, durum, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
+
+  let dealers = $state([]);
+
+  async function loadDealers() {
+    try {
+      const res = await fetch(`${API}/api/dealers`, { headers: authHeader() });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      dealers = await res.json();
+    } catch (e) {
+      durum.error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  onMount(loadDealers);
+</script>
+
+<h2>Bayiler</h2>
+{#if dealers.length}
+  <div class="tablo-cerceve">
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Bayi Adı</th><th>Adres</th><th>Telefon</th></tr>
+      </thead>
+      <tbody>
+        {#each sayfala(dealers, "dealers") as d}
+          <tr>
+            <td>{d.id}</td>
+            <td>{d.username}</td>
+            <td>{d.address ?? "-"}</td>
+            <td>{d.phone ?? "-"}</td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination">
+    <button onclick={() => sayfaGit("dealers", -1)}
+            disabled={(sayfalar.dealers ?? 1) === 1}>Önceki</button>
+    <span>Sayfa {sayfalar.dealers ?? 1} / {toplamSayfa(dealers)}</span>
+    <button onclick={() => sayfaGit("dealers", 1)}
+            disabled={(sayfalar.dealers ?? 1) === toplamSayfa(dealers)}>Sonraki</button>
+  </div>
+{:else}
+  <p>Henüz bayi yok.</p>
+{/if}
+```
+
+## frontend/src/lib/Components/AdminHareketler.svelte
+
+```svelte
+<script>
+  import { API, oturum, durum, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
+
+  let movements = $state([]);
+
+  async function loadMovements() {
+    try {
+      const res = await fetch(`${API}/api/movements`, {
+        headers: { Authorization: oturum.token },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      movements = await res.json();
+    } catch (e) {
+      durum.error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  $effect(() => {
+    if (durum.aktifSekme === "hareketler") {
+      loadMovements();
+    }
+  });
+</script>
+
+<h2>Bayi Hareketleri</h2>
+
+{#if movements.length}
+  <div class="tablo-cerceve">
+    <table>
+      <thead>
+        <tr>
+          <th>Bayi</th>
+          <th>Ürün</th>
+          <th>İşlem</th>
+          <th>Miktar</th>
+          <th>Tarih</th>
+        </tr>
+      </thead>
+      <tbody>
+        {#each sayfala(movements, "hareketler") as m}
+          <tr>
+            <td>{m.bayi}</td>
+            <td>{m.urun}</td>
+            <td style="color: {m.quantity > 0 ? 'green' : '#c00'}">
+              {m.quantity > 0 ? "Giriş" : "Çıkış"}
+            </td>
+            <td>{Math.abs(m.quantity)}</td>
+            <td>{new Date(m.created_at).toLocaleString("tr-TR")}</td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination">
+    <button
+      onclick={() => sayfaGit("hareketler", -1)}
+      disabled={(sayfalar.hareketler ?? 1) === 1}>Önceki</button>
+    <span>Sayfa {sayfalar.hareketler ?? 1} / {toplamSayfa(movements)}</span>
+    <button
+      onclick={() => sayfaGit("hareketler", 1)}
+      disabled={(sayfalar.hareketler ?? 1) === toplamSayfa(movements)}>Sonraki</button>
+  </div>
+{:else}
+  <p>Henüz hareket yok.</p>
+{/if}
+```
+
+## frontend/src/lib/Components/AdminIstekler.svelte
+
+```svelte
+<script>
+  import { onMount } from "svelte";
+  import { API, authHeader, jsonHeader, durum, fiyatKolon, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
+  import RedModal from "../Modals/RedModal.svelte";
+
+  let { sayiDegisti } = $props();
+
+  let requests = $state([]);
+  let filtre = $state("all");
+  let redModalAcik = $state(false);
+  let redTalepId = $state(null);
+
+  async function loadRequests() {
+    try {
+      const res = await fetch(`${API}/api/requests?status=${filtre}`, { headers: authHeader() });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      requests = await res.json();
+      sayiDegisti?.(requests.filter((r) => r.status === "pending").length);
+    } catch (e) {
+      durum.error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  async function talepKarar(id, karar, not = "") {
+    try {
+      const res = await fetch(`${API}/api/requests/${id}/${karar}`, {
+        method: "PUT",
+        headers: jsonHeader(),
+        body: JSON.stringify({ note: not }),
+      });
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      await loadRequests();
+    } catch (e) {
+      durum.error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  function filtreDegistir(yeni) {
+    filtre = yeni;
+    loadRequests();
+  }
+
+  onMount(loadRequests);
+</script>
+
+<h2>Fiyat Değişiklik İstekleri</h2>
+
+<div class="filtre-satir">
+  <button class:aktif={filtre === "all"} onclick={() => filtreDegistir("all")}>Hepsi</button>
+  <button class:aktif={filtre === "pending"} onclick={() => filtreDegistir("pending")}>Bekleyen</button>
+  <button class:aktif={filtre === "approved"} onclick={() => filtreDegistir("approved")}>Onaylanan</button>
+  <button class:aktif={filtre === "rejected"} onclick={() => filtreDegistir("rejected")}>Reddedilen</button>
+</div>
+
+{#if requests.length}
+  <div class="tablo-cerceve">
+    <table>
+      <thead>
+        <tr>
+          <th>Bayi</th><th>Ürün</th><th>Eski Fiyat</th><th>Yeni Fiyat</th>
+          <th>Aralık</th><th>Tarih</th><th>Durum</th><th>İşlem</th>
+        </tr>
+      </thead>
+      <tbody>
+        {#each sayfala(requests, "istekler") as r}
+          <tr>
+            <td>{r.bayi}</td>
+            <td>{r.urun}</td>
+            <td>{fiyatKolon(r.old_price)}</td>
+            <td><strong>{fiyatKolon(r.new_price)}</strong></td>
+            <td class="kucuk">{fiyatKolon(r.alt_sinir)} - {fiyatKolon(r.ust_sinir)}</td>
+            <td class="kucuk">{new Date(r.created_at).toLocaleString("tr-TR")}</td>
+            <td>
+              {#if r.status === "pending"}
+                <span class="durum bekliyor">Bekliyor</span>
+              {:else if r.status === "approved"}
+                <span class="durum onayli">Onaylandı</span>
+              {:else if r.status === "rejected"}
+                <span class="durum redli">Reddedildi</span>
+              {:else}
+                <span class="durum">{r.status}</span>
+              {/if}
+              {#if r.admin_note}<div class="kucuk">{r.admin_note}</div>{/if}
+            </td>
+            <td>
+              {#if r.status === "pending"}
+                <button class="onay-btn" onclick={() => talepKarar(r.id, "approve")}>Onayla</button>
+                <button class="red-btn" onclick={() => { redTalepId = r.id; redModalAcik = true; }}>Reddet</button>
+              {:else}
+                <span class="kucuk">-</span>
+              {/if}
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination">
+    <button onclick={() => sayfaGit("istekler", -1)}
+            disabled={(sayfalar.istekler ?? 1) === 1}>Önceki</button>
+    <span>Sayfa {sayfalar.istekler ?? 1} / {toplamSayfa(requests)}</span>
+    <button onclick={() => sayfaGit("istekler", 1)}
+            disabled={(sayfalar.istekler ?? 1) === toplamSayfa(requests)}>Sonraki</button>
+  </div>
+{:else}
+  <p>Bu durumda istek yok.</p>
+{/if}
+
+<RedModal bind:acik={redModalAcik} onay={(sebep) => talepKarar(redTalepId, "reject", sebep)} />
+```
+
+## frontend/src/lib/Components/AdminKategoriler.svelte
+
+```svelte
+<script>
+  import { veri } from "../store.svelte.js";
+  import KategoriModal from "../Modals/KategoriModal.svelte";
+  import KategoriDetayModal from "../Modals/KategoriDetayModal.svelte";
+
+  let { yenile } = $props();
+
+  let modalAcik = $state(false);
+  let detayAcik = $state(false);
+  let acikKategori = $state(null);
+
+  let anaKategoriler = $derived(veri.categories.filter((c) => !c.parent_id));
+
+  function altlariGetir(anaId) {
+    return veri.categories.filter((c) => c.parent_id === anaId);
+  }
+
+  function detayAc(kategori) {
+    acikKategori = kategori;
+    detayAcik = true;
+  }
+</script>
+
+<div class="sekme-baslik">
+  <h2>Kategoriler</h2>
+  <button class="ekle-btn" onclick={() => (modalAcik = true)}>+ Yeni Ana Kategori</button>
+</div>
+
+{#if anaKategoriler.length}
+  <div class="kategori-kartlari">
+    {#each anaKategoriler as ana}
+      {@const altlar = altlariGetir(ana.id)}
+      <button class="kategori-kart" onclick={() => detayAc(ana)}>
+        <div class="kart-ust">
+          <h3>{ana.name}</h3>
+          <span class="kart-sayi">{altlar.length}</span>
+        </div>
+        <div class="kart-altlar">
+          {#if altlar.length}
+            {#each altlar.slice(0, 4) as alt}
+              <span class="alt-etiket">{alt.name}</span>
+            {/each}
+            {#if altlar.length > 4}
+              <span class="alt-etiket daha">+{altlar.length - 4} daha</span>
+            {/if}
+          {:else}
+            <span class="bos-yazi">Alt Kategori Yok</span>
+          {/if}
+        </div>
+      </button>
+    {/each}
+  </div>
+{:else}
+  <p>Kategori Yok</p>
+{/if}
+
+<KategoriModal bind:acik={modalAcik} eklendi={yenile} />
+<KategoriDetayModal bind:acik={detayAcik} kategori={acikKategori} degisti={yenile} />
+```
+
+## frontend/src/lib/Components/AdminKullanicilar.svelte
+
+```svelte
+<script>
+    import { onMount } from "svelte";
+    import {
+        API,
+        authHeader,
+        durum,
+        metinAra,
+        alanEsit,
+        sayfalar,
+        sayfala,
+        toplamSayfa,
+        sayfaGit,
+    } from "../store.svelte.js";
+    import KullaniciModal from "../Modals/KullaniciModal.svelte";
+    import FiltreCubuk from "../Components/FiltreCubuk.svelte";
+
+    let users = $state([]);
+    let modalAcik = $state(false);
+
+    let arama = $state("");
+
+    let filtreli = $derived(metinAra(users, arama, ["username", "role"]));
+
+    $effect(() => {
+        arama;
+        sayfalar.users = 1;
+    });
+
+    async function loadUsers() {
+        try {
+            const res = await fetch(`${API}/api/users`, {
+                headers: authHeader(),
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            users = await res.json();
+        } catch (e) {
+            durum.error = e instanceof Error ? e.message : String(e);
+        }
+    }
+
+    onMount(loadUsers);
+</script>
+
+<h2>Kullanıcılar</h2>
+<div class="sekme-baslik">
+    <FiltreCubuk bind:arama placeholder="Kullanıcı veya rol ara..."></FiltreCubuk>
+    <button class="ekle-btn" onclick={() => (modalAcik = true)}
+        >+ Yeni Kullanıcı</button
+    >
+</div>
+
+{#if filtreli.length}
+    <div class="tablo-cerceve">
+        <table>
+            <thead>
+                <tr><th>ID</th><th>Kullanıcı</th><th>Rol</th></tr>
+            </thead>
+            <tbody>
+                {#each sayfala(filtreli, "users") as u}
+                    <tr>
+                        <td>{u.id}</td>
+                        <td>{u.username}</td>
+                        <td>{u.role}</td>
+                    </tr>
+                {/each}
+            </tbody>
+        </table>
+    </div>
+    <div class="pagination">
+        <button
+            onclick={() => sayfaGit("users", -1)}
+            disabled={(sayfalar.users ?? 1) === 1}>Önceki</button
+        >
+        <span>Sayfa {sayfalar.users ?? 1} / {toplamSayfa(filtreli)}</span>
+        <button
+            onclick={() => sayfaGit("users", 1)}
+            disabled={(sayfalar.users ?? 1) === toplamSayfa(filtreli)}
+            >Sonraki</button
+        >
+    </div>
+{:else}
+    <p>Henüz kullanıcı yok.</p>
+{/if}
+
+<KullaniciModal bind:acik={modalAcik} eklendi={loadUsers} />
+
+```
+
+## frontend/src/lib/Components/AdminLoglar.svelte
+
+```svelte
+<script>
+    import { onMount } from "svelte";
+    import {
+        API,
+        authHeader,
+        durum,
+        metinAra,
+        alanEsit,
+        sayfalar,
+        sayfala,
+        toplamSayfa,
+        sayfaGit,
+    } from "../store.svelte.js";
+    import FiltreCubuk from "./FiltreCubuk.svelte";
+
+    let loglar = $state([]);
+
+    //filtreleme
+    let secilenIslem = $state("");
+    let arama = $state("");
+
+    let filtreli = $derived(
+        alanEsit(
+            metinAra(loglar, arama, ["username", "role"]),
+            secilenIslem,
+            "action",
+        ),
+    );
+
+    $effect(() => {
+        secilenIslem;
+        arama;
+        sayfalar.loglar = 1;
+    });
+
+    async function loadLoglar() {
+        try {
+            const res = await fetch(`${API}/api/logs`, {
+                headers: authHeader(),
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            loglar = await res.json();
+        } catch (e) {
+            durum.error = e instanceof Error ? e.message : String(e);
+        }
+    }
+
+    const islemler = { login: "Giriş", logout: "Çıkış" };
+    function islemYazi(a) {
+        return islemler[a] || a;
+    }
+
+    onMount(loadLoglar);
+</script>
+
+<h2>Loglar</h2>
+<div class="sekme-baslik">
+    <FiltreCubuk bind:arama placeholder="Kullanıcı veya rol ara...">
+        {#snippet ekstra()}
+            <select bind:value={secilenIslem}>
+                <option value="">Tümü</option>
+                <option value="login">Giriş</option>
+                <option value="logout">Çıkış</option>
+            </select>
+        {/snippet}
+    </FiltreCubuk>
+</div>
+
+{#if filtreli.length}
+    <div class="tablo-cerceve">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Kullanıcı</th>
+                    <th>Rol</th>
+                    <th>İşlem</th>
+                    <th>Ip</th>
+                    <th>Tarih</th>
+                </tr>
+            </thead>
+            <tbody>
+                {#each sayfala(filtreli, "loglar") as l}
+                    <tr>
+                        <td>{l.id}</td>
+                        <td>{l.username}</td>
+                        <td>{l.role}</td>
+                        <td>{islemYazi(l.action)}</td>
+                        <td>{l.ip_address || "-"}</td>
+                        <td>{new Date(l.created_at).toLocaleString("tr-TR")}</td
+                        >
+                    </tr>
+                {/each}
+            </tbody>
+        </table>
+    </div>
+{:else}
+    <p>Henüz log yok.</p>
+{/if}
+
+```
+
+## frontend/src/lib/Components/AdminUrunler.svelte
+
+```svelte
+<script>
+  import { API, veri, authHeader, durum, fiyatKolon, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
+  import UrunModal from "../Modals/UrunModal.svelte";
+
+  let { yenile } = $props();
+
+  let modalAcik = $state(false);
+  let duzenlenenUrun = $state(null);
+
+  function ekleAc() {
+    duzenlenenUrun = null;
+    modalAcik = true;
+  }
+
+  function duzenleAc(p) {
+    duzenlenenUrun = p;
+    modalAcik = true;
+  }
+
+  async function sil(id) {
+    try {
+      const res = await fetch(`${API}/api/products/${id}`, {
+        method: "DELETE",
+        headers: authHeader(),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      yenile();
+    } catch (e) {
+      durum.error = e instanceof Error ? e.message : String(e);
+    }
+  }
+</script>
+
+<h2>Ürünler</h2>
+<button class="ekle-btn" onclick={ekleAc}>+ Yeni Ürün</button>
+
+{#if veri.products.length}
+  <div class="tablo-cerceve">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th><th>Resim</th><th>Ürün</th><th>Kategori</th>
+          <th>Toplam Stok</th><th>Fiyat</th><th>Aralık</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {#each sayfala(veri.products, "urunler") as p}
+          <tr>
+            <td>{p.id}</td>
+            <td>{#if p.image_url}<img src={p.image_url} alt={p.name} />{/if}</td>
+            <td>{p.name}</td>
+            <td>{p.parent_category ? `${p.parent_category} › ${p.category}` : p.category}</td>
+            <td>{p.toplam_stok}</td>
+            <td>{fiyatKolon(p.price)}</td>
+            <td class="kucuk">{fiyatKolon(p.alt_sinir)} - {fiyatKolon(p.ust_sinir)}</td>
+            <td>
+              <button class="duzenle-btn" onclick={() => duzenleAc(p)}>Düzenle</button>
+              <button class="sil" onclick={() => sil(p.id)}>Sil</button>
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
+  </div>
+  <div class="pagination">
+    <button onclick={() => sayfaGit("urunler", -1)}
+            disabled={(sayfalar.urunler ?? 1) === 1}>Önceki</button>
+    <span>Sayfa {sayfalar.urunler ?? 1} / {toplamSayfa(veri.products)}</span>
+    <button onclick={() => sayfaGit("urunler", 1)}
+            disabled={(sayfalar.urunler ?? 1) === toplamSayfa(veri.products)}>Sonraki</button>
+  </div>
+{/if}
+
+<UrunModal bind:acik={modalAcik} urun={duzenlenenUrun} kaydedildi={yenile} />
+```
+
+## frontend/src/lib/Components/BayiRaporlar.svelte
+
+```svelte
+<script>
+  import { onMount } from "svelte";
+  import { Chart, registerables } from "chart.js";
+  import { API, authHeader, durum, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
+  Chart.register(...registerables);
+
+  let myMovements = $state([]);
+  let history = $state([]);
+  let chartCanvas = $state(null);
+  let chartInstance = null;
+
+  async function loadMyMovements() {
+    try {
+      const res = await fetch(`${API}/api/my-stock/movements`, { headers: authHeader() });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      myMovements = await res.json();
+    } catch (e) {
+      durum.error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  async function loadHistory() {
+    try {
+      const res = await fetch(`${API}/api/my-stock/history`, { headers: authHeader() });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      history = await res.json();
+      setTimeout(drawChart, 0);
+    } catch (e) {
+      durum.error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  function drawChart() {
+    if (!chartCanvas || !history.length) return;
+    if (chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(chartCanvas, {
+      type: "bar",
+      data: {
+        labels: history.map((h) => new Date(h.tarih).toLocaleDateString("tr-TR")),
+        datasets: [
+          { label: "Giriş", data: history.map((h) => h.giris), backgroundColor: "#22a722" },
+          { label: "Çıkış", data: history.map((h) => h.cikis), backgroundColor: "#c00" },
+        ],
+      },
+      options: { responsive: true, scales: { y: { beginAtZero: true } } },
+    });
+  }
+
+  onMount(() => {
+    loadMyMovements();
+    loadHistory();
+  });
+</script>
+
+<h2>Raporlar</h2>
+<div style="display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap;">
+  <div style="flex: 1; min-width: 280px;">
+    <h3>Giriş / Çıkış Geçmişi</h3>
+    {#if myMovements.length}
+      <div class="tablo-cerceve">
+        <table>
+          <thead>
+            <tr><th>Tarih</th><th>Ürün</th><th>İşlem</th><th>Miktar</th></tr>
+          </thead>
+          <tbody>
+            {#each sayfala(myMovements, "raporlar") as m}
+              <tr>
+                <td>{new Date(m.created_at).toLocaleDateString("tr-TR")}</td>
+                <td>{m.urun}</td>
+                <td style="color: {m.quantity > 0 ? 'green' : 'red'}">
+                  {m.quantity > 0 ? "Giriş" : "Çıkış"}
+                </td>
+                <td>{Math.abs(m.quantity)}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+        <div class="pagination">
+          <button onclick={() => sayfaGit("raporlar", -1)}
+                  disabled={(sayfalar.raporlar ?? 1) === 1}>Önceki</button>
+          <span>Sayfa {sayfalar.raporlar ?? 1} / {toplamSayfa(myMovements)}</span>
+          <button onclick={() => sayfaGit("raporlar", 1)}
+                  disabled={(sayfalar.raporlar ?? 1) === toplamSayfa(myMovements)}>Sonraki</button>
+        </div>
+      </div>
+    {:else}
+      <p>Henüz giriş/çıkış yapılmamış.</p>
+    {/if}
+  </div>
+
+  <div style="flex: 1; min-width: 350px;">
+    <h3>Giriş / Çıkış Grafiği</h3>
+    {#if history.length}
+      <div><canvas bind:this={chartCanvas}></canvas></div>
+    {/if}
+  </div>
+</div>
+```
+
+## frontend/src/lib/Components/BayiStok.svelte
+
+```svelte
+<script>
+  import { onMount } from "svelte";
+  import { API, veri, authHeader, durum, fiyatKolon, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
+  import IslemModal from "../Modals/IslemModal.svelte"
+
+  let islemModalAcik = $state(false);
+  let islemUrunId = $state("");
+
+  async function loadMyStock() {
+    try {
+      const res = await fetch(`${API}/api/my-stock`, { headers: authHeader() });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      veri.myStock = await res.json();
+    } catch (e) {
+      durum.error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  function islemModalAc(productId = "") {
+    islemUrunId = productId;
+    islemModalAcik = true;
+  }
+
+  function depoDurumu(stok) {
+    const s = Number(stok) || 0;
+    const yuzde = Math.min(100, Math.round((s / 100) * 100));
+    let sinif = "bol";
+    let etiket = "Bol";
+    if (s === 0) { sinif = "bos"; etiket = "Tükendi"; }
+    else if (s <= 10) { sinif = "kritik"; etiket = "Kritik"; }
+    else if (s <= 30) { sinif = "az"; etiket = "Az"; }
+    else if (s <= 60) { sinif = "normal"; etiket = "Normal"; }
+    return { yuzde, sinif, sayi: s, etiket };
+  }
+
+  onMount(loadMyStock);
+</script>
+
+<h2>Stok Yönetimi</h2>
+<div class="tablo-cerceve">
+  <button class="islem-btn1" onclick={() => islemModalAc("")}>Stok/fiyat</button>
+  <table>
+    <thead>
+      <tr>
+        <th>Ürün-Id</th><th>Ürün</th><th>Bayi Fiyatı</th><th>Kategori</th>
+        <th>Depo Durumu</th><th>Son Güncelleme Tarihi</th><th>İşlem</th>
+      </tr>
+    </thead>
+    <tbody>
+      {#each sayfala(veri.myStock, "stok") as p}
+        {@const d = depoDurumu(p.stock)}
+        <tr class:dusuk={p.stock < 10}>
+          <td>{p.product_id}</td>
+          <td>{p.name}</td>
+          <td>{fiyatKolon(p.benim_fiyatim)}</td>
+          <td>{p.category}</td>
+          <td>
+            <div class="depo-bar">
+              <div class="depo-dolu {d.sinif}" style="width: {d.yuzde}%"></div>
+              <span class="depo-yazi">{d.sayi}</span>
+            </div>
+            <span class="depo-etiket {d.sinif}">{d.etiket}</span>
+          </td>
+          <td class="tarih-hucre">
+            {p.son_hareket ? new Date(p.son_hareket).toLocaleString("tr-TR") : "-"}
+          </td>
+          <td>
+            <button class="islem-btn" onclick={() => islemModalAc(p.product_id)}>Stok/fiyat</button>
+          </td>
+        </tr>
+      {/each}
+    </tbody>
+  </table>
+</div>
+<div class="pagination">
+  <button onclick={() => sayfaGit("stok", -1)}
+          disabled={(sayfalar.stok ?? 1) === 1}>Önceki</button>
+  <span>Sayfa {sayfalar.stok ?? 1} / {toplamSayfa(veri.myStock)}</span>
+  <button onclick={() => sayfaGit("stok", 1)}
+          disabled={(sayfalar.stok ?? 1) === toplamSayfa(veri.myStock)}>Sonraki</button>
+</div>
+
+<IslemModal
+  bind:acik={islemModalAcik}
+  urunId={islemUrunId}
+  tamamlandi={(tur) => {
+    loadMyStock();
+    if (tur === "fiyat") {
+      durum.bildirim = "Fiyat talebiniz onaya gönderildi.";
+      setTimeout(() => (durum.bildirim = ""), 4000);
+    }
+  }}
+/>
+```
+
+## frontend/src/lib/Components/BayiTalepler.svelte
+
+```svelte
+<script>
+    import { onMount } from "svelte";
+    import { API, authHeader, durum, fiyatKolon } from "../store.svelte";
+
+    let talepler = $state([]);
+
+    async function loadTalepler() {
+        try {
+            const res = await fetch(`${API}/api/requests/mine`, {
+                headers: authHeader(),
+            });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            talepler = await res.json();
+        } catch (e) {
+            durum.error = e instanceof Error ? e.message : String(e);
+        }
+    }
+
+    async function iptalEt(id) {
+        try {
+            const res = await fetch(`${API}/api/requests/${id}/cancel`, {
+                method: "PUT",
+                headers: authHeader(),
+            });
+            if (!res.ok)
+                throw new Error((await res.text()) || `HTTP ${res.status}`);
+            await loadTalepler();
+        } catch (e) {
+            durum.error = e instanceof Error ? e.message : String(e);
+        }
+    }
+
+    const durumlar = {
+        pending: "Onay bekliyor",
+        approved: "Onaylandı",
+        rejected: "Reddedildi",
+        cancelled: "İptal edildi",
+    };
+
+    function durumYazi(s) {
+        return durumlar[s] || s;
+    }
+
+    onMount(loadTalepler);
+</script>
+
+<h2>Taleplerim</h2>
+{#if talepler.length}
+    <table>
+        <thead>
+            <tr>
+                <th>Ürün</th>
+                <th>Eski Fiyat</th>
+                <th>Yeni Fiyat</th>
+                <th>Durum</th>
+                <th>Admin Notu</th>
+                <th>Tarih</th>
+                <th>İşlem</th>
+            </tr>
+        </thead>
+        <tbody>
+            {#each talepler as t}
+                <tr>
+                    <td>{t.urun}</td>
+                    <td>{fiyatKolon(t.old_price)}</td>
+                    <td>{fiyatKolon(t.new_price)}</td>
+                    <td
+                        ><span class="rozet {t.status}"
+                            >{durumYazi(t.status)}</span
+                        ></td
+                    >
+                    <td>{t.admin_note || "-"}</td>
+                    <td>{new Date(t.created_at).toLocaleString("tr-TR")}</td
+                    >
+                    <td>
+                        {#if t.status === "pending"}
+                            <button
+                                class="sil-btn"
+                                onclick={() => iptalEt(t.id)}>İptal</button
+                            >
+                        {/if}
+                    </td>
+                </tr>
+            {/each}
+        </tbody>
+    </table>
+{:else}
+    <p>Henüz talebiniz yok.</p>
+{/if}
+
+```
+
+## frontend/src/lib/Components/FiltreCubuk.svelte
+
+```svelte
+<!-- FiltreCubuk.svelte -->
+<script>
+  let { arama = $bindable(""), placeholder = "Ara...", ekstra } = $props();
+</script>
+
+<div class="filtre-cubuk">
+  <input bind:value={arama} {placeholder} />
+  {@render ekstra?.()}
+</div>
+```
+
+## frontend/src/lib/Components/Login.svelte
+
+```svelte
+<script>
+  import { API, oturum } from "../store.svelte.js";
+
+  let { girisYapildi } = $props();
+
+  let kayitModu = $state(false);
+  let loginUser = $state("");
+  let loginPass = $state("");
+  let loginError = $state("");
+  let kayitMesaj = $state("");
+
+  let kayitForm = $state({
+    username: "",
+    password: "",
+    email: "",
+    address: "",
+    phone: "",
+  });
+
+  let epostaGecerli = $derived.by(() => {
+    const e = kayitForm.email?.trim() || "";
+    if (!e) return null;
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+  });
+
+  async function login() {
+    loginError = "";
+    try {
+      const res = await fetch(`${API}/api/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: loginUser, password: loginPass }),
+      });
+      if (!res.ok) throw new Error("Kullanıcı adı veya şifre hatalı");
+      const data = await res.json();
+      oturum.token = data.token;
+      oturum.role = data.role;
+      oturum.currentUser = data.username;
+      oturum.avatarUrl = data.avatar_url || "";
+      localStorage.setItem("token", oturum.token);
+      localStorage.setItem("username", oturum.currentUser);
+      localStorage.setItem("avatar_url", oturum.avatarUrl);
+      girisYapildi();
+    } catch (e) {
+      loginError = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  async function kayitOl() {
+    kayitMesaj = "";
+    loginError = "";
+    if (epostaGecerli === false) {
+      loginError = "Geçerli bir e-posta adresi girin";
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/api/signup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(kayitForm),
+      });
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      loginUser = kayitForm.username;
+      loginPass = kayitForm.password;
+      kayitForm = { username: "", password: "", email: "", address: "", phone: "" };
+      kayitModu = false;
+      await login();
+    } catch (e) {
+      loginError = e instanceof Error ? e.message : String(e);
+    }
+  }
+</script>
+
+<div class="login-wrapper">
+  <div class="lava-background">
+    <div class="lava lava-1"></div>
+    <div class="lava lava-2"></div>
+    <div class="lava lava-3"></div>
+    <div class="lava lava-4"></div>
+    <div class="lava lava-5"></div>
+    <div class="lava lava-6"></div>
+    <div class="lava lava-7"></div>
+  </div>
+
+  <div class="flip-cerceve">
+    <div class="flip-ic" class:donuk={kayitModu}>
+      <div class="flip-yuz flip-on" inert={kayitModu}>
+        <div class="login-card">
+          <div class="avatar">
+            <svg viewBox="0 0 24 24" width="40" height="40" fill="white">
+              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+            </svg>
+          </div>
+
+          <div class="input-group">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="#888"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            </span>
+            <input placeholder="Kullanıcı Adı" bind:value={loginUser} />
+          </div>
+
+          <div class="input-group">
+            <span class="input-icon">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="#888"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3-9H9V6c0-1.66 1.34-3 3-3s3 1.34 3 3v2z"/></svg>
+            </span>
+            <input type="password" placeholder="Şifre" bind:value={loginPass}
+                   onkeydown={(e) => e.key === "Enter" && login()} />
+          </div>
+
+          <button class="login-btn" onclick={login}>Giriş</button>
+          <button class="mod-degistir" onclick={() => { kayitModu = true; loginError = ""; kayitMesaj = ""; }}>
+            Hesabın yok mu? Kayıt Ol
+          </button>
+          {#if kayitMesaj}<p class="basari">{kayitMesaj}</p>{/if}
+          {#if loginError && !kayitModu}<p class="error">{loginError}</p>{/if}
+        </div>
+      </div>
+
+      <div class="flip-yuz flip-arka" inert={!kayitModu}>
+        <div class="login-card">
+          <h3 class="kayit-baslik">Kayıt Ol</h3>
+          <div class="input-group">
+            <input placeholder="Kullanıcı Adı" bind:value={kayitForm.username} />
+          </div>
+          <div class="input-group">
+            <input type="password" placeholder="Şifre (en az 6 karakter)" bind:value={kayitForm.password} />
+          </div>
+          <div class="input-group" class:hatali={epostaGecerli === false}>
+            <input type="email" placeholder="E-Posta" bind:value={kayitForm.email} />
+          </div>
+          {#if epostaGecerli === false}
+            <p class="ipucu-hata">Geçerli bir E-Posta giriniz. (ornek@site.com)</p>
+          {/if}
+          <div class="input-group">
+            <input placeholder="Adres" bind:value={kayitForm.address} />
+          </div>
+          <div class="input-group">
+            <input placeholder="Telefon" bind:value={kayitForm.phone} />
+          </div>
+          <button class="login-btn" onclick={kayitOl}>Kayıt Ol</button>
+          <button class="mod-degistir" onclick={() => { kayitModu = false; loginError = ""; }}>
+            Zaten hesabım var - Giriş Yap
+          </button>
+          {#if loginError && kayitModu}<p class="error">{loginError}</p>{/if}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+## frontend/src/lib/Components/Magaza.svelte
+
+```svelte
+<script>
+  import { onMount } from "svelte";
+  import {
+    API,
+    authHeader,
+    durum,
+    veri,
+    fiyatKolon,
+    sepeteEkle,
+  } from "../store.svelte.js";
+
+  let secilenKategori = $state("");
+  let arama = $state("");
+  let aramaZaman;
+  let ilkYukleme = true;
+
+  let shopData = $state([]);
+  let shopOffset = $state(0);
+  let hepsiYuklendi = $state(false);
+  let yukleniyor = $state(false);
+  let sentinel = $state(null);
+  const limit = 14;
+
+  async function loadShop() {
+    if (yukleniyor || hepsiYuklendi) return;
+    yukleniyor = true;
+    try {
+      const p = new URLSearchParams({ limit, offset: shopOffset });
+      if (secilenKategori) p.set("kategori", secilenKategori);
+      if (arama) p.set("arama", arama);
+
+      const res = await fetch(`${API}/api/shop?${p}`, {
+        headers: authHeader(),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const yeni = await res.json();
+      if (yeni.length < limit) hepsiYuklendi = true;
+      shopData = [...shopData, ...yeni];
+      shopOffset += yeni.length;
+    } catch (e) {
+      durum.error = e instanceof Error ? e.message : String(e);
+    } finally {
+      yukleniyor = false;
+    }
+  }
+
+  $effect(() => {
+    secilenKategori;
+    arama;
+    clearTimeout(aramaZaman);
+    aramaZaman = setTimeout(() => {
+      shopData = [];
+      shopOffset = 0;
+      hepsiYuklendi = false;
+      loadShop();
+    }, 300);
+  });
+
+  $effect(() => {
+    if (!sentinel) return;
+    const gozlemci = new IntersectionObserver(
+      (girisler) => {
+        if (girisler[0].isIntersecting) loadShop();
+      },
+      { rootMargin: "200px" },
+    );
+    gozlemci.observe(sentinel);
+    return () => gozlemci.disconnect();
+  });
+
+  onMount(async () => {
+    const res = await fetch(`${API}/api/categories`);
+    if (res.ok) veri.categories = await res.json();
+    await loadShop();
+  });
+</script>
+
+<h2>Mağaza</h2>
+<div class="filtre-cubuk">
+  <input bind:value={arama} placeholder="Ürün ara..." />
+  <select bind:value={secilenKategori}>
+    <option value="">Tüm kategoriler</option>
+    {#each veri.categories as k}
+      <option value={k.id}>{k.name}</option>
+    {/each}
+  </select>
+</div>
+
+{#if shopData.length}
+  <div class="urun-kartlari">
+    {#each shopData as urun}
+      <div class="urun-kart">
+        {#if urun.image_url}
+          <img
+            src={urun.image_url}
+            alt={urun.name}
+            class="kart-resim"
+            onerror={(e) => (e.currentTarget.src = "/images/placeholder.png")}
+          />
+        {/if}
+        <h3>{urun.name}</h3>
+        <p class="kart-satici">Satıcı: <strong>{urun.dealer_name}</strong></p>
+        <p class="kart-fiyat">{fiyatKolon(urun.price)}</p>
+        <p class="kart-stok">Stok: {urun.stock}</p>
+        <button
+          class="sepet-btn"
+          onclick={async () => {
+            try {
+              await sepeteEkle(urun.product_id, urun.dealer_id);
+              durum.bildirim = "Ürün sepete eklendi";
+              setTimeout(() => (durum.bildirim = ""), 2000);
+            } catch (e) {
+              durum.error = e.message;
+            }
+          }}>Sepete Ekle</button
+        >
+      </div>
+    {/each}
+  </div>
+  {#if !hepsiYuklendi}
+    <div bind:this={sentinel} class="sentinel">
+      {#if yukleniyor}<div class="spinner"></div>{/if}
+    </div>
+  {/if}
+{:else}
+  <p>Şu an satışta ürün yok.</p>
+{/if}
+
+```
+
+## frontend/src/lib/Components/Profil.svelte
+
+```svelte
+<script>
+  import { onMount } from "svelte";
+  import { API, oturum, durum, authHeader, jsonHeader } from "../store.svelte.js";
+
+  let profil = $state({
+    username: "", role: "", address: "", phone: "", avatar_url: "",
+  });
+  let mesaj = $state("");
+
+  async function loadProfile() {
+    try {
+      const res = await fetch(`${API}/api/profile`, { headers: authHeader() });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      profil = await res.json();
+    } catch (e) {
+      durum.error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  async function guncelle() {
+    mesaj = "";
+    try {
+      const res = await fetch(`${API}/api/profile`, {
+        method: "PUT",
+        headers: jsonHeader(),
+        body: JSON.stringify({
+          address: profil.address,
+          phone: profil.phone,
+          avatar_url: profil.avatar_url,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      oturum.avatarUrl = profil.avatar_url || "";
+      localStorage.setItem("avatar_url", oturum.avatarUrl);
+      mesaj = "Profil güncellendi";
+      setTimeout(() => (mesaj = ""), 3000);
+    } catch (e) {
+      durum.error = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  onMount(loadProfile);
+</script>
+
+<h2>Profilim</h2>
+<div class="profil-sayfa">
+  <div class="profil-avatar">
+    {#if profil.avatar_url}<img src={profil.avatar_url} alt="avatar" />{/if}
+  </div>
+
+  <div class="profil-bilgi">
+    <label>Kullanıcı Adı <input value={profil.username} disabled /></label>
+    <label>Rol <input value={profil.role} disabled /></label>
+    <label>Adres <input bind:value={profil.address} placeholder="Adres" /></label>
+    <label>Telefon <input bind:value={profil.phone} placeholder="Telefon" /></label>
+    <label>Avatar URL <input bind:value={profil.avatar_url} placeholder="/avatars/..." /></label>
+
+    {#if mesaj}<p class="basari">{mesaj}</p>{/if}
+
+    <button class="ekle-btn" onclick={guncelle}>Kaydet</button>
+  </div>
+</div>
+```
+
+## frontend/src/lib/Components/Sepet.svelte
+
+```svelte
+<script>
+    import { onMount } from "svelte";
+    import {
+        API,
+        authHeader,
+        jsonHeader,
+        durum,
+        fiyatKolon,
+        sepet,
+        sepetYukle,
+    } from "../store.svelte.js";
+    import OnayModal from "../Modals/OnayModal.svelte";
+
+    let gruplar = $derived(
+        Object.values(
+            sepet.satirlar.reduce((acc, s) => {
+                acc[s.dealer_id] ??= {
+                    bayi: s.bayi,
+                    satirlar: [],
+                    araToplam: 0,
+                };
+                acc[s.dealer_id].satirlar.push(s);
+                acc[s.dealer_id].araToplam += Number(s.satir_tutar);
+                return acc;
+            }, {}),
+        ),
+    );
+
+    async function adetDegistir(id, yeni) {
+        try {
+            const res = await fetch(`${API}/api/cart/${id}`, {
+                method: "PUT",
+                headers: jsonHeader(),
+                body: JSON.stringify({ quantity: yeni }),
+            });
+            if (!res.ok) throw new Error(await res.text());
+            await sepetYukle();
+        } catch (e) {
+            durum.error = e instanceof Error ? e.message : String(e);
+        }
+    }
+
+    async function satirSil(id) {
+        try {
+            const res = await fetch(`${API}/api/cart/${id}`, {
+                method: "DELETE",
+                headers: authHeader(),
+            });
+            if (!res.ok) throw new Error(await res.text());
+            await sepetYukle();
+        } catch (e) {
+            durum.error = e instanceof Error ? e.message : String(e);
+        }
+    }
+
+    let onayAcik = $state(false);
+
+    async function sepetiBosalt() {
+        try {
+            const res = await fetch(`${API}/api/cart`, {
+                method: "DELETE",
+                headers: authHeader(),
+            });
+            if (!res.ok) throw new Error(await res.text());
+            await sepetYukle();
+        } catch (e) {
+            durum.error = e instanceof Error ? e.message : String(e);
+        }
+    }
+
+    onMount(sepetYukle);
+</script>
+
+<div class="sepet-baslik">
+    <h2>Sepetim <span class="sepet-sayi">({sepet.adet} ürün)</span></h2>
+    {#if sepet.satirlar.length}
+        <button class="sepet-bosalt" onclick={() => (onayAcik = true)}
+            >Sepeti Temizle</button
+        >
+    {/if}
+</div>
+
+{#if sepet.satirlar.length}
+    <div class="sepet-duzen">
+        <div class="sepet-sol">
+            {#each gruplar as g}
+                <div class="bayi-karti">
+                    <div class="bayi-basligi">
+                        <span>Satıcı: <strong>{g.bayi}</strong></span>
+                        <span class="ara-toplam">{fiyatKolon(g.araToplam)}</span
+                        >
+                    </div>
+
+                    {#each g.satirlar as s}
+                        <div class="sepet-satir">
+                            <div class="satir-gorsel">
+                                {#if s.image_url}
+                                    <img
+                                        src={s.image_url}
+                                        alt={s.urun}
+                                        onerror={(e) =>
+                                            (e.currentTarget.src =
+                                                "/images/placeholder.png")}
+                                    />
+                                {:else}
+                                    <div class="gorsel-yok">-</div>
+                                {/if}
+                            </div>
+
+                            <div class="satir-bilgi">
+                                <span class="satir-ad">{s.urun}</span>
+                                <span class="satir-birim"
+                                    >{fiyatKolon(s.price)} / adet</span
+                                >
+                                {#if s.quantity > s.stock}
+                                    <span class="stok-uyari"
+                                        >Stok {s.stock} adete düştü</span
+                                    >
+                                {/if}
+                            </div>
+
+                            <div class="adet-kontrol">
+                                {#if s.quantity <= 1}
+                                    <button
+                                        class="adet-sil"
+                                        onclick={() => satirSil(s.id)}
+                                        title="Kaldır">🗑</button
+                                    >
+                                {:else}
+                                    <button
+                                        onclick={() =>
+                                            adetDegistir(s.id, s.quantity - 1)}
+                                        >-</button
+                                    >
+                                {/if}
+                                <span class="adet-sayi">{s.quantity}</span>
+                                <button
+                                    onclick={() =>
+                                        adetDegistir(s.id, s.quantity + 1)}
+                                    disabled={s.quantity >= s.stock}>+</button
+                                >
+                            </div>
+
+                            <div class="satir-tutar">
+                                {fiyatKolon(s.satir_tutar)}
+                            </div>
+                        </div>
+                    {/each}
+                </div>
+            {/each}
+        </div>
+
+        <aside class="sepet-ozet">
+            <span class="ozet-etiket">SEÇİLEN ÜRÜNLER ({sepet.adet})</span>
+            <span class="ozet-tutar">{fiyatKolon(sepet.toplam)}</span>
+            <!--                            Sipariş Sistemi HENÜZ Yok                           -->
+
+            <button class="ozet-btn" disabled>Alışverişi Tamamla</button>
+            <p class="ozet-not">Sipariş oluşturma geliştirme aşamasında!</p>
+        </aside>
+    </div>
+{:else}
+    <div class="sepet-bos">
+        <p>Sepetiniz boş.</p>
+    </div>
+{/if}
+
+<OnayModal
+    bind:acik={onayAcik}
+    baslik="Sepeti Temizle"
+    mesaj="Sepetinizdeki tüm ürünler kaldırılacak. Devam etmek istiyor musunuz?"
+    onayYazi="Boşalt"
+    onaylandi={sepetiBosalt}
+/>
+
+```
+
+## frontend/src/lib/Modals/IslemModal.svelte
+
+```svelte
+<script>
+  import { API, veri, jsonHeader, fiyatKolon } from "../store.svelte.js";
+
+  let { acik = $bindable(), urunId = "", tamamlandi } = $props();
+
+  let secilenId = $state("");
+  let islemTuru = $state("");
+  let miktar = $state("");
+  let yeniFiyat = $state("");
+  let hata = $state("");
+
+  $effect(() => {
+    if (acik) {
+      secilenId = urunId;
+      islemTuru = "";
+      miktar = "";
+      yeniFiyat = "";
+      hata = "";
+    }
+  });
+
+  let secilenUrun = $derived(
+    veri.myStock.find((p) => p.product_id === Number(secilenId)) ?? null
+  );
+
+  let fiyatDurum = $derived.by(() => {
+    if (islemTuru !== "fiyat" || !secilenUrun || !yeniFiyat) return null;
+    const f = Number(yeniFiyat);
+    if (isNaN(f)) return null;
+    const alt = Number(secilenUrun.alt_sinir);
+    const ust = Number(secilenUrun.ust_sinir);
+    if (f < alt || f > ust) return "disarida";
+    const aralik = ust - alt;
+    if (f - alt < aralik * 0.15 || ust - f < aralik * 0.15) return "sinirda";
+    return "iyi";
+  });
+
+  function kapat() {
+    acik = false;
+    hata = "";
+  }
+
+  async function kaydet() {
+    hata = "";
+    if (!secilenId) {
+      hata = "Ürün seçin";
+      return;
+    }
+    if (!islemTuru) {
+      hata = "İşlem türü seçin";
+      return;
+    }
+
+    const pid = Number(secilenId);
+
+    if (islemTuru === "fiyat") {
+      const f = Number(yeniFiyat);
+      if (!yeniFiyat || isNaN(f) || f <= 0) {
+        hata = "Geçerli bir fiyat girin";
+        return;
+      }
+      if (fiyatDurum === "disarida") {
+        hata = `Fiyat ${fiyatKolon(secilenUrun.alt_sinir)} - ${fiyatKolon(secilenUrun.ust_sinir)} aralığında olmalı`;
+        return;
+      }
+      try {
+        const res = await fetch(`${API}/api/my-stock/price`, {
+          method: "PUT",
+          headers: jsonHeader(),
+          body: JSON.stringify({ product_id: pid, price: f }),
+        });
+        if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+        kapat();
+        tamamlandi("fiyat");
+      } catch (e) {
+        hata = e instanceof Error ? e.message : String(e);
+      }
+    } else {
+      const m = Math.abs(Number(miktar) || 0);
+      if (m <= 0) {
+        hata = "Miktar 0'dan büyük olmalı";
+        return;
+      }
+      const degisim = islemTuru === "giris" ? m : -m;
+      try {
+        const res = await fetch(`${API}/api/my-stock/movement`, {
+          method: "POST",
+          headers: jsonHeader(),
+          body: JSON.stringify({ product_id: pid, change: degisim }),
+        });
+        if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+        kapat();
+        tamamlandi("hareket");
+      } catch (e) {
+        hata = e instanceof Error ? e.message : String(e);
+      }
+    }
+  }
+</script>
+
+{#if acik}
+  <div class="modal-arkaplan" onclick={kapat}
+       onkeydown={(e) => e.key === "Escape" && kapat()}
+       role="button" tabindex="0">
+    <div class="modal" onclick={(e) => e.stopPropagation()} role="presentation">
+      <h3>Stok-Fiyat Güncelle</h3>
+
+      <label>Ürün
+        <select bind:value={secilenId}>
+          <option value="">Ürün Seçiniz</option>
+          {#each veri.myStock as p}
+            <option value={p.product_id}>{p.name}</option>
+          {/each}
+        </select>
+      </label>
+
+      <label>İşlem Türü
+        <select class="islem-secim" bind:value={islemTuru}>
+          <option value="">İşlem türü seçiniz</option>
+          <option value="giris">Giriş</option>
+          <option value="cikis">Çıkış</option>
+          <option value="fiyat">Fiyat Güncelleme</option>
+        </select>
+      </label>
+
+      {#if secilenUrun && (islemTuru === "giris" || islemTuru === "cikis")}
+        <p class="modal-bilgi">Mevcut stok: <strong>{secilenUrun.stock}</strong></p>
+        <label>Miktar
+          <input type="number" min="1" bind:value={miktar} placeholder="0" />
+        </label>
+
+      {:else if secilenUrun && islemTuru === "fiyat"}
+        <p class="modal-bilgi">
+          Mevcut fiyat: <strong>{fiyatKolon(secilenUrun.benim_fiyatim)}</strong>
+        </p>
+        <label>Yeni Fiyat
+          <input type="number" step="0.01" bind:value={yeniFiyat}
+                 placeholder={secilenUrun.onerilen}
+                 class="fiyat-input {fiyatDurum ?? ''}" />
+        </label>
+        <p class="fiyat-ipucu">
+          Aralık: {fiyatKolon(secilenUrun.alt_sinir)} - {fiyatKolon(secilenUrun.ust_sinir)}
+          · <button type="button" class="oneri-btn"
+                    onclick={() => (yeniFiyat = secilenUrun.onerilen)}>
+              Önerilen: {fiyatKolon(secilenUrun.onerilen)}
+            </button>
+        </p>
+      {/if}
+
+      {#if hata}<p class="error">{hata}</p>{/if}
+
+      <div class="modal-butonlar">
+        <button class="iptal-btn" onclick={kapat}>İptal</button>
+        <button class="ekle-btn" onclick={kaydet}>Kaydet</button>
+      </div>
+    </div>
+  </div>
+{/if}
+```
+
+## frontend/src/lib/Modals/KategoriDetayModal.svelte
+
+```svelte
+<script>
+  import { API, veri, jsonHeader, authHeader } from "../store.svelte.js";
+
+  let { acik = $bindable(), kategori, degisti } = $props();
+
+  let yeniAd = $state("");
+  let hata = $state("");
+
+  let altlar = $derived(
+    kategori ? veri.categories.filter((c) => c.parent_id === kategori.id) : []
+  );
+
+  function kapat() {
+    acik = false;
+    yeniAd = "";
+    hata = "";
+  }
+
+  async function ekle() {
+    hata = "";
+    if (!yeniAd.trim()) {
+      hata = "Kategori adı zorunlu";
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/api/categories`, {
+        method: "POST",
+        headers: jsonHeader(),
+        body: JSON.stringify({ name: yeniAd.trim(), parent_id: kategori.id }),
+      });
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      yeniAd = "";
+      degisti();
+    } catch (e) {
+      hata = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  async function sil(id) {
+    hata = "";
+    try {
+      const res = await fetch(`${API}/api/categories/${id}`, {
+        method: "DELETE",
+        headers: authHeader(),
+      });
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      degisti();
+    } catch (e) {
+      hata = e instanceof Error ? e.message : String(e);
+    }
+  }
+</script>
+
+{#if acik && kategori}
+  <div class="modal-arkaplan" onclick={kapat}
+       onkeydown={(e) => e.key === "Escape" && kapat()}
+       role="button" tabindex="0">
+    <div class="kategori-detay-modal" onclick={(e) => e.stopPropagation()} role="presentation">
+      <h2>{kategori.name}</h2>
+      <p class="modal-bilgi">Alt kategoriler</p>
+
+      <div class="alt-liste">
+        {#each altlar as alt}
+          <div class="alt-satir">
+            <span>{alt.name}</span>
+            <button class="sil" onclick={() => sil(alt.id)}>Sil</button>
+          </div>
+        {:else}
+          <p class="bos-yazi">Bu kategoride alt kategori yok.</p>
+        {/each}
+      </div>
+
+      <div class="alt-ekle-satir">
+        <input bind:value={yeniAd} placeholder="Yeni alt kategori adı"
+               onkeydown={(e) => e.key === "Enter" && ekle()} />
+        <button class="ekle-btn" onclick={ekle}>Ekle</button>
+      </div>
+
+      {#if hata}<p class="error">{hata}</p>{/if}
+
+      <div class="modal-butonlar">
+        <button class="iptal-btn" onclick={kapat}>Kapat</button>
+      </div>
+    </div>
+  </div>
+{/if}
+```
+
+## frontend/src/lib/Modals/KategoriModal.svelte
+
+```svelte
+<script>
+  import { API, jsonHeader } from "../store.svelte.js";
+
+  let { acik = $bindable(), eklendi } = $props();
+
+  let ad = $state("");
+  let hata = $state("");
+
+  function kapat() {
+    acik = false;
+    ad = "";
+    hata = "";
+  }
+
+  async function ekle() {
+    hata = "";
+    if (!ad.trim()) {
+      hata = "Kategori adı zorunlu";
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/api/categories`, {
+        method: "POST",
+        headers: jsonHeader(),
+        body: JSON.stringify({ name: ad.trim(), parent_id: null }),
+      });
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      kapat();
+      eklendi();
+    } catch (e) {
+      hata = e instanceof Error ? e.message : String(e);
+    }
+  }
+</script>
+
+{#if acik}
+  <div class="modal-arkaplan" onclick={kapat}
+       onkeydown={(e) => e.key === "Escape" && kapat()}
+       role="button" tabindex="0">
+    <div class="modal" onclick={(e) => e.stopPropagation()} role="presentation">
+      <h3>Yeni Ana Kategori</h3>
+
+      <label>Kategori Adı
+        <input bind:value={ad} placeholder="Örn: Kozmetik"
+               onkeydown={(e) => e.key === "Enter" && ekle()} />
+      </label>
+
+      {#if hata}<p class="error">{hata}</p>{/if}
+
+      <div class="modal-butonlar">
+        <button class="iptal-btn" onclick={kapat}>İptal</button>
+        <button class="ekle-btn" onclick={ekle}>Ekle</button>
+      </div>
+    </div>
+  </div>
+{/if}
+```
+
+## frontend/src/lib/Modals/KullaniciModal.svelte
+
+```svelte
+<script>
+  import { API, jsonHeader } from "../store.svelte.js";
+
+  let { acik = $bindable(), eklendi } = $props();
+
+  let form = $state({
+    username: "",
+    password: "",
+    role: "Kullanici",
+    address: "",
+    phone: "",
+  });
+  let hata = $state("");
+
+  function kapat() {
+    acik = false;
+    form = { username: "", password: "", role: "Kullanici", address: "", phone: "" };
+    hata = "";
+  }
+
+  async function ekle() {
+    hata = "";
+    if (!form.username.trim() || !form.password) {
+      hata = "Kullanıcı adı ve şifre zorunlu";
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/api/register`, {
+        method: "POST",
+        headers: jsonHeader(),
+        body: JSON.stringify(form),
+      });
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      kapat();
+      eklendi();
+    } catch (e) {
+      hata = e instanceof Error ? e.message : String(e);
+    }
+  }
+</script>
+
+{#if acik}
+  <div class="modal-arkaplan" onclick={kapat}
+       onkeydown={(e) => e.key === "Escape" && kapat()}
+       role="button" tabindex="0">
+    <div class="modal" onclick={(e) => e.stopPropagation()} role="presentation">
+      <h3>Yeni Kullanıcı</h3>
+
+      <input placeholder="Kullanıcı Adı" bind:value={form.username} />
+      <input type="password" placeholder="Şifre" bind:value={form.password} />
+
+      <select bind:value={form.role}>
+        <option value="Kullanici">Kullanıcı</option>
+        <option value="Bayi">Bayi</option>
+        <option value="Admin">Admin</option>
+      </select>
+
+      {#if form.role === "Bayi"}
+        <input placeholder="Adres" bind:value={form.address} />
+        <input placeholder="Telefon" bind:value={form.phone} />
+      {/if}
+
+      {#if hata}<p class="error">{hata}</p>{/if}
+
+      <div class="modal-butonlar">
+        <button class="iptal-btn" onclick={kapat}>İptal</button>
+        <button class="ekle-btn" onclick={ekle}>Ekle</button>
+      </div>
+    </div>
+  </div>
+{/if}
+```
+
+## frontend/src/lib/Modals/OnayModal.svelte
+
+```svelte
+<script>
+    let {
+        acik = $bindable(false),
+        baslik = "Emin misiniz ?",
+        mesaj = "",
+        onayYazi = "Evet",
+        iptalYazi = "Vazgeç",
+        onaylandi,
+    } = $props();
+
+    function kapat() {
+        acik = false;
+    }
+
+    function onayla() {
+        acik = false;
+        onaylandi?.();
+    }
+</script>
+
+{#if acik}
+    <div class="modal-arka" onclick={kapat} role="presentation">
+        <div class="modal-kutu onay-kutu" onclick={(e) => e.stopPropagation()} role="presentation">
+            <h3>{baslik}</h3>
+            {#if mesaj}<p class="onay-mesaj">{mesaj}</p>{/if}
+            <div class="onay-butonlar">
+                <button class="vazgec-btn" onclick={kapat}>{iptalYazi}</button>
+                <button class="onay-btn" onclick={onayla}>{onayYazi}</button>
+            </div>
+        </div>
+    </div>
+{/if}
+```
+
+## frontend/src/lib/Modals/RedModal.svelte
+
+```svelte
+<script>
+  let { acik = $bindable(), onay } = $props();
+  let sebep = $state("");
+
+  function kapat() {
+    acik = false;
+    sebep = "";
+  }
+
+  function gonder() {
+    onay(sebep);
+    kapat();
+  }
+</script>
+
+{#if acik}
+  <div class="modal-arkaplan" onclick={kapat}
+       onkeydown={(e) => e.key === "Escape" && kapat()}
+       role="button" tabindex="0">
+    <div class="modal" onclick={(e) => e.stopPropagation()} role="presentation">
+      <h3>Talebi Reddet</h3>
+      <label>Red Sebebi
+        <input bind:value={sebep} placeholder="Örn: Fiyat çok düşük"
+               onkeydown={(e) => e.key === "Enter" && gonder()} />
+      </label>
+      <div class="modal-butonlar">
+        <button class="iptal-btn" onclick={kapat}>İptal</button>
+        <button class="red-btn" onclick={gonder}>Reddet</button>
+      </div>
+    </div>
+  </div>
+{/if}
+```
+
+## frontend/src/lib/Modals/UrunModal.svelte
+
+```svelte
+<script>
+  import { API, veri, jsonHeader } from "../store.svelte.js";
+
+  let { acik = $bindable(), urun = null, kaydedildi } = $props();
+
+  let form = $state({ name: "", category_id: "", price: "", image_url: "" });
+  let hata = $state("");
+
+  let duzenlemeMi = $derived(urun !== null);
+
+  $effect(() => {
+    if (acik) {
+      form = urun
+        ? {
+            name: urun.name,
+            category_id: urun.category_id ?? "",
+            price: urun.price,
+            image_url: urun.image_url ?? "",
+          }
+        : { name: "", category_id: "", price: "", image_url: "" };
+      hata = "";
+    }
+  });
+
+  let onizlemeYolu = $derived.by(() => {
+    let v = form.image_url?.trim() || "";
+    if (!v) return "";
+    if (v.startsWith("/") || v.startsWith("http")) return v;
+    if (!/\.(jpg|jpeg|png|webp|gif)$/i.test(v)) v += ".jpg";
+    return `/products/${v}`;
+  });
+
+  function kapat() {
+    acik = false;
+    hata = "";
+  }
+
+  async function kaydet() {
+    hata = "";
+    if (!form.name.trim()) {
+      hata = "Ürün adı zorunlu";
+      return;
+    }
+    if (!form.category_id) {
+      hata = "Kategori seçin";
+      return;
+    }
+
+    const url = duzenlemeMi
+      ? `${API}/api/products/${urun.id}`
+      : `${API}/api/products`;
+    const method = duzenlemeMi ? "PUT" : "POST";
+
+    let resimYolu = form.image_url?.trim() || "";
+    if (
+      resimYolu &&
+      !resimYolu.startsWith("/") &&
+      !resimYolu.startsWith("http")
+    ) {
+      if (!/\.(jpg|jpeg|png|webp|gif)$/i.test(resimYolu)) resimYolu += ".jpg";
+      resimYolu = `/products/${resimYolu}`;
+    }
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: jsonHeader(),
+        body: JSON.stringify({
+          name: form.name.trim(),
+          category_id: Number(form.category_id),
+          stock: 0,
+          price: Number(form.price),
+          image_url: resimYolu,
+        }),
+      });
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      kapat();
+      kaydedildi();
+    } catch (e) {
+      hata = e instanceof Error ? e.message : String(e);
+    }
+  }
+</script>
+
+{#if acik}
+  <div
+    class="modal-arkaplan"
+    onclick={kapat}
+    onkeydown={(e) => e.key === "Escape" && kapat()}
+    role="button"
+    tabindex="0"
+  >
+    <div
+      class="buyuk-modal"
+      onclick={(e) => e.stopPropagation()}
+      role="presentation"
+    >
+      <h2>{duzenlemeMi ? "Ürün Düzenle" : "Yeni Ürün"}</h2>
+
+      <label
+        >Ürün Adı
+        <input bind:value={form.name} placeholder="Ürün adı" />
+      </label>
+
+      <label
+        >Kategori
+        <select bind:value={form.category_id}>
+          <option value="">Kategori seç</option>
+          {#each veri.categories.filter((c) => !c.parent_id) as ust}
+            {#if veri.categories.some((c) => c.parent_id === ust.id)}
+              <optgroup label={ust.name}>
+                {#each veri.categories.filter((c) => c.parent_id === ust.id) as alt}
+                  <option value={alt.id}>{alt.name}</option>
+                {/each}
+              </optgroup>
+            {:else}
+              <option value={ust.id}>{ust.name}</option>
+            {/if}
+          {/each}
+        </select>
+      </label>
+
+      <label
+        >Fiyat (₺)
+        <input
+          type="number"
+          step="0.01"
+          bind:value={form.price}
+          placeholder="0.00"
+        />
+      </label>
+
+      <label>
+        Görsel URL
+        <input
+          bind:value={form.image_url}
+          placeholder="https://upload.wikimedia.org/..."
+        />
+      </label>
+
+      {#if form.image_url}
+        <img
+          src={form.image_url}
+          alt="önizleme"
+          class="onizleme"
+          onerror={(e) => (e.currentTarget.style.display = "none")}
+          onload={(e) => (e.currentTarget.style.display = "block")}
+        />
+      {/if}
+
+      {#if hata}<p class="error">{hata}</p>{/if}
+
+      <div class="modal-butonlar">
+        <button class="iptal-btn" onclick={kapat}>İptal</button>
+        <button class="ekle-btn" onclick={kaydet}
+          >{duzenlemeMi ? "Kaydet" : "Ekle"}</button
+        >
+      </div>
+    </div>
+  </div>
+{/if}
+
+```
+

@@ -251,6 +251,7 @@ CREATE TABLE public.users (
     password_hash character varying(200) NOT NULL,
     role character varying(20) NOT NULL,
     token character varying(200),
+    token_issued_at timestamp with time zone,
     address character varying(300),
     phone character varying(20),
     avatar_url character varying(500),

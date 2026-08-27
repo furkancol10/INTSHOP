@@ -15,6 +15,10 @@ public class CategoriesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
+        var token = Request.Headers["Authorization"].ToString();
+        var role = await AuthHelper.GetRole(_db, token);
+        if (role is null) return Unauthorized("Giriş gerekli");
+
         var sql = @"
             SELECT c.id, c.name, c.parent_id,
                    ust.name AS parent_name,
