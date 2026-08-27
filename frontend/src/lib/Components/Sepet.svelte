@@ -9,6 +9,7 @@
         sepet,
         sepetYukle,
     } from "../store.svelte.js";
+    import OnayModal from "../Modals/OnayModal.svelte";
 
     let gruplar = $derived(
         Object.values(
@@ -47,15 +48,16 @@
             durum.error = e instanceof Error ? e.message : String(e);
         }
     }
+    
+    let onayAcik = $state(false);
 
     async function sepetiBosalt() {
-        if (!confirm("Sepeti boşaltmak istediğinizden emin misiniz ? ")) return;
         try {
             const res = await fetch(`${API}/api/cart`, {
                 method: "DELETE",
                 headers: authHeader(),
             });
-            if (!res.Ok) throw new Error(await res.text());
+            if (!res.ok) throw new Error(await res.text());
             await sepetYukle();
         } catch (e) {
             durum.error = e instanceof Error ? e.message : String(e);
@@ -68,7 +70,7 @@
 <div class="sepet-baslik">
     <h2>Sepetim <span class="sepet-sayi">({sepet.adet} ürün)</span></h2>
     {#if sepet.satirlar.length}
-        <button class="sepet-bosalt" onclick={sepetiBosalt}
+        <button class="sepet-bosalt" onclick={() => (onayAcik = true)}
             >Sepeti Temizle</button
         >
     {/if}
@@ -150,3 +152,11 @@
         <p>Sepetiniz boş.</p>
     </div>
 {/if}
+
+<OnayModal
+  bind:acik={onayAcik}
+  baslik="Sepeti Temizle"
+  mesaj="Sepetinizdeki tüm ürünler kaldırılacak. Devam etmek istiyor musunuz?"
+  onayYazi="Boşalt"
+  onaylandi={sepetiBosalt}
+/>
