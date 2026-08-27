@@ -52,7 +52,11 @@
     const method = duzenlemeMi ? "PUT" : "POST";
 
     let resimYolu = form.image_url?.trim() || "";
-    if (resimYolu && !resimYolu.startsWith("/") && !resimYolu.startsWith("http")) {
+    if (
+      resimYolu &&
+      !resimYolu.startsWith("/") &&
+      !resimYolu.startsWith("http")
+    ) {
       if (!/\.(jpg|jpeg|png|webp|gif)$/i.test(resimYolu)) resimYolu += ".jpg";
       resimYolu = `/products/${resimYolu}`;
     }
@@ -79,17 +83,27 @@
 </script>
 
 {#if acik}
-  <div class="modal-arkaplan" onclick={kapat}
-       onkeydown={(e) => e.key === "Escape" && kapat()}
-       role="button" tabindex="0">
-    <div class="buyuk-modal" onclick={(e) => e.stopPropagation()} role="presentation">
+  <div
+    class="modal-arkaplan"
+    onclick={kapat}
+    onkeydown={(e) => e.key === "Escape" && kapat()}
+    role="button"
+    tabindex="0"
+  >
+    <div
+      class="buyuk-modal"
+      onclick={(e) => e.stopPropagation()}
+      role="presentation"
+    >
       <h2>{duzenlemeMi ? "Ürün Düzenle" : "Yeni Ürün"}</h2>
 
-      <label>Ürün Adı
+      <label
+        >Ürün Adı
         <input bind:value={form.name} placeholder="Ürün adı" />
       </label>
 
-      <label>Kategori
+      <label
+        >Kategori
         <select bind:value={form.category_id}>
           <option value="">Kategori seç</option>
           {#each veri.categories.filter((c) => !c.parent_id) as ust}
@@ -106,23 +120,41 @@
         </select>
       </label>
 
-      <label>Fiyat (₺)
-        <input type="number" step="0.01" bind:value={form.price} placeholder="0.00" />
+      <label
+        >Fiyat (₺)
+        <input
+          type="number"
+          step="0.01"
+          bind:value={form.price}
+          placeholder="0.00"
+        />
       </label>
 
-      <label>Resim
-        <input bind:value={form.image_url} placeholder="Ürün adı" />
+      <label>
+        Görsel URL
+        <input
+          bind:value={form.image_url}
+          placeholder="https://upload.wikimedia.org/..."
+        />
       </label>
 
-      {#if onizlemeYolu}
-        <img src={onizlemeYolu} alt="Önizleme" style="max-width: 150px; border-radius: 8px;" />
+      {#if form.image_url}
+        <img
+          src={form.image_url}
+          alt="önizleme"
+          class="onizleme"
+          onerror={(e) => (e.currentTarget.style.display = "none")}
+          onload={(e) => (e.currentTarget.style.display = "block")}
+        />
       {/if}
 
       {#if hata}<p class="error">{hata}</p>{/if}
 
       <div class="modal-butonlar">
         <button class="iptal-btn" onclick={kapat}>İptal</button>
-        <button class="ekle-btn" onclick={kaydet}>{duzenlemeMi ? "Kaydet" : "Ekle"}</button>
+        <button class="ekle-btn" onclick={kaydet}
+          >{duzenlemeMi ? "Kaydet" : "Ekle"}</button
+        >
       </div>
     </div>
   </div>

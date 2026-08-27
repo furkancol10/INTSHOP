@@ -1200,6 +1200,7 @@ sepet-btn:active {
 .filtre-cubuk input,
 .filtre-cubuk select {
   padding: .55rem .8rem;
+  margin-bottom: .5rem;
   border: 1px solid whitesmoke;
   border-radius: 8px;
   font-size: .95rem;
@@ -1359,7 +1360,15 @@ sepet-btn:active {
   box-shadow: 0 10px 40px rgba(0, 0, 0, .2);
 }
 
-
+/*   Görsel URL    */
+.onizleme {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  border: 1px solid #e8ebef;
+  border-radius: 8px;
+  margin-top: .5rem;
+}
 
 
 

@@ -91,6 +91,7 @@ public class ProductsController : ControllerBase
         // Foreign key sırası: önce bağlı kayıtlar
         await _db.ExecuteAsync("DELETE FROM requests WHERE product_id = @id", new { id });
         await _db.ExecuteAsync("DELETE FROM stock_movements WHERE product_id = @id", new { id });
+        await _db.ExecuteAsync("DELETE FROM cart_items WHERE product_id = @id", new { id });
         await _db.ExecuteAsync("DELETE FROM dealer_stock WHERE product_id = @id", new { id });
 
         var affected = await _db.ExecuteAsync("DELETE FROM products WHERE id = @id", new { id });

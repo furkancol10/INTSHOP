@@ -13,13 +13,17 @@
 
     let gruplar = $derived(
         Object.values(
-            sepet.satirlar.reduce((acc,s) => {
-                acc[s.dealer_id] ??= { bayi: s.bayi, satirlar: [], araToplam: 0 };
+            sepet.satirlar.reduce((acc, s) => {
+                acc[s.dealer_id] ??= {
+                    bayi: s.bayi,
+                    satirlar: [],
+                    araToplam: 0,
+                };
                 acc[s.dealer_id].satirlar.push(s);
                 acc[s.dealer_id].araToplam += Number(s.satir_tutar);
                 return acc;
-            }, {})
-        )
+            }, {}),
+        ),
     );
 
     async function adetDegistir(id, yeni) {
@@ -48,7 +52,7 @@
             durum.error = e instanceof Error ? e.message : String(e);
         }
     }
-    
+
     let onayAcik = $state(false);
 
     async function sepetiBosalt() {
@@ -91,7 +95,13 @@
                         <div class="sepet-satir">
                             <div class="satir-gorsel">
                                 {#if s.image_url}
-                                    <img src={s.image_url} alt={s.urun} />
+                                    <img
+                                        src={s.image_url}
+                                        alt={s.urun}
+                                        onerror={(e) =>
+                                            (e.currentTarget.src =
+                                                "/images/placeholder.png")}
+                                    />
                                 {:else}
                                     <div class="gorsel-yok">-</div>
                                 {/if}
@@ -131,18 +141,20 @@
                                 >
                             </div>
 
-                            <div class="satir-tutar">{fiyatKolon(s.satir_tutar)}</div>
+                            <div class="satir-tutar">
+                                {fiyatKolon(s.satir_tutar)}
+                            </div>
                         </div>
                     {/each}
                 </div>
             {/each}
         </div>
-        
+
         <aside class="sepet-ozet">
             <span class="ozet-etiket">SEÇİLEN ÜRÜNLER ({sepet.adet})</span>
             <span class="ozet-tutar">{fiyatKolon(sepet.toplam)}</span>
             <!--                            Sipariş Sistemi HENÜZ Yok                           -->
-        
+
             <button class="ozet-btn" disabled>Alışverişi Tamamla</button>
             <p class="ozet-not">Sipariş oluşturma geliştirme aşamasında!</p>
         </aside>
@@ -154,9 +166,9 @@
 {/if}
 
 <OnayModal
-  bind:acik={onayAcik}
-  baslik="Sepeti Temizle"
-  mesaj="Sepetinizdeki tüm ürünler kaldırılacak. Devam etmek istiyor musunuz?"
-  onayYazi="Boşalt"
-  onaylandi={sepetiBosalt}
+    bind:acik={onayAcik}
+    baslik="Sepeti Temizle"
+    mesaj="Sepetinizdeki tüm ürünler kaldırılacak. Devam etmek istiyor musunuz?"
+    onayYazi="Boşalt"
+    onaylandi={sepetiBosalt}
 />

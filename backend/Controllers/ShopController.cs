@@ -18,7 +18,7 @@ public class ShopController : ControllerBase
     }
 
     [HttpGet("shop")]
-    public async Task<IActionResult> Shop([FromQuery] int offset = 0, [FromQuery] int limit = 12)
+    public async Task<IActionResult> Shop([FromQuery] int offset = 0, [FromQuery] int limit = 20, int? kategori = null, string? arama = null)
     {
         var token = Request.Headers["Authorization"].ToString();
         var role = await GetRole(token);
@@ -32,9 +32,11 @@ public class ShopController : ControllerBase
             JOIN products p ON p.id = ds.product_id
             JOIN users u ON u.id = ds.dealer_id
             WHERE ds.stock > 0 AND ds.price IS NOT NULL
+                AND (@kategori IS NULL OR p.category_id = @kategori)
+                AND (@arama IS NULL OR p.name ILIKE '%' || @arama || '%')
             ORDER BY p.name, u.username
             LIMIT @adet OFFSET @baslangic";
-        var rows = await _db.QueryAsync(sql, new { adet = limit, baslangic = offset});
+        var rows = await _db.QueryAsync(sql, new { adet = limit, baslangic = offset, kategori, arama = string.IsNullOrWhiteSpace(arama) ? null : arama});
         return Ok(rows);
     }
  }
