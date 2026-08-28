@@ -48,10 +48,15 @@ public class AuthController : ControllerBase
             "SELECT id, password_hash, role, avatar_url FROM users WHERE username = @username",
             new { req.username });
 
-        if (user is null)
-            return Unauthorized("Kullanıcı bulunamadı");
+        var hash = user is null
+            ? "$2a$11$/HEWwh0XFN2vBgwD7DsbFOoxQPtvtw5ChTTOi2c0i0uLReO8d4JH2"
+            : (string)user.password_hash;
 
-        bool ok = BCrypt.Net.BCrypt.Verify(req.password, (string)user.password_hash);
+        bool ok = BCrypt.Net.BCrypt.Verify(req.password, hash);
+
+        if (user is null || !ok)
+            return Unauthorized("Kullanıcı adı veya şifre hatalı");
+            
         if (!ok)
             return Unauthorized("Şifre hatalı");
 
