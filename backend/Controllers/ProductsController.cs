@@ -9,8 +9,8 @@ public class ProductsController : ControllerBase
     private readonly IDbConnection _db;
     public ProductsController(IDbConnection db) => _db = db;
 
-    public record NewProduct(string name, int category_id, int stock, decimal price, string? image_url);
-    public record UpdateProduct(string name, int category_id, decimal price, string? image_url);
+    public record NewProduct(string name, int category_id, int stock, decimal price, string? image_url, string? attributes);
+    public record UpdateProduct(string name, int category_id, decimal price, string? image_url, string? attributes);
 
     // ---------- ÜRÜNLERİ LİSTELE ----------
     [HttpGet]
@@ -24,7 +24,7 @@ public class ProductsController : ControllerBase
             SELECT p.id, p.name, p.category_id,
                    c.name AS category,
                    ust.name AS parent_category,
-                   p.stock, p.price, p.image_url,
+                   p.stock, p.price, p.image_url, p.attributes,
                    p.min_oran, p.max_oran,
                    ROUND(p.price * COALESCE(p.min_oran, 80) / 100, 2) AS alt_sinir,
                    ROUND(p.price * COALESCE(p.max_oran, 120) / 100, 2) AS ust_sinir,
@@ -47,8 +47,8 @@ public class ProductsController : ControllerBase
         if (role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
 
         var sql = @"
-            INSERT INTO products (name, category_id, stock, price, image_url)
-            VALUES (@name, @category_id, @stock, @price, @image_url)
+            INSERT INTO products (name, category_id, stock, price, image_url, attributes)
+            VALUES (@name, @category_id, @stock, @price, @image_url, COALESCE(@attributes::jsonb, '{}'::jsonb))
             RETURNING id";
         var id = await _db.ExecuteScalarAsync<int>(sql, p);
 
@@ -77,9 +77,10 @@ public class ProductsController : ControllerBase
 
         var affected = await _db.ExecuteAsync(
             @"UPDATE products
-              SET name = @name, category_id = @category_id, price = @price, image_url = @image_url
+              SET name = @name, category_id = @category_id, price = @price, image_url = @image_url,
+                  attributes = COALESCE(@attributes::jsonb, '{}'::jsonb)
               WHERE id = @id",
-            new { id, p.name, p.category_id, p.price, p.image_url });
+            new { id, p.name, p.category_id, p.price, p.image_url, p.attributes });
 
         return affected > 0 ? Ok() : NotFound();
     }

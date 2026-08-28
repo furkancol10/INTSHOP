@@ -146,7 +146,8 @@ CREATE TABLE public.products (
     created_at timestamp without time zone DEFAULT now(),
     image_url character varying(500),
     min_oran numeric(5,2) DEFAULT 80,
-    max_oran numeric(5,2) DEFAULT 120
+    max_oran numeric(5,2) DEFAULT 120,
+    attributes jsonb DEFAULT '{}'::jsonb
 );
 
 

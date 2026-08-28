@@ -1,11 +1,22 @@
 <script>
   import { API, veri, authHeader, durum, fiyatKolon, sayfalar, sayfala, toplamSayfa, sayfaGit } from "../store.svelte.js";
+  import { ozellikAlanlari, ozellikleriAyristir } from "../urunOzellikleri.js";
   import UrunModal from "../Modals/UrunModal.svelte";
 
   let { yenile } = $props();
 
   let modalAcik = $state(false);
   let duzenlenenUrun = $state(null);
+
+  function ozellikOzeti(p) {
+    const alanlar = ozellikAlanlari(p.category);
+    if (!alanlar.length) return "-";
+    const degerler = ozellikleriAyristir(p.attributes);
+    const dolu = alanlar
+      .filter((a) => degerler[a.key])
+      .map((a) => `${a.label}: ${degerler[a.key]}`);
+    return dolu.length ? dolu.join(" · ") : "-";
+  }
 
   function ekleAc() {
     duzenlenenUrun = null;
@@ -40,6 +51,7 @@
       <thead>
         <tr>
           <th>ID</th><th>Resim</th><th>Ürün</th><th>Kategori</th>
+          <th>Özellikler</th>
           <th>Toplam Stok</th><th>Fiyat</th><th>Aralık</th><th></th>
         </tr>
       </thead>
@@ -50,6 +62,7 @@
             <td>{#if p.image_url}<img src={p.image_url} alt={p.name} />{/if}</td>
             <td>{p.name}</td>
             <td>{p.parent_category ? `${p.parent_category} › ${p.category}` : p.category}</td>
+            <td class="kucuk ozellik-hucre">{ozellikOzeti(p)}</td>
             <td>{p.toplam_stok}</td>
             <td>{fiyatKolon(p.price)}</td>
             <td class="kucuk">{fiyatKolon(p.alt_sinir)} - {fiyatKolon(p.ust_sinir)}</td>

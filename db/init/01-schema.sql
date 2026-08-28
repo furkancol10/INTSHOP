@@ -71,7 +71,8 @@ CREATE TABLE products (
     created_at  TIMESTAMP DEFAULT NOW(),
     image_url   VARCHAR(500),
     min_oran    NUMERIC(5,2) DEFAULT 80,
-    max_oran    NUMERIC(5,2) DEFAULT 120
+    max_oran    NUMERIC(5,2) DEFAULT 120,
+    attributes  JSONB DEFAULT '{}'::jsonb
 );
 
 INSERT INTO products (name, category_id, stock, price, image_url) VALUES

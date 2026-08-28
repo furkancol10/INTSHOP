@@ -57,7 +57,7 @@ public class ShopController : ControllerBase
         if (role != "Kullanici") return StatusCode(403, "Sadece müşteriler");
 
         var sql = @"
-            SELECT p.id AS product_id, p.name, p.image_url, c.name AS category,
+            SELECT p.id AS product_id, p.name, p.image_url, p.attributes, c.name AS category,
                    u.id AS dealer_id, u.username AS dealer_name, ds.price, ds.stock
             FROM dealer_stock ds
             JOIN products p ON p.id = ds.product_id
@@ -75,6 +75,7 @@ public class ShopController : ControllerBase
             name = (string)ilk.name,
             image_url = (string?)ilk.image_url,
             category = (string?)ilk.category,
+            attributes = (string?)ilk.attributes,
             teklifler
         });
     }

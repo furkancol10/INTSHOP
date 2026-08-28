@@ -623,6 +623,18 @@ table tbody tr:nth-child(even) {
   margin-top: auto;
 }
 
+.ozellik-baslik {
+  margin: 0;
+  font-size: 1rem;
+  color: #444;
+}
+
+.ozellik-izgara {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.9rem;
+}
+
 /* ---- Mağaza ekranı ---- */
 
 .urun-kartlari {
@@ -772,6 +784,32 @@ sepet-btn:active {
   margin: 0;
   color: darkslategrey;
   font-size: .9rem;
+}
+
+.ozellik-liste {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: .6rem 1.5rem;
+  margin: 0 0 1.5rem;
+}
+
+.ozellik-satir {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  padding-bottom: .5rem;
+  border-bottom: 1px solid whitesmoke;
+}
+
+.ozellik-satir dt {
+  color: darkslategrey;
+  font-size: .9rem;
+}
+
+.ozellik-satir dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
 }
 
 .teklif-liste {
@@ -1044,6 +1082,13 @@ sepet-btn:active {
 .kucuk {
   font-size: .75rem;
   color: gray
+}
+
+.ozellik-hucre {
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .onay-btn {

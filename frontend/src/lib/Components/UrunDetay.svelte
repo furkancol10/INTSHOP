@@ -6,6 +6,7 @@
     fiyatKolon,
     sepeteEkle,
   } from "../store.svelte.js";
+  import { ozellikAlanlari, ozellikleriAyristir } from "../urunOzellikleri.js";
 
   let { productId, geriDon } = $props();
 
@@ -35,6 +36,14 @@
   $effect(() => {
     productId;
     yukle();
+  });
+
+  let ozellikler = $derived.by(() => {
+    if (!urun) return [];
+    const degerler = ozellikleriAyristir(urun.attributes);
+    return ozellikAlanlari(urun.category)
+      .filter((a) => degerler[a.key])
+      .map((a) => ({ label: a.label, deger: degerler[a.key] }));
   });
 
   async function ekle(dealerId) {
@@ -73,6 +82,18 @@
         {#if urun.category}<p class="detay-kategori">{urun.category}</p>{/if}
       </div>
     </div>
+
+    {#if ozellikler.length}
+      <h3>Ürün Özellikleri</h3>
+      <dl class="ozellik-liste">
+        {#each ozellikler as o}
+          <div class="ozellik-satir">
+            <dt>{o.label}</dt>
+            <dd>{o.deger}</dd>
+          </div>
+        {/each}
+      </dl>
+    {/if}
 
     <h3>Satıcıyı seçin</h3>
     <div class="teklif-liste">

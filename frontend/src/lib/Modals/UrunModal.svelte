@@ -1,12 +1,19 @@
 <script>
   import { API, veri, jsonHeader } from "../store.svelte.js";
+  import { ozellikAlanlari, ozellikleriAyristir, ozellikleriStringify } from "../urunOzellikleri.js";
 
   let { acik = $bindable(), urun = null, kaydedildi } = $props();
 
   let form = $state({ name: "", category_id: "", price: "", image_url: "" });
+  let attributes = $state({});
   let hata = $state("");
 
   let duzenlemeMi = $derived(urun !== null);
+
+  let kategoriAdi = $derived(
+    veri.categories.find((c) => c.id === Number(form.category_id))?.name ?? "",
+  );
+  let ozellikAlanlariGecerli = $derived(ozellikAlanlari(kategoriAdi));
 
   $effect(() => {
     if (acik) {
@@ -18,6 +25,7 @@
             image_url: urun.image_url ?? "",
           }
         : { name: "", category_id: "", price: "", image_url: "" };
+      attributes = urun ? ozellikleriAyristir(urun.attributes) : {};
       hata = "";
     }
   });
@@ -71,6 +79,7 @@
           stock: 0,
           price: Number(form.price),
           image_url: resimYolu,
+          attributes: ozellikleriStringify(attributes, kategoriAdi),
         }),
       });
       if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
@@ -146,6 +155,18 @@
           onerror={(e) => (e.currentTarget.style.display = "none")}
           onload={(e) => (e.currentTarget.style.display = "block")}
         />
+      {/if}
+
+      {#if ozellikAlanlariGecerli.length}
+        <h3 class="ozellik-baslik">{kategoriAdi} Özellikleri</h3>
+        <div class="ozellik-izgara">
+          {#each ozellikAlanlariGecerli as alan}
+            <label
+              >{alan.label}
+              <input bind:value={attributes[alan.key]} placeholder={alan.label} />
+            </label>
+          {/each}
+        </div>
       {/if}
 
       {#if hata}<p class="error">{hata}</p>{/if}
