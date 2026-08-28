@@ -7,6 +7,7 @@
     veri,
     fiyatKolon,
   } from "../store.svelte.js";
+  import SepetWidget from "./SepetWidget.svelte";
 
   function detayaGit(productId) {
     durum.secilenUrunId = productId;
@@ -78,6 +79,8 @@
     await loadShop();
   });
 </script>
+
+<SepetWidget />
 
 <h2>Mağaza</h2>
 <div class="filtre-cubuk">

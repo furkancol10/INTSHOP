@@ -68,7 +68,31 @@
         }
     }
 
-    onMount(sepetYukle);
+    let oneriler = $state([]);
+
+    async function onerileriYukle() {
+        try {
+            const res = await fetch(`${API}/api/shop?limit=12`, {
+                headers: authHeader(),
+            });
+            if (!res.ok) return;
+            const tumu = await res.json();
+            const sepettekiIdler = new Set(sepet.satirlar.map((s) => s.product_id));
+            oneriler = tumu.filter((u) => !sepettekiIdler.has(u.product_id)).slice(0, 6);
+        } catch {
+            // öneriler yüklenemezse sessizce yok say
+        }
+    }
+
+    function urunAc(productId) {
+        durum.secilenUrunId = productId;
+        durum.aktifSekme = "urun-detay";
+    }
+
+    onMount(async () => {
+        await sepetYukle();
+        await onerileriYukle();
+    });
 </script>
 
 <div class="sepet-baslik">
@@ -162,6 +186,31 @@
 {:else}
     <div class="sepet-bos">
         <p>Sepetiniz boş.</p>
+    </div>
+{/if}
+
+{#if oneriler.length}
+    <div class="oneri-bolum">
+        <h3>Önerilen Ürünler</h3>
+        <div class="urun-kartlari">
+            {#each oneriler as urun}
+                <button class="urun-kart" onclick={() => urunAc(urun.product_id)}>
+                    {#if urun.image_url}
+                        <img
+                            src={urun.image_url}
+                            alt={urun.name}
+                            class="kart-resim"
+                            onerror={(e) => (e.currentTarget.src = "/images/placeholder.png")}
+                        />
+                    {/if}
+                    <h3>{urun.name}</h3>
+                    <p class="kart-satici">
+                        En uygun: <strong>{urun.dealer_name}</strong>
+                    </p>
+                    <p class="kart-fiyat">{fiyatKolon(urun.price)}</p>
+                </button>
+            {/each}
+        </div>
     </div>
 {/if}
 

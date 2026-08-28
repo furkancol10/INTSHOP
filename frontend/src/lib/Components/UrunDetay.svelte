@@ -7,6 +7,7 @@
     sepeteEkle,
   } from "../store.svelte.js";
   import { ozellikAlanlari, ozellikleriAyristir } from "../urunOzellikleri.js";
+  import SepetWidget from "./SepetWidget.svelte";
 
   let { productId, geriDon } = $props();
 
@@ -50,8 +51,7 @@
     ekleniyorId = dealerId;
     try {
       await sepeteEkle(productId, dealerId);
-      durum.bildirim = "Ürün sepete eklendi";
-      setTimeout(() => (durum.bildirim = ""), 2000);
+      durum.sepetPopup = true;
     } catch (e) {
       durum.error = e instanceof Error ? e.message : String(e);
     } finally {
@@ -59,6 +59,8 @@
     }
   }
 </script>
+
+<SepetWidget />
 
 <button class="geri-btn" onclick={geriDon}>← Mağazaya Dön</button>
 

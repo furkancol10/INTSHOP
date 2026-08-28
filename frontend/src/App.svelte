@@ -196,10 +196,6 @@
               class:aktif={durum.aktifSekme === "magaza"}
               onclick={() => (durum.aktifSekme = "magaza")}>Mağaza</button
             >
-            <button
-              class:aktif={durum.aktifSekme === "sepet"}
-              onclick={() => (durum.aktifSekme = "sepet")}>Sepetim</button
-            >
           {/if}
         </div>
 
@@ -224,13 +220,7 @@
 
     <div class="sekme-icerik">
       {#if durum.aktifSekme === "anasayfa"}
-        <div class="hosgeldin">
-          <h1>Hoş Geldiniz, {oturum.currentUser}!</h1>
-          <p>
-            Stok işlemleriniz için "Stok", raporlarınız için "Raporlar"
-            sekmesini kullanın.
-          </p>
-        </div>
+        <Magaza />
       {:else if durum.aktifSekme === "loglar"}
         <AdminLoglar />
       {:else if durum.aktifSekme === "stok"}
