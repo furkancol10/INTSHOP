@@ -111,15 +111,16 @@ h2 {
 .lava-background {
   position: absolute;
   inset: 0;
-  filter: blur(25px) contrast(19);
+  filter: blur(38px) contrast(11);
   z-index: 0;
   pointer-events: none;
+  animation: normal;
 }
 
 .lava {
   position: absolute;
   border-radius: 50%;
-  mix-blend-mode: screen;
+  mix-blend-mode: normal;
 }
 
 .lava-1 {
@@ -127,7 +128,8 @@ h2 {
   height: 240px;
   background: red;
   left: 12%;
-  animation: yuz1 14s ease-in-out infinite;
+  animation: yuz1 46s cubic-bezier(.45, .05, .55, .95) infinite -4s;
+  will-change: transform, top;
 }
 
 .lava-2 {
@@ -135,7 +137,8 @@ h2 {
   height: 180px;
   background: cyan;
   left: 30%;
-  animation: yuz2 18s ease-in-out infinite;
+  animation: yuz2 50s cubic-bezier(.4, .1, .3, .9) infinite -17s;
+  will-change: transform, top;
 }
 
 .lava-3 {
@@ -143,7 +146,8 @@ h2 {
   height: 300px;
   background: #7c3aed;
   left: 55%;
-  animation: yuz3 22s ease-in-out infinite;
+  animation: yuz3 58s cubic-bezier(.5, 0, .4, 1) infinite -9s;
+  will-change: transform, top;
 }
 
 .lava-4 {
@@ -151,7 +155,8 @@ h2 {
   height: 150px;
   background: orange;
   left: 12%;
-  animation: yuz1 14s ease-in-out infinite reverse;
+  animation: yuz4 49s cubic-bezier(.42, .08, .58, .92) infinite -26s;
+  will-change: transform, top;
 }
 
 .lava-5 {
@@ -159,7 +164,8 @@ h2 {
   height: 200px;
   background: cyan;
   left: 30%;
-  animation: yuz2 18s ease-in-out infinite reverse;
+  animation: yuz5 50s cubic-bezier(.38, .12, .32, .88) infinite -12s;
+  will-change: transform, top;
 }
 
 .lava-6 {
@@ -167,78 +173,67 @@ h2 {
   height: 130px;
   background: red;
   left: 88%;
-  animation: yuz3 12s ease-in-out infinite;
+  animation: yuz6 53s cubic-bezier(.48, .04, .46, .96) infinite -21s;
+  will-change: transform, top;
 }
 
 @keyframes yuz1 {
-
-  0%,
-  100% {
-    top: 110%;
-    transform: scale(1);
-  }
-
-  35% {
-    top: 40%;
-    transform: scale(1.25);
-  }
-
-  55% {
-    top: 15%;
-    transform: scale(0.85);
-  }
-
-  80% {
-    top: -20%;
-    transform: scale(1.1);
-  }
+  0%, 100% { top: 112%; transform: translateX(0) scale(1); }
+  18% { top: 78%; transform: translateX(3vw) scale(1.1); }
+  38% { top: 42%; transform: translateX(-2vw) scale(1.28); }
+  58% { top: 14%; transform: translateX(4vw) scale(0.86); }
+  78% { top: -12%; transform: translateX(-1.5vw) scale(1.12); }
+  92% { top: -22%; transform: translateX(1vw) scale(0.96); }
 }
 
 @keyframes yuz2 {
-
-  0%,
-  100% {
-    top: -25%;
-    transform: scale(0.9);
-  }
-
-  30% {
-    top: 30%;
-    transform: scale(1.3);
-  }
-
-  60% {
-    top: 65%;
-    transform: scale(0.8);
-  }
-
-  85% {
-    top: 105%;
-    transform: scale(1.15);
-  }
+  0%, 100% { top: -26%; transform: translateX(0) scale(0.9); }
+  22% { top: 2%; transform: translateX(-3.5vw) scale(1.15); }
+  44% { top: 33%; transform: translateX(2.5vw) scale(1.32); }
+  66% { top: 68%; transform: translateX(-2vw) scale(0.82); }
+  86% { top: 100%; transform: translateX(3vw) scale(1.18); }
 }
 
 @keyframes yuz3 {
+  0%, 100% { top: 102%; transform: translateX(0) scale(1.08); }
+  16% { top: 74%; transform: translateX(-3vw) scale(0.9); }
+  36% { top: 48%; transform: translateX(2vw) scale(1.22); }
+  56% { top: 22%; transform: translateX(-4vw) scale(0.78); }
+  76% { top: -8%; transform: translateX(3vw) scale(1.34); }
+  92% { top: -18%; transform: translateX(-1vw) scale(0.98); }
+}
 
-  0%,
-  100% {
-    top: 100%;
-    transform: scale(1.1);
-  }
+@keyframes yuz4 {
+  0%, 100% { top: -20%; transform: translateX(0) scale(1.05); }
+  24% { top: 10%; transform: translateX(4vw) scale(0.88); }
+  46% { top: 45%; transform: translateX(-3vw) scale(1.24); }
+  64% { top: 72%; transform: translateX(2.5vw) scale(0.92); }
+  82% { top: 96%; transform: translateX(-2vw) scale(1.14); }
+  94% { top: 106%; transform: translateX(1vw) scale(1); }
+}
 
-  25% {
-    top: 55%;
-    transform: scale(0.75);
-  }
+@keyframes yuz5 {
+  0%, 100% { top: 108%; transform: translateX(0) scale(0.95); }
+  20% { top: 80%; transform: translateX(-4vw) scale(1.2); }
+  42% { top: 50%; transform: translateX(3vw) scale(0.84); }
+  62% { top: 24%; transform: translateX(-2.5vw) scale(1.3); }
+  80% { top: -4%; transform: translateX(2vw) scale(0.9); }
+  95% { top: -24%; transform: translateX(-1vw) scale(1.1); }
+}
 
-  50% {
-    top: 20%;
-    transform: scale(1.35);
-  }
+@keyframes yuz6 {
+  0%, 100% { top: 96%; transform: translateX(0) scale(1.12); }
+  19% { top: 66%; transform: translateX(3.5vw) scale(0.86); }
+  40% { top: 38%; transform: translateX(-3vw) scale(1.28); }
+  60% { top: 12%; transform: translateX(2vw) scale(0.94); }
+  80% { top: -14%; transform: translateX(-2.5vw) scale(1.2); }
+  95% { top: -24%; transform: translateX(1.5vw) scale(1); }
+}
 
-  75% {
-    top: -15%;
-    transform: scale(0.95);
+@media (prefers-reduced-motion: reduce) {
+  .lava {
+    animation: none;
+    top: 45%;
   }
 }
 
