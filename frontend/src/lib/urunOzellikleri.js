@@ -24,14 +24,51 @@ export const KATEGORI_OZELLIKLERI = {
         { key: "basim_yeri", label: "Basım Yeri" },
         { key: "sayfa_sayisi", label: "Sayfa Sayısı" },
     ],
-    Gıda: [
+    Kulaklık: [
+        { key: "baglanti", label: "Bağlantı Tipi" },
+        { key: "dayaniklilik", label: "Suya / Tere dayanıklılık" },
+        { key: "mikrofon", label: "Mikrofon" },
+        { key: "bluetooth", label: "Bluetooth Versiyon" },
+        { key: "baglanti", label: "Bağlantı Tipi" },
+    ],
+    Monitör: [
+        { key: "ekran", label: "Ekran Boyutu" },
+        { key: "cozunurluk", label: "Çözünürlük" },
+        { key: "panel_tipi", label: "Panel Tipi" },
+        { key: "yenileme_hizi", label: "Yenileme Hızı" },
+        { key: "baglanti", label: "Bağlantı" },
+    ],
+    "Bilim Kurgu": [
+        { key: "yazar", label: "Yazar" },
+        { key: "cevirmen", label: "Çevirmen" },
+        { key: "yayinevi", label: "Yayınevi" },
+        { key: "basim_yili", label: "Basım Yılı" },
+        { key: "basim_yeri", label: "Basım Yeri" },
+        { key: "sayfa_sayisi", label: "Sayfa Sayısı" },
+    ],
+    Çikolata: [
         { key: "agirlik", label: "Ağırlık / Hacim" },
         { key: "skt", label: "Son Kullanma Tarihi" },
         { key: "icindekiler", label: "İçindekiler / Alerjenler" },
     ],
-    Elektronik: [
-        { key: "baglanti", label: "Bağlantı Tipi" },
-        { key: "garanti", label: "Garanti Süresi" },
+    "Meyve & Kuruyemiş": [
+        { key: "agirlik", label: "Ağırlık / Hacim" },
+        { key: "skt", label: "Son Kullanma Tarihi" },
+        { key: "icindekiler", label: "İçindekiler / Alerjenler" },
+    ],
+    İçecek: [
+        { key: "agirlik", label: "Ağırlık / Hacim" },
+        { key: "skt", label: "Son Kullanma Tarihi" },
+        { key: "icindekiler", label: "İçindekiler / Alerjenler" },
+    ],
+    Mouse: [
+        { key: "mouseFormu", label: "Mouse Formu" },
+        { key: "baglanti", label: "Bağlantı" },
+        { key: "kullanimAmaci", label: "Kullanım Amacı" },
+        { key: "dpi", label: "DPI"},
+        { key: "rgb", label: "RGB"},
+        { key: "mouseTip", label: "Mouse Tipi"},
+        { key: "butonSayi", label: "Buton Sayısı"},
     ],
 };
 

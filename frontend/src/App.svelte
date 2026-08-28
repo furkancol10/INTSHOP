@@ -28,6 +28,7 @@
   import Profil from "./lib/Components/Profil.svelte";
   import BayiTalepler from "./lib/Components/BayiTalepler.svelte";
   import AdminLoglar from "./lib/Components/AdminLoglar.svelte";
+  import AdminDenetim from "./lib/Components/AdminDenetim.svelte";
   import Sepet from "./lib/Components/Sepet.svelte";
 
   Chart.register(...registerables);
@@ -39,7 +40,7 @@
 
   async function girisSonrasi() {
     if (oturum.role === "Bayi") {
-      durum.aktifSekme = "anasayfa";
+      durum.aktifSekme = "stok";
     } else if (oturum.role === "Admin") {
       durum.aktifSekme = "loglar";
       await loadAll();
@@ -113,7 +114,7 @@
     }
 
     if (oturum.role === "Bayi") {
-      durum.aktifSekme = "anasayfa";
+      durum.aktifSekme = "stok";
     } else if (oturum.role === "Admin") {
       durum.aktifSekme = "loglar";
       loadAll();
@@ -178,6 +179,11 @@
               onclick={() => (durum.aktifSekme = "hareketler")}
               >Hareketler</button
             >
+            <button
+              class:aktif={durum.aktifSekme === "denetim"}
+              onclick={() => (durum.aktifSekme = "denetim")}
+              >Denetim</button
+            >
           {:else if oturum.role === "Bayi"}
             <button
               class:aktif={durum.aktifSekme === "stok"}
@@ -189,7 +195,7 @@
             >
             <button
               class:aktif={durum.aktifSekme === "talepler"}
-              onclick={() => (durum.aktifSekme = "talepler")}>Talepler</button
+              onclick={() => (durum.aktifSekme = "talepler")}>Taleplerim</button
             >
           {:else if oturum.role === "Kullanici"}
             <button
@@ -219,9 +225,7 @@
     {/if}
 
     <div class="sekme-icerik">
-      {#if durum.aktifSekme === "anasayfa"}
-        <Magaza />
-      {:else if durum.aktifSekme === "loglar"}
+      {#if durum.aktifSekme === "loglar"}
         <AdminLoglar />
       {:else if durum.aktifSekme === "stok"}
         <BayiStok />
@@ -233,6 +237,8 @@
         <AdminIstekler sayiDegisti={(n) => (bekleyenSayi = n)} />
       {:else if durum.aktifSekme === "hareketler"}
         <AdminHareketler />
+      {:else if durum.aktifSekme === "denetim"}
+        <AdminDenetim />
       {:else if durum.aktifSekme === "talepler"}
         <BayiTalepler />
       {:else if durum.aktifSekme === "urunler"}

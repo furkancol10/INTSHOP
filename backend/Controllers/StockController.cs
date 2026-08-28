@@ -72,6 +72,11 @@ public class StockController : ControllerBase
               VALUES (@dealerId, @pid, @qty)",
             new { dealerId, pid = req.product_id, qty = req.change });
 
+        await Denetim.Yaz(_db, HttpContext, user.Value.id, user.Value.role,
+            "stock.movement", "dealer_stock", req.product_id,
+            oldValue: new { dealerId, product_id = req.product_id, stock = yeniStok.Value - req.change },
+            newValue: new { dealerId, product_id = req.product_id, stock = yeniStok.Value, change = req.change });
+
         return Ok(new { product_id = req.product_id, newStock = yeniStok.Value, change = req.change });
     }
 

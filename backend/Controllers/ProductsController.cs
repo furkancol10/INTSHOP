@@ -43,8 +43,9 @@ public class ProductsController : ControllerBase
     public async Task<IActionResult> Create([FromBody] NewProduct p)
     {
         var token = Request.Headers["Authorization"].ToString();
-        var role = await AuthHelper.GetRole(_db, token);
-        if (role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
+        var user = await AuthHelper.GetUser(_db, token);
+        if (user is null) return Unauthorized();
+        if (user.Value.Role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
 
         var sql = @"
             INSERT INTO products (name, category_id, stock, price, image_url, attributes)
@@ -64,6 +65,10 @@ public class ProductsController : ControllerBase
                 )",
             new { productId = id });
 
+        await Denetim.Yaz(_db, HttpContext, user.Value.Id, user.Value.Role,
+            "product.create", "products", id,
+            newValue: new { id, p.name, p.category_id, p.stock, p.price, p.image_url, p.attributes });
+
         return Ok(new { id });
     }
 
@@ -72,8 +77,14 @@ public class ProductsController : ControllerBase
     public async Task<IActionResult> Update(int id, [FromBody] UpdateProduct p)
     {
         var token = Request.Headers["Authorization"].ToString();
-        var role = await AuthHelper.GetRole(_db, token);
-        if (role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
+        var user = await AuthHelper.GetUser(_db, token);
+        if (user is null) return Unauthorized();
+        if (user.Value.Role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
+
+        var eski = await _db.QueryFirstOrDefaultAsync(
+            "SELECT name, category_id, price, image_url, attributes FROM products WHERE id = @id",
+            new { id });
+        if (eski is null) return NotFound();
 
         var affected = await _db.ExecuteAsync(
             @"UPDATE products
@@ -82,7 +93,14 @@ public class ProductsController : ControllerBase
               WHERE id = @id",
             new { id, p.name, p.category_id, p.price, p.image_url, p.attributes });
 
-        return affected > 0 ? Ok() : NotFound();
+        if (affected == 0) return NotFound();
+
+        await Denetim.Yaz(_db, HttpContext, user.Value.Id, user.Value.Role,
+            "product.update", "products", id,
+            oldValue: new { eski.name, eski.category_id, eski.price, eski.image_url, eski.attributes },
+            newValue: new { p.name, p.category_id, p.price, p.image_url, p.attributes });
+
+        return Ok();
     }
 
     // ---------- ÜRÜN SİL ----------
@@ -90,8 +108,14 @@ public class ProductsController : ControllerBase
     public async Task<IActionResult> Delete(int id)
     {
         var token = Request.Headers["Authorization"].ToString();
-        var role = await AuthHelper.GetRole(_db, token);
-        if (role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
+        var user = await AuthHelper.GetUser(_db, token);
+        if (user is null) return Unauthorized();
+        if (user.Value.Role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
+
+        var silinen = await _db.QueryFirstOrDefaultAsync(
+            "SELECT name, category_id, stock, price, image_url, attributes FROM products WHERE id = @id",
+            new { id });
+        if (silinen is null) return NotFound();
 
         // Foreign key sırası: önce bağlı kayıtlar
         await _db.ExecuteAsync("DELETE FROM requests WHERE product_id = @id", new { id });
@@ -100,6 +124,12 @@ public class ProductsController : ControllerBase
         await _db.ExecuteAsync("DELETE FROM dealer_stock WHERE product_id = @id", new { id });
 
         var affected = await _db.ExecuteAsync("DELETE FROM products WHERE id = @id", new { id });
-        return affected > 0 ? Ok() : NotFound();
+        if (affected == 0) return NotFound();
+
+        await Denetim.Yaz(_db, HttpContext, user.Value.Id, user.Value.Role,
+            "product.delete", "products", id,
+            oldValue: new { silinen.name, silinen.category_id, silinen.stock, silinen.price, silinen.image_url, silinen.attributes });
+
+        return Ok();
     }
 }

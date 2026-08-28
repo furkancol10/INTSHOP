@@ -20,8 +20,9 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterReq req)
     {
         var token = Request.Headers["Authorization"].ToString();
-        var role = await AuthHelper.GetRole(_db, token);
-        if (role != "Admin") return StatusCode(403, "Sadece Admin kullanıcı ekleyebilir!");
+        var user = await AuthHelper.GetUser(_db, token);
+        if (user is null) return Unauthorized();
+        if (user.Value.Role != "Admin") return StatusCode(403, "Sadece Admin kullanıcı ekleyebilir!");
 
         var hash = BCrypt.Net.BCrypt.HashPassword(req.password);
         var izinliRoller = new[] { "Admin", "Bayi", "Kullanici" };
@@ -32,6 +33,11 @@ public class AuthController : ControllerBase
                 @"INSERT INTO users (username, password_hash, email, role, address, phone)
                   VALUES (@username, @hash, @email, @role, @address, @phone) RETURNING id",
                 new { req.username, hash, req.email, req.role, req.address, req.phone });
+
+            await Denetim.Yaz(_db, HttpContext, user.Value.Id, user.Value.Role,
+                "user.create", "users", id,
+                newValue: new { req.username, req.role });
+
             return Ok(new { id, req.username, req.email, req.role });
         }
         catch

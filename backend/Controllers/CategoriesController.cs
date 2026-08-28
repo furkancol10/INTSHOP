@@ -35,8 +35,9 @@ public class CategoriesController : ControllerBase
     public async Task<IActionResult> Create([FromBody] NewCategory c)
     {
         var token = Request.Headers["Authorization"].ToString();
-        var role = await AuthHelper.GetRole(_db, token);
-        if (role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
+        var user = await AuthHelper.GetUser(_db, token);
+        if (user is null) return Unauthorized();
+        if (user.Value.Role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
 
         if (string.IsNullOrWhiteSpace(c.name))
             return BadRequest("Kategori adı zorunlu");
@@ -44,6 +45,10 @@ public class CategoriesController : ControllerBase
         var id = await _db.ExecuteScalarAsync<int>(
             "INSERT INTO categories (name, parent_id) VALUES (@name, @parent_id) RETURNING id",
             new { c.name, c.parent_id });
+
+        await Denetim.Yaz(_db, HttpContext, user.Value.Id, user.Value.Role,
+            "category.create", "categories", id,
+            newValue: new { id, c.name, c.parent_id });
 
         return Ok(new { id, c.name, c.parent_id });
     }
@@ -53,8 +58,9 @@ public class CategoriesController : ControllerBase
     public async Task<IActionResult> Delete(int id)
     {
         var token = Request.Headers["Authorization"].ToString();
-        var role = await AuthHelper.GetRole(_db, token);
-        if (role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
+        var user = await AuthHelper.GetUser(_db, token);
+        if (user is null) return Unauthorized();
+        if (user.Value.Role != "Admin") return StatusCode(403, "Bu işlem için yetkiniz yok");
 
         // Alt kategorisi var mı?
         var altSayisi = await _db.ExecuteScalarAsync<int>(
@@ -68,7 +74,17 @@ public class CategoriesController : ControllerBase
         if (urunSayisi > 0)
             return BadRequest($"Bu kategoride {urunSayisi} ürün var, önce onları taşıyın");
 
+        var silinen = await _db.QueryFirstOrDefaultAsync(
+            "SELECT name, parent_id FROM categories WHERE id = @id", new { id });
+        if (silinen is null) return NotFound();
+
         var affected = await _db.ExecuteAsync("DELETE FROM categories WHERE id = @id", new { id });
-        return affected > 0 ? Ok() : NotFound();
+        if (affected == 0) return NotFound();
+
+        await Denetim.Yaz(_db, HttpContext, user.Value.Id, user.Value.Role,
+            "category.delete", "categories", id,
+            oldValue: new { silinen.name, silinen.parent_id });
+
+        return Ok();
     }
 }
