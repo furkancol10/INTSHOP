@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration.UserSecrets;
 using System.Data;
+using System.Linq;
 
 [ApiController]
 [Route("api")]
@@ -23,6 +24,8 @@ public class AuthController : ControllerBase
         if (role != "Admin") return StatusCode(403, "Sadece Admin kullanıcı ekleyebilir!");
 
         var hash = BCrypt.Net.BCrypt.HashPassword(req.password);
+        var izinliRoller = new[] { "Admin", "Bayi", "Kullanici" };
+        if (!izinliRoller.Contains(req.role)) return BadRequest("Geçersiz rol");
         try
         {
             var id = await _db.ExecuteScalarAsync<int>(
@@ -127,5 +130,5 @@ public class AuthController : ControllerBase
 
         return Ok();
     }
-    
+
 }
