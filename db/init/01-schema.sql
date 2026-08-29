@@ -244,6 +244,17 @@ CREATE TABLE audit_log (
 CREATE INDEX idx_audit_created ON audit_log (created_at DESC);
 CREATE INDEX idx_audit_actor ON audit_log (actor_id);
 
+CREATE TABLE login_logs (
+    id         SERIAL PRIMARY KEY,
+    user_id    INT REFERENCES users(id),   -- kim giris yapti
+    action     VARCHAR(10) NOT NULL,       -- 'login' / 'logout'
+    ip_address VARCHAR(45),
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_login_logs_user ON login_logs (user_id);
+CREATE INDEX idx_login_logs_created ON login_logs (created_at DESC);
+
 
 -- ---------- 8. SEPET ----------
 -- UNIQUE (user_id, product_id, dealer_id):

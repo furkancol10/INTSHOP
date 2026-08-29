@@ -72,8 +72,8 @@ public class AuthController : ControllerBase
             new { token, id = (int)user.id });
 
         await _db.ExecuteAsync(
-            "INSERT INTO login_logs (user_id, action) VALUES (@userId, 'login')",
-            new { userId = (int)user.id });
+            "INSERT INTO login_logs (user_id, action, ip_address) VALUES (@userId, 'login', @ipAddress)",
+            new { userId = (int)user.id, ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() });
 
         return Ok(new { token, role = (string)user.role, username = req.username, avatar_url = (string?)user.avatar_url });
     }
@@ -132,8 +132,8 @@ public class AuthController : ControllerBase
         if (userId is null) return Unauthorized();
 
         await _db.ExecuteAsync(
-            "INSERT INTO login_logs (user_id, action) VALUES (@userId, 'logout')",
-            new { userId = userId.Value });
+            "INSERT INTO login_logs (user_id, action, ip_address) VALUES (@userId, 'logout', @ipAddress)",
+            new { userId = userId.Value, ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() });
 
         await _db.ExecuteAsync(
             "UPDATE users SET token = NULL WHERE id = @userId",
