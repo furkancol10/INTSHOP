@@ -52,6 +52,32 @@ public class RequestsController : ControllerBase
         int productId = (int)talep.product_id;
         decimal yeni_Fiyat = (decimal)talep.new_price;
 
+        // Guncel aralikla yeniden dogrula: talep olusturulduktan sonra urunun
+        // taban fiyati/oranlari degismis olabilir. Aralik disi kalan talep
+        // korumali sekilde otomatik reddedilir (fiyat uygulanmaz).
+        var sinir = await _db.QueryFirstOrDefaultAsync(
+            @"SELECT ROUND(price * COALESCE(min_oran, 80) / 100, 2) AS alt,
+                     ROUND(price * COALESCE(max_oran, 120) / 100, 2) AS ust
+              FROM products WHERE id = @pid",
+            new { pid = productId });
+        if (sinir is null) return NotFound("Ürün bulunamadı");
+
+        decimal alt = (decimal)sinir.alt, ust = (decimal)sinir.ust;
+        if (yeni_Fiyat < alt || yeni_Fiyat > ust)
+        {
+            var otomatikNot = $"Otomatik reddedildi: talep fiyatı ({yeni_Fiyat} ₺) güncel aralık dışında ({alt} - {ust} ₺).";
+            await _db.ExecuteAsync(
+                "UPDATE requests SET status = 'rejected', admin_note = @note, resolved_at = NOW() WHERE id = @id",
+                new { id, note = otomatikNot });
+
+            await Denetim.Yaz(_db, HttpContext, user.Value.Id, user.Value.Role,
+                "request.reject", "requests", id,
+                oldValue: new { status = "pending" },
+                newValue: new { status = "rejected", sebep = "aralik_disi", alt, ust, talep_fiyat = yeni_Fiyat });
+
+            return BadRequest(new { id, durum = "otomatik_reddedildi", sebep = otomatikNot });
+        }
+
         //Fiyat uygula
         await _db.ExecuteAsync(
             "UPDATE dealer_stock SET price = @price WHERE dealer_id = @dealerId AND product_id = @pid",
