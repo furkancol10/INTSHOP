@@ -3,3 +3,7 @@ obj/
 node_modules/
 dist/
 .env
+
+# Tam kod dump'i — kod tabaninin bayat kopyasi, repoya girmemeli
+TUM_KODLAR.txt
+*.yedek
