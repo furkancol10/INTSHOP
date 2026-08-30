@@ -54,6 +54,20 @@ public class AuthController : ControllerBase
             "SELECT id, password_hash, role, avatar_url FROM users WHERE username = @username",
             new { req.username });
 
+        // Kullanici-adi bazli brute-force kilidi: son 15 dk'da 5+ basarisiz deneme.
+        // IP guvenilir kimlik degil (NAT/proxy arkasinda paylasilir), bu yuzden
+        // kilit hesaba gore uygulanir. Basarili sifre kilidi ACMAZ; sure dolmali.
+        if (user is not null)
+        {
+            var basarisizDeneme = await _db.ExecuteScalarAsync<int>(
+                @"SELECT COUNT(*) FROM login_logs
+                  WHERE user_id = @uid AND action = 'login_fail'
+                    AND created_at > NOW() - INTERVAL '15 minutes'",
+                new { uid = (int)user.id });
+            if (basarisizDeneme >= 5)
+                return StatusCode(429, "Cok fazla basarisiz deneme. Lutfen 15 dakika sonra tekrar deneyin.");
+        }
+
         var hash = user is null
             ? "$2a$11$/HEWwh0XFN2vBgwD7DsbFOoxQPtvtw5ChTTOi2c0i0uLReO8d4JH2"
             : (string)user.password_hash;
@@ -61,10 +75,14 @@ public class AuthController : ControllerBase
         bool ok = BCrypt.Net.BCrypt.Verify(req.password, hash);
 
         if (user is null || !ok)
+        {
+            // Basarisiz deneme kaydi yalniz var olan hesap icin (user_id FK NOT NULL).
+            if (user is not null)
+                await _db.ExecuteAsync(
+                    "INSERT INTO login_logs (user_id, action, ip_address) VALUES (@uid, 'login_fail', @ip)",
+                    new { uid = (int)user.id, ip = HttpContext.Connection.RemoteIpAddress?.ToString() });
             return Unauthorized("Kullanıcı adı veya şifre hatalı");
-            
-        if (!ok)
-            return Unauthorized("Şifre hatalı");
+        }
 
         var raw = Guid.NewGuid().ToString("N");
         await _db.ExecuteAsync(
