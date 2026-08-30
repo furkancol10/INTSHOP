@@ -51,6 +51,14 @@ public class StockController : ControllerBase
         if (user is null) return Unauthorized("Giriş Gerekli");
         if (user.Value.role != "Bayi") return StatusCode(403, "Sadece bayiler");
 
+        // Hareket miktari sinirlanir: sinirsiz 'change' stok sisirmeye ve
+        // buyuk degerde INT tasmasina (500) yol acar.
+        const int MaxHareket = 100_000;
+        if (req.change == 0)
+            return BadRequest("Miktar sifir olamaz");
+        if (Math.Abs(req.change) > MaxHareket)
+            return BadRequest($"Tek harekette en fazla {MaxHareket} adet giris/cikis yapilabilir");
+
         var dealerId = user.Value.id;
 
         if (!await UrunListedeMi(dealerId, req.product_id))
