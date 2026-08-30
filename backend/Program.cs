@@ -36,7 +36,7 @@ app.Use(async (ctx, next) =>
     ctx.Response.Headers.Append("X-Content-Type-Options", "nosniff");
     ctx.Response.Headers.Append("X-Frame-Options", "DENY");
     ctx.Response.Headers.Append("Referrer-Policy", "no-referrer");
-    ctx.Response.Headers.Append("Permission-Policy", "geolocation=(), microphone=(), camera=()");
+    ctx.Response.Headers.Append("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
     await next();
 });
 
