@@ -101,6 +101,17 @@ docker compose up --build
 `-v` bayrağı veri hacmini (volume) siler; seed dosyası yalnızca boş bir
 veritabanında çalışır.
 
+### Üretime alırken
+
+Bu `docker-compose` yapısı **yerel geliştirme** içindir: frontend, canlı
+düzenleme için Vite dev server ile çalışır. Üretimde:
+
+- Frontend'i statik derleyip web sunucusu ardında sunun —
+  [`frontend/Dockerfile.prod`](frontend/Dockerfile.prod) (build + nginx) hazırdır.
+- Tüm demo hesaplarının parolalarını değiştirin (ilk girişte zaten zorunludur).
+- Gerçek `.env` değerlerini (özellikle `POSTGRES_PASSWORD`) belirleyin.
+- TLS kullanın; CSP/HSTS başlıklarını web sunucusu tarafında ekleyin.
+
 ---
 
 ## Demo Hesapları
