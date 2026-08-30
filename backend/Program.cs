@@ -37,6 +37,11 @@ app.Use(async (ctx, next) =>
     ctx.Response.Headers.Append("X-Frame-Options", "DENY");
     ctx.Response.Headers.Append("Referrer-Policy", "no-referrer");
     ctx.Response.Headers.Append("Permissions-Policy", "geolocation=(), microphone=(), camera=()");
+    // HSTS: yalniz HTTPS'te gecerli (HTTP'de tarayici yok sayar), TLS eklenince devreye girer.
+    ctx.Response.Headers.Append("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    // API sadece JSON doner; default-src 'none' JSON istemciyi etkilemez, yanlislikla
+    // HTML/hata sayfasi dönerse kaynak yuklemesini ve iframe'lenmeyi engeller (defense-in-depth).
+    ctx.Response.Headers.Append("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'");
     await next();
 });
 
