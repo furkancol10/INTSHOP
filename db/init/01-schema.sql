@@ -6,13 +6,9 @@
 --   categories, users -> products -> dealer_stock, stock_movements,
 --   requests, login_logs, cart_items
 --
--- Demo kullanıcıları (BCrypt hash'li şifreler):
---   admin / admin123   (Admin)
---   bayi  / bayi123    (Bayi)
---   bayi2 / bayi123    (Bayi)
---   bayi3 / bayi123    (Bayi)
---   user1 / user123    (Kullanici)
---   user2 / user123    (Kullanici)
+-- Demo kullanıcıları: admin, bayi/bayi2/bayi3, user1/user2 (BCrypt hash'li).
+-- UYARI: varsayılan demo parolaları zayıftır ve yalnızca yerel geliştirme
+-- içindir. Herkese açık ortama kurmadan önce parolaları değiştirin.
 -- ============================================================
 
 

@@ -105,14 +105,15 @@ veritabanında çalışır.
 
 ## Demo Hesapları
 
-| Kullanıcı adı | Şifre | Rol |
-|---|---|---|
-| `admin` | `admin123` | Admin |
-| `bayi` | `bayi123` | Bayi |
-| `bayi2` | `bayi123` | Bayi |
-| `bayi3` | `bayi123` | Bayi |
-| `user1` | `user123` | Müşteri |
-| `user2` | `user123` | Müşteri |
+Kurulum seed'i aşağıdaki demo hesaplarını oluşturur.
+
+| Kullanıcı adı | Rol |
+|---|---|
+| `admin` | Admin |
+| `bayi`, `bayi2`, `bayi3` | Bayi |
+| `user1`, `user2` | Müşteri |
+
+> ⚠️ **Güvenlik:** Varsayılan demo parolaları zayıftır ve yalnızca yerel geliştirme içindir. Herkese açık bir ortama kurmadan önce tüm hesapların parolalarını mutlaka değiştirin; parolaları README'de veya başka bir dokümanda paylaşmayın. Parola politikası: en az 8 karakter, en az bir harf ve bir rakam.
 
 ---
 
