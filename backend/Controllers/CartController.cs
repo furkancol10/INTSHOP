@@ -16,18 +16,22 @@ public class CartController : ControllerBase
     private readonly IDbConnection _db;
     public CartController(IDbConnection db) => _db = db;
 
-    private async Task<int?> KullaniciId()
+    // Sepet yalniz "Kullanici" (musteri) rolune acik. Oturum + rol dogrular;
+    // yanlis rolde 403, oturum yoksa 401 doner.
+    private async Task<(int? id, IActionResult? error)> MusteriGuard()
     {
         var token = Request.Headers["Authorization"].ToString();
         var user = await AuthHelper.GetUser(_db, token);
-        return user?.Id;
+        if (user is null) return (null, Unauthorized());
+        if (user.Value.Role != "Kullanici") return (null, StatusCode(403, "Sadece musteriler"));
+        return (user.Value.Id, null);
     }
 
     [HttpGet]
     public async Task<IActionResult> Get()
     {
-        var userId = await KullaniciId();
-        if (userId is null) return Unauthorized();
+        var (userId, hata) = await MusteriGuard();
+        if (hata is not null) return hata;
 
         var sql = @"
             SELECT c.id, c.product_id, c.dealer_id, c.quantity,
@@ -51,8 +55,8 @@ public class CartController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Ekle([FromBody] SepetEkleReq req)
     {
-        var userId = await KullaniciId();
-        if (userId is null) return Unauthorized();
+        var (userId, hata) = await MusteriGuard();
+        if (hata is not null) return hata;
 
         var stok = await _db.ExecuteScalarAsync<int?>(
             "SELECT stock FROM dealer_stock WHERE product_id = @productId AND dealer_id = @dealerId",
@@ -80,8 +84,8 @@ public class CartController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> AdetGuncelle(int id, [FromBody] AdetReq req)
     {
-        var userId = await KullaniciId();
-        if (userId is null) return Unauthorized();
+        var (userId, hata) = await MusteriGuard();
+        if (hata is not null) return hata;
         if (req.quantity < 1) return BadRequest("Adet en az 1 olmalı");
 
         var stok = await _db.ExecuteScalarAsync<int?>(
@@ -102,8 +106,8 @@ public class CartController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Sil(int id)
     {
-        var userId = await KullaniciId();
-        if (userId is null) return Unauthorized();
+        var (userId, hata) = await MusteriGuard();
+        if (hata is not null) return hata;
 
         var etkilenen = await _db.ExecuteAsync(
             "DELETE FROM cart_items WHERE id = @id AND user_id = @userId",
@@ -116,8 +120,8 @@ public class CartController : ControllerBase
     [HttpDelete]
     public async Task<IActionResult> Bosalt()
     {
-        var userId = await KullaniciId();
-        if (userId is null) return Unauthorized();
+        var (userId, hata) = await MusteriGuard();
+        if (hata is not null) return hata;
 
         await _db.ExecuteAsync(
             "DELETE FROM cart_items WHERE user_id = @userId",
