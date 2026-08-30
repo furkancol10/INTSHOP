@@ -66,16 +66,16 @@ public class AuthController : ControllerBase
         if (!ok)
             return Unauthorized("Şifre hatalı");
 
-        var token = Guid.NewGuid().ToString("N");
+        var raw = Guid.NewGuid().ToString("N");
         await _db.ExecuteAsync(
             "UPDATE users SET token = @token, token_issued_at = NOW() WHERE id = @id",
-            new { token, id = (int)user.id });
+            new { token = AuthHelper.TokenHash(raw), id = (int)user.id });
 
         await _db.ExecuteAsync(
             "INSERT INTO login_logs (user_id, action, ip_address) VALUES (@userId, 'login', @ipAddress)",
             new { userId = (int)user.id, ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() });
 
-        return Ok(new { token, role = (string)user.role, username = req.username, avatar_url = (string?)user.avatar_url });
+        return Ok(new { token = raw, role = (string)user.role, username = req.username, avatar_url = (string?)user.avatar_url });
     }
 
     [HttpPost("signup")]
@@ -128,7 +128,7 @@ public class AuthController : ControllerBase
         var token = Request.Headers["Authorization"].ToString();
 
         var userId = await _db.ExecuteScalarAsync<int?>(
-            "SELECT id FROM users WHERE token = @token", new { token });
+            "SELECT id FROM users WHERE token = @token", new { token = AuthHelper.TokenHash(token) });
         if (userId is null) return Unauthorized();
 
         await _db.ExecuteAsync(
