@@ -37,6 +37,7 @@
       oturum.role = data.role;
       oturum.currentUser = data.username;
       oturum.avatarUrl = data.avatar_url || "";
+      oturum.sifreDegistir = data.sifre_degistir || false;
       localStorage.setItem("token", oturum.token);
       localStorage.setItem("username", oturum.currentUser);
       localStorage.setItem("avatar_url", oturum.avatarUrl);
@@ -123,7 +124,7 @@
             <input placeholder="Kullanıcı Adı" bind:value={kayitForm.username} />
           </div>
           <div class="input-group">
-            <input type="password" placeholder="Şifre (en az 6 karakter)" bind:value={kayitForm.password} />
+            <input type="password" placeholder="Şifre (en az 8 karakter, harf ve rakam)" bind:value={kayitForm.password} />
           </div>
           <div class="input-group" class:hatali={epostaGecerli === false}>
             <input type="email" placeholder="E-Posta" bind:value={kayitForm.email} />

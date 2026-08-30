@@ -5,6 +5,7 @@ export const oturum = $state({
     role:"",
     currentUser: localStorage.getItem("username") || "",
     avatarUrl: localStorage.getItem("avatar_url") || "",
+    sifreDegistir: false,   // true ise ilk giriste zorunlu sifre degisimi
 });
 
 export const durum= $state({

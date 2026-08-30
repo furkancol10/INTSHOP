@@ -53,7 +53,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Login([FromBody] LoginReq req)
     {
         var user = await _db.QueryFirstOrDefaultAsync(
-            "SELECT id, password_hash, role, avatar_url FROM users WHERE username = @username",
+            "SELECT id, password_hash, role, avatar_url, must_change_password FROM users WHERE username = @username",
             new { req.username });
 
         // Kullanici-adi bazli brute-force kilidi: son 15 dk'da 5+ basarisiz deneme.
@@ -95,7 +95,7 @@ public class AuthController : ControllerBase
             "INSERT INTO login_logs (user_id, action, ip_address) VALUES (@userId, 'login', @ipAddress)",
             new { userId = (int)user.id, ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() });
 
-        return Ok(new { token = raw, role = (string)user.role, username = req.username, avatar_url = (string?)user.avatar_url });
+        return Ok(new { token = raw, role = (string)user.role, username = req.username, avatar_url = (string?)user.avatar_url, sifre_degistir = (bool)user.must_change_password });
     }
 
     [HttpPost("signup")]
@@ -170,6 +170,39 @@ public class AuthController : ControllerBase
             new { userId = userId.Value });
 
         return Ok();
+    }
+
+    public record ChangePassReq(string eski_sifre, string yeni_sifre);
+
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePassReq req)
+    {
+        var token = Request.Headers["Authorization"].ToString();
+        var user = await AuthHelper.GetUser(_db, token);
+        if (user is null) return Unauthorized();
+
+        var mevcutHash = await _db.ExecuteScalarAsync<string?>(
+            "SELECT password_hash FROM users WHERE id = @id", new { id = user.Value.Id });
+        if (mevcutHash is null) return Unauthorized();
+
+        if (!BCrypt.Net.BCrypt.Verify(req.eski_sifre ?? "", mevcutHash))
+            return BadRequest("Mevcut şifre hatalı");
+
+        var (sifreOk, sifreHata) = SifreGecerliMi(req.yeni_sifre);
+        if (!sifreOk) return BadRequest(sifreHata);
+
+        if (BCrypt.Net.BCrypt.Verify(req.yeni_sifre, mevcutHash))
+            return BadRequest("Yeni şifre mevcut şifreden farklı olmalı");
+
+        var yeniHash = BCrypt.Net.BCrypt.HashPassword(req.yeni_sifre);
+        await _db.ExecuteAsync(
+            "UPDATE users SET password_hash = @h, must_change_password = false WHERE id = @id",
+            new { h = yeniHash, id = user.Value.Id });
+
+        await Denetim.Yaz(_db, HttpContext, user.Value.Id, user.Value.Role,
+            "user.password_change", "users", user.Value.Id);
+
+        return Ok(new { degistirildi = true });
     }
 
 }

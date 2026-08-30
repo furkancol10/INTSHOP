@@ -13,6 +13,7 @@
 
   // Modallar
   import Login from "./lib/Components/Login.svelte";
+  import ParolaModal from "./lib/Modals/ParolaModal.svelte";
 
   // Sayfa Bileşenleri
   import BayiRaporlar from "./lib/Components/BayiRaporlar.svelte";
@@ -106,6 +107,7 @@
       oturum.role = p.role;
       oturum.currentUser = p.username;
       oturum.avatarUrl = p.avatar_url || "";
+      oturum.sifreDegistir = p.must_change_password || false;
       localStorage.setItem("username", oturum.currentUser);
       localStorage.setItem("avatar_url", oturum.avatarUrl);
     } catch {
@@ -128,6 +130,8 @@
 <main>
   {#if !oturum.token}
     <Login girisYapildi={girisSonrasi} />
+  {:else if oturum.sifreDegistir}
+    <ParolaModal />
   {:else if karsilama}<div class="karsilama-ekran">
       {#if oturum.avatarUrl}
         <img src={oturum.avatarUrl} alt="avatar" class="karsilama-avatar" />

@@ -55,7 +55,9 @@ CREATE TABLE users (
     address       VARCHAR(300),
     phone         VARCHAR(20),
     avatar_url    VARCHAR(500),
-    email         VARCHAR(200) UNIQUE
+    email         VARCHAR(200) UNIQUE,
+    -- true ise kullanici ilk girisinde sifresini degistirmek zorunda
+    must_change_password BOOLEAN NOT NULL DEFAULT false
 );
 
 INSERT INTO users (username, password_hash, role, address, phone, avatar_url, email) VALUES
@@ -65,6 +67,9 @@ INSERT INTO users (username, password_hash, role, address, phone, avatar_url, em
     ('bayi3', '$2a$11$nUeo6B4.gwLflsYYzOOo0evbBnv6C17FFJn6/9FcrZNDhBDVIhFN2', 'Bayi',      'Istanbul, Kadikoy', '0538 666 77 88', NULL, 'bayi3@intshop.local'),
     ('user1', '$2a$11$KM/OVZMbSJPZYNrU60ZSpuIKl1jQ15buBKlSgqI3yKifLwhuKf13q', 'Kullanici', 'Ankara, Cankaya',   '0533 222 33 44', NULL, 'user1@intshop.local'),
     ('user2', '$2a$11$KM/OVZMbSJPZYNrU60ZSpuIKl1jQ15buBKlSgqI3yKifLwhuKf13q', 'Kullanici', 'Izmir, Bornova',    '0534 555 66 77', NULL, 'user2@intshop.local');
+
+-- Demo hesaplari varsayilan (zayif) parolayla gelir; ilk giriste degisim zorunlu.
+UPDATE users SET must_change_password = true;
 
 
 -- ---------- 3. ÜRÜNLER ----------

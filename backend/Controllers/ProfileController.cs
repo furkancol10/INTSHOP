@@ -22,7 +22,7 @@ public class ProfileController : ControllerBase
         if (user is null) return Unauthorized("Giriş gerekli");
 
         var data = await _db.QueryFirstOrDefaultAsync(
-            "SELECT id, username, role, address, phone, avatar_url FROM users WHERE id = @id",
+            "SELECT id, username, role, address, phone, avatar_url, must_change_password FROM users WHERE id = @id",
             new { id = user.Value.id });
         return Ok(data);
     }
