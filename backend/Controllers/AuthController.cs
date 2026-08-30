@@ -24,6 +24,9 @@ public class AuthController : ControllerBase
         if (user is null) return Unauthorized();
         if (user.Value.Role != "Admin") return StatusCode(403, "Sadece Admin kullanıcı ekleyebilir!");
 
+        var (regSifreOk, regSifreHata) = SifreGecerliMi(req.password);
+        if (!regSifreOk) return BadRequest(regSifreHata);
+
         var hash = BCrypt.Net.BCrypt.HashPassword(req.password);
         var izinliRoller = new[] { "Admin", "Bayi", "Kullanici" };
         if (!izinliRoller.Contains(req.role)) return BadRequest("Geçersiz rol");
@@ -102,8 +105,8 @@ public class AuthController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(req.username) || string.IsNullOrWhiteSpace(req.password))
             return BadRequest("Kullanıcı adı ve şifre zorunlu !");
-        if (req.password.Length < 6)
-            return BadRequest("Şifre en az 6 karakter olmalı !");
+        var (sifreOk, sifreHata) = SifreGecerliMi(req.password);
+        if (!sifreOk) return BadRequest(sifreHata);
         if (string.IsNullOrWhiteSpace(req.email) || !EpostaGecerliMi(req.email))
             return BadRequest("Geçerli bir e-posta adresi giriniz!");
 
@@ -125,6 +128,16 @@ public class AuthController : ControllerBase
         {
             return StatusCode(500, "Kayıt sırasında bir hata oluştu");
         }
+    }
+
+    // Parola politikasi: en az 8 karakter, en az bir harf ve bir rakam.
+    private static (bool ok, string? hata) SifreGecerliMi(string? sifre)
+    {
+        if (string.IsNullOrWhiteSpace(sifre) || sifre.Length < 8)
+            return (false, "Şifre en az 8 karakter olmalı");
+        if (!sifre.Any(char.IsLetter) || !sifre.Any(char.IsDigit))
+            return (false, "Şifre en az bir harf ve bir rakam içermeli");
+        return (true, null);
     }
 
     private static bool EpostaGecerliMi(string eposta)
