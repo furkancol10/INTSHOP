@@ -1,7 +1,6 @@
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Extensions.Configuration.UserSecrets;
 using System.Data;
 using System.Linq;
 
