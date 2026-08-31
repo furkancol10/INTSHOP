@@ -2,6 +2,7 @@ using Npgsql;
 using System.Data;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
+using Dapper;
 
 var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
@@ -46,6 +47,36 @@ app.Use(async (ctx, next) =>
 });
 
 app.UseRateLimiter();
+
+// Zorunlu parola degisimi server-side zorlanir: must_change_password=true olan
+// bir token, sifresini degistirene kadar yalnizca asagidaki uclara erisebilir.
+// Aksi halde frontend modal'i atlanip API dogrudan cagirilabiliyordu.
+app.Use(async (ctx, next) =>
+{
+    var path = ctx.Request.Path.Value ?? "";
+    bool izinli = path.StartsWith("/api/change-password")
+               || path.StartsWith("/api/profile")
+               || path.StartsWith("/api/logout")
+               || path.StartsWith("/api/login");
+    if (!izinli)
+    {
+        var token = ctx.Request.Headers["Authorization"].ToString();
+        if (!string.IsNullOrEmpty(token))
+        {
+            var db = ctx.RequestServices.GetRequiredService<IDbConnection>();
+            var mustChange = await db.ExecuteScalarAsync<bool?>(
+                "SELECT must_change_password FROM users WHERE token = @token",
+                new { token = AuthHelper.TokenHash(token) });
+            if (mustChange == true)
+            {
+                ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
+                await ctx.Response.WriteAsync("Once varsayilan sifrenizi degistirmelisiniz.");
+                return;
+            }
+        }
+    }
+    await next();
+});
 
 app.MapControllers();
 
