@@ -52,34 +52,34 @@
   });
 </script>
 
-<h2>Raporlar</h2>
+<h2 class="text-2xl font-semibold mb-4">Raporlar</h2>
 <div style="display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap;">
   <div style="flex: 1; min-width: 280px;">
     <h3>Giriş / Çıkış Geçmişi</h3>
     {#if myMovements.length}
-      <div class="tablo-cerceve">
-        <table>
-          <thead>
-            <tr><th>Tarih</th><th>Ürün</th><th>İşlem</th><th>Miktar</th></tr>
+      <div class="min-h-[530px] overflow-auto border border-white rounded-lg">
+        <table class="w-full border-collapse">
+          <thead class="bg-coral-500 font-semibold">
+            <tr><th class="p-2 border border-slate-100">Tarih</th><th class="p-2 border border-slate-100">Ürün</th><th class="p-2 border border-slate-100">İşlem</th><th class="p-2 border border-slate-100">Miktar</th></tr>
           </thead>
           <tbody>
             {#each sayfala(myMovements, "raporlar") as m}
-              <tr>
-                <td>{new Date(m.created_at).toLocaleDateString("tr-TR")}</td>
-                <td>{m.urun}</td>
-                <td style="color: {m.quantity > 0 ? 'green' : 'red'}">
+              <tr class="even:bg-yellow-100">
+                <td class="p-2 border border-slate-100 text-center">{new Date(m.created_at).toLocaleDateString("tr-TR")}</td>
+                <td class="p-2 border border-slate-100 text-center">{m.urun}</td>
+                <td class="p-2 border border-slate-100 text-center {m.quantity > 0 ? 'text-green-600' : 'text-red-700'}">
                   {m.quantity > 0 ? "Giriş" : "Çıkış"}
                 </td>
-                <td>{Math.abs(m.quantity)}</td>
+                <td class="p-2 border border-slate-100 text-center">{Math.abs(m.quantity)}</td>
               </tr>
             {/each}
           </tbody>
         </table>
-        <div class="pagination">
-          <button onclick={() => sayfaGit("raporlar", -1)}
+        <div class="flex items-center gap-4 mt-4">
+          <button class="px-4 py-2 bg-teal-600 text-slate-100 rounded-md disabled:bg-gray-500 disabled:opacity-40" onclick={() => sayfaGit("raporlar", -1)}
                   disabled={(sayfalar.raporlar ?? 1) === 1}>Önceki</button>
           <span>Sayfa {sayfalar.raporlar ?? 1} / {toplamSayfa(myMovements)}</span>
-          <button onclick={() => sayfaGit("raporlar", 1)}
+          <button class="px-4 py-2 bg-teal-600 text-slate-100 rounded-md disabled:bg-gray-500 disabled:opacity-40" onclick={() => sayfaGit("raporlar", 1)}
                   disabled={(sayfalar.raporlar ?? 1) === toplamSayfa(myMovements)}>Sonraki</button>
         </div>
       </div>

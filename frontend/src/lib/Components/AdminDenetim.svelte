@@ -90,11 +90,11 @@
     onMount(loadKayitlar);
 </script>
 
-<h2>Denetim Kayıtları</h2>
-<div class="sekme-baslik">
+<h2 class="text-2xl font-semibold mb-4">Denetim Kayıtları</h2>
+<div class="flex items-center justify-between mb-4">
     <FiltreCubuk bind:arama placeholder="Kullanıcı veya işlem ara...">
         {#snippet ekstra()}
-            <select bind:value={secilenVarlik}>
+            <select bind:value={secilenVarlik} class="p-2 border border-slate-200 rounded-md">
                 <option value="">Tüm varlıklar</option>
                 <option value="products">Ürünler</option>
                 <option value="categories">Kategoriler</option>
@@ -107,49 +107,49 @@
 </div>
 
 {#if filtreli.length}
-    <div class="tablo-cerceve">
-        <table>
-            <thead>
+    <div class="min-h-[530px] overflow-auto border border-white rounded-lg">
+        <table class="w-full border-collapse">
+            <thead class="bg-coral-500 font-semibold">
                 <tr>
-                    <th>#</th>
-                    <th>Kullanıcı</th>
-                    <th>Rol</th>
-                    <th>İşlem</th>
-                    <th>Varlık</th>
-                    <th>Kayıt</th>
-                    <th>Eski Değer</th>
-                    <th>Yeni Değer</th>
-                    <!--<th>Ip</th>-->
-                    <th>Tarih</th>
+                    <th class="p-2 border border-slate-100">#</th>
+                    <th class="p-2 border border-slate-100">Kullanıcı</th>
+                    <th class="p-2 border border-slate-100">Rol</th>
+                    <th class="p-2 border border-slate-100">İşlem</th>
+                    <th class="p-2 border border-slate-100">Varlık</th>
+                    <th class="p-2 border border-slate-100">Kayıt</th>
+                    <th class="p-2 border border-slate-100">Eski Değer</th>
+                    <th class="p-2 border border-slate-100">Yeni Değer</th>
+                    <th class="p-2 border border-slate-100">Tarih</th>
                 </tr>
             </thead>
             <tbody>
                 {#each sayfala(filtreli, "denetim") as k}
-                    <tr>
-                        <td>{k.id}</td>
-                        <td>{k.actor_username || "-"}</td>
-                        <td>{k.actor_role || "-"}</td>
-                        <td>{islemYazi(k.action)}</td>
-                        <td>{k.entity}</td>
-                        <td>{k.entity_id ?? "-"}</td>
-                        <td class="kucuk ozellik-hucre" title={degerYazi(k.old_value)}>
+                    <tr class="even:bg-yellow-100">
+                        <td class="p-2 border border-slate-100 text-center">{k.id}</td>
+                        <td class="p-2 border border-slate-100 text-center">{k.actor_username || "-"}</td>
+                        <td class="p-2 border border-slate-100 text-center">{k.actor_role || "-"}</td>
+                        <td class="p-2 border border-slate-100 text-center">{islemYazi(k.action)}</td>
+                        <td class="p-2 border border-slate-100 text-center">{k.entity}</td>
+                        <td class="p-2 border border-slate-100 text-center">{k.entity_id ?? "-"}</td>
+                        <td class="text-xs text-gray-500 max-w-[220px] truncate p-2 border border-slate-100" title={degerYazi(k.old_value)}>
                             {degerYazi(k.old_value)}
                         </td>
-                        <td class="kucuk ozellik-hucre" title={degerYazi(k.new_value)}>
+                        <td class="text-xs text-gray-500 max-w-[220px] truncate p-2 border border-slate-100" title={degerYazi(k.new_value)}>
                             {degerYazi(k.new_value)}
                         </td>
-                        <!-- <td>{k.ip_address || "-"}</td> -->
-                        <td>{new Date(k.created_at).toLocaleString("tr-TR")}</td>
+                        <td class="p-2 border border-slate-100 text-center">{new Date(k.created_at).toLocaleString("tr-TR")}</td>
                     </tr>
                 {/each}
             </tbody>
         </table>
     </div>
-    <div class="pagination">
-        <button onclick={() => sayfaGit("denetim", -1)}
+    <div class="flex items-center gap-4 mt-4">
+        <button class="px-4 py-2 bg-teal-600 text-slate-100 rounded-md disabled:bg-gray-500 disabled:opacity-40" 
+                onclick={() => sayfaGit("denetim", -1)}
                 disabled={(sayfalar.denetim ?? 1) === 1}>Önceki</button>
         <span>Sayfa {sayfalar.denetim ?? 1} / {toplamSayfa(filtreli)}</span>
-        <button onclick={() => sayfaGit("denetim", 1)}
+        <button class="px-4 py-2 bg-teal-600 text-slate-100 rounded-md disabled:bg-gray-500 disabled:opacity-40" 
+                onclick={() => sayfaGit("denetim", 1)}
                 disabled={(sayfalar.denetim ?? 1) === toplamSayfa(filtreli)}>Sonraki</button>
     </div>
 {:else}

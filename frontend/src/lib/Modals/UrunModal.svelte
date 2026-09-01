@@ -93,27 +93,27 @@
 
 {#if acik}
   <div
-    class="modal-arkaplan"
+    class="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]"
     onclick={kapat}
     onkeydown={(e) => e.key === "Escape" && kapat()}
     role="button"
     tabindex="0"
   >
     <div
-      class="buyuk-modal"
+      class="bg-white p-10 rounded-xl w-[90%] max-w-[700px] min-h-[60vh] flex flex-col gap-[1.2rem] shadow-[0_8px_40px_rgba(0,0,0,0.25)]"
       onclick={(e) => e.stopPropagation()}
       role="presentation"
     >
-      <h2>{duzenlemeMi ? "Ürün Düzenle" : "Yeni Ürün"}</h2>
+      <h2 class="m-0">{duzenlemeMi ? "Ürün Düzenle" : "Yeni Ürün"}</h2>
 
-      <label
+      <label class="flex flex-col gap-[.4rem] font-semibold text-gray-700"
         >Ürün Adı
-        <input bind:value={form.name} placeholder="Ürün adı" />
+        <input class="p-[.7rem] border border-gray-300 rounded-lg text-base font-normal" bind:value={form.name} placeholder="Ürün adı" />
       </label>
 
-      <label
+      <label class="flex flex-col gap-[.4rem] font-semibold text-gray-700"
         >Kategori
-        <select bind:value={form.category_id}>
+        <select class="p-[.7rem] border border-gray-300 rounded-lg text-base font-normal" bind:value={form.category_id}>
           <option value="">Kategori seç</option>
           {#each veri.categories.filter((c) => !c.parent_id) as ust}
             {#if veri.categories.some((c) => c.parent_id === ust.id)}
@@ -129,9 +129,10 @@
         </select>
       </label>
 
-      <label
+      <label class="flex flex-col gap-[.4rem] font-semibold text-gray-700"
         >Fiyat (₺)
         <input
+          class="p-[.7rem] border border-gray-300 rounded-lg text-base font-normal"
           type="number"
           step="0.01"
           bind:value={form.price}
@@ -139,9 +140,10 @@
         />
       </label>
 
-      <label>
+      <label class="flex flex-col gap-[.4rem] font-semibold text-gray-700">
         Görsel URL
         <input
+          class="p-[.7rem] border border-gray-300 rounded-lg text-base font-normal"
           bind:value={form.image_url}
           placeholder="https://upload.wikimedia.org/..."
         />
@@ -151,29 +153,29 @@
         <img
           src={form.image_url}
           alt="önizleme"
-          class="onizleme"
+          class="w-[120px] h-[120px] object-contain border border-gray-200 rounded-lg mt-2"
           onerror={(e) => (e.currentTarget.style.display = "none")}
           onload={(e) => (e.currentTarget.style.display = "block")}
         />
       {/if}
 
       {#if ozellikAlanlariGecerli.length}
-        <h3 class="ozellik-baslik">{kategoriAdi} Özellikleri</h3>
-        <div class="ozellik-izgara">
+        <h3 class="m-0 text-base text-gray-700">{kategoriAdi} Özellikleri</h3>
+        <div class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-[.9rem]">
           {#each ozellikAlanlariGecerli as alan}
-            <label
+            <label class="flex flex-col gap-[.4rem] font-semibold text-gray-700"
               >{alan.label}
-              <input bind:value={attributes[alan.key]} placeholder={alan.label} />
+              <input class="p-[.7rem] border border-gray-300 rounded-lg text-base font-normal" bind:value={attributes[alan.key]} placeholder={alan.label} />
             </label>
           {/each}
         </div>
       {/if}
 
-      {#if hata}<p class="error">{hata}</p>{/if}
+      {#if hata}<p class="text-red-700 text-[.85rem] m-0">{hata}</p>{/if}
 
-      <div class="modal-butonlar">
-        <button class="iptal-btn" onclick={kapat}>İptal</button>
-        <button class="ekle-btn" onclick={kaydet}
+      <div class="flex gap-2 justify-end mt-auto">
+        <button class="bg-white border-0 px-4 py-2 rounded-md cursor-pointer" onclick={kapat}>İptal</button>
+        <button class="bg-teal-600 text-white border-0 px-4 py-2 mb-[.6rem] rounded-md cursor-pointer" onclick={kaydet}
           >{duzenlemeMi ? "Kaydet" : "Ekle"}</button
         >
       </div>

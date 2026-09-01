@@ -132,18 +132,18 @@
     <Login girisYapildi={girisSonrasi} />
   {:else if oturum.sifreDegistir}
     <ParolaModal />
-  {:else if karsilama}<div class="karsilama-ekran">
+  {:else if karsilama}<div class="min-h-screen flex flex-col items-center justify-center gap-[1.2rem] bg-[repeating-radial-gradient(circle,blue,lightseagreen,lightblue,whitesmoke)] text-white">
       {#if oturum.avatarUrl}
-        <img src={oturum.avatarUrl} alt="avatar" class="karsilama-avatar" />
+        <img src={oturum.avatarUrl} alt="avatar" class="w-[120px] h-[120px] rounded-full object-cover border-4 border-white/60 shadow-[0_8px_32px_rgba(255,255,255,0.2)]" />
       {/if}
-      <h1>Hoş Geldiniz, {oturum.currentUser}!</h1>
+      <h1 class="m-0 text-[2rem] [text-shadow:0_2px_8px_rgba(255,255,255,0.2)]">Hoş Geldiniz, {oturum.currentUser}!</h1>
       <div class="spinner"></div>
-      <p>Sayfa Yükleniyor...</p>
+      <p class="m-0 opacity-90">Sayfa Yükleniyor...</p>
     </div>{:else if !oturum.role}{:else}
-    <div class="toolbar">
-      <div class="toolbar-ic">
+    <div class="flex items-center gap-2 bg-teal-600 text-slate-100">
+      <div class="justify-between flex items-center w-full px-8 py-3">
         <button
-          class="toolbar-baslik"
+          class="bg-transparent border-none font-bold text-xl text-slate-100 cursor-pointer mr-6 px-3 py-2 rounded-lg tracking-wide transition hover:bg-white/10"
           onclick={() =>
             (durum.aktifSekme =
               oturum.role === "Admin" ? "loglar" : "anasayfa")}
@@ -151,84 +151,84 @@
           INTSHOP
         </button>
 
-        <div class="toolbar-sekmeler">
+        <div class="flex items-center gap-2">
           {#if oturum.role === "Admin"}
             <button
-              class:aktif={durum.aktifSekme === "dealers"}
+              class="relative px-4 py-2 border-none rounded-md cursor-pointer transition {durum.aktifSekme === 'dealers' ? 'bg-slate-100 text-teal-600 font-semibold' : 'bg-transparent text-slate-100'}"
               onclick={() => (durum.aktifSekme = "dealers")}>Bayiler</button
             >
             <button
-              class:aktif={durum.aktifSekme === "urunler"}
+              class="relative px-4 py-2 border-none rounded-md cursor-pointer transition {durum.aktifSekme === 'urunler' ? 'bg-slate-100 text-teal-600 font-semibold' : 'bg-transparent text-slate-100'}"
               onclick={() => (durum.aktifSekme = "urunler")}>Ürünler</button
             >
             <button
-              class:aktif={durum.aktifSekme === "kategoriler"}
+              class="relative px-4 py-2 border-none rounded-md cursor-pointer transition {durum.aktifSekme === 'kategoriler' ? 'bg-slate-100 text-teal-600 font-semibold' : 'bg-transparent text-slate-100'}"
               onclick={() => (durum.aktifSekme = "kategoriler")}
               >Kategoriler</button
             >
             <button
-              class:aktif={durum.aktifSekme === "istekler"}
+              class="relative px-4 py-2 border-none rounded-md cursor-pointer transition {durum.aktifSekme === 'istekler' ? 'bg-slate-100 text-teal-600 font-semibold' : 'bg-transparent text-slate-100'}"
               onclick={() => (durum.aktifSekme = "istekler")}
             >
-              İstekler {#if bekleyenSayi > 0}<span class="badge"
+              İstekler {#if bekleyenSayi > 0}<span class="bg-coral text-white rounded-full px-[.4rem] py-[.1rem] text-[.7rem] ml-1"
                   >{bekleyenSayi}</span
                 >{/if}
             </button>
             <button
-              class:aktif={durum.aktifSekme === "users"}
+              class="relative px-4 py-2 border-none rounded-md cursor-pointer transition {durum.aktifSekme === 'users' ? 'bg-slate-100 text-teal-600 font-semibold' : 'bg-transparent text-slate-100'}"
               onclick={() => (durum.aktifSekme = "users")}>Kullanıcılar</button
             >
             <button
-              class:aktif={durum.aktifSekme === "hareketler"}
+              class="relative px-4 py-2 border-none rounded-md cursor-pointer transition {durum.aktifSekme === 'hareketler' ? 'bg-slate-100 text-teal-600 font-semibold' : 'bg-transparent text-slate-100'}"
               onclick={() => (durum.aktifSekme = "hareketler")}
               >Hareketler</button
             >
             <button
-              class:aktif={durum.aktifSekme === "denetim"}
+              class="relative px-4 py-2 border-none rounded-md cursor-pointer transition {durum.aktifSekme === 'denetim' ? 'bg-slate-100 text-teal-600 font-semibold' : 'bg-transparent text-slate-100'}"
               onclick={() => (durum.aktifSekme = "denetim")}
               >Denetim</button
             >
           {:else if oturum.role === "Bayi"}
             <button
-              class:aktif={durum.aktifSekme === "stok"}
+              class="relative px-4 py-2 border-none rounded-md cursor-pointer transition {durum.aktifSekme === 'stok' ? 'bg-slate-100 text-teal-600 font-semibold' : 'bg-transparent text-slate-100'}"
               onclick={() => (durum.aktifSekme = "stok")}>Stok</button
             >
             <button
-              class:aktif={durum.aktifSekme === "raporlar"}
+              class="relative px-4 py-2 border-none rounded-md cursor-pointer transition {durum.aktifSekme === 'raporlar' ? 'bg-slate-100 text-teal-600 font-semibold' : 'bg-transparent text-slate-100'}"
               onclick={() => (durum.aktifSekme = "raporlar")}>Raporlar</button
             >
             <button
-              class:aktif={durum.aktifSekme === "talepler"}
+              class="relative px-4 py-2 border-none rounded-md cursor-pointer transition {durum.aktifSekme === 'talepler' ? 'bg-slate-100 text-teal-600 font-semibold' : 'bg-transparent text-slate-100'}"
               onclick={() => (durum.aktifSekme = "talepler")}>Taleplerim</button
             >
           {:else if oturum.role === "Kullanici"}
             <button
-              class:aktif={durum.aktifSekme === "magaza"}
+              class="relative px-4 py-2 border-none rounded-md cursor-pointer transition {durum.aktifSekme === 'magaza' ? 'bg-slate-100 text-teal-600 font-semibold' : 'bg-transparent text-slate-100'}"
               onclick={() => (durum.aktifSekme = "magaza")}>Mağaza</button
             >
           {/if}
         </div>
 
-        <div class="toolbar-right">
+        <div class="flex items-center gap-2">
           <button
-            class="profil-btn"
+            class="flex items-center gap-2 bg-transparent border-none text-white cursor-pointer px-8 py-1 rounded-lg transition hover:bg-white/15"
             onclick={() => (durum.aktifSekme = "profil")}
           >
             {#if oturum.avatarUrl}
-              <img src={oturum.avatarUrl} alt="avatar" class="toolbar-avatar" />
+              <img src={oturum.avatarUrl} alt="avatar" class="w-8 h-8 rounded-full object-cover" />
             {/if}
             <span>{oturum.currentUser}</span>
           </button>
-          <button class="cikis-btn" onclick={logout}>Çıkış</button>
+          <button class="bg-coral text-white px-4 py-2 rounded-md cursor-pointer border-none text-[.95rem]" onclick={logout}>Çıkış</button>
         </div>
       </div>
     </div>
 
     {#if durum.bildirim}
-      <div class="bildirim">{durum.bildirim}</div>
+      <div class="fixed top-[70px] right-5 bg-green-600 text-white p-3 rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.2)] z-[200]">{durum.bildirim}</div>
     {/if}
 
-    <div class="sekme-icerik">
+    <div class="px-6 py-8 mx-auto max-w-[1440px]">
       {#if durum.aktifSekme === "loglar"}
         <AdminLoglar />
       {:else if durum.aktifSekme === "stok"}
@@ -266,5 +266,5 @@
     </div>
   {/if}
 
-  {#if durum.error}<p class="error">{durum.error}</p>{/if}
+  {#if durum.error}<p class="text-red-700 text-sm m-0">{durum.error}</p>{/if}
 </main>

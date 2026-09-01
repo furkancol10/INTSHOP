@@ -43,51 +43,51 @@
   onMount(loadRequests);
 </script>
 
-<h2>Fiyat Değişiklik İstekleri</h2>
+<h2 class="text-2xl font-semibold mb-4">Fiyat Değişiklik İstekleri</h2>
 
-<div class="filtre-satir">
-  <button class:aktif={filtre === "all"} onclick={() => filtreDegistir("all")}>Hepsi</button>
-  <button class:aktif={filtre === "pending"} onclick={() => filtreDegistir("pending")}>Bekleyen</button>
-  <button class:aktif={filtre === "approved"} onclick={() => filtreDegistir("approved")}>Onaylanan</button>
-  <button class:aktif={filtre === "rejected"} onclick={() => filtreDegistir("rejected")}>Reddedilen</button>
+<div class="flex gap-2 mb-4">
+  <button class="px-[.9rem] py-[.4rem] border-none rounded-md cursor-pointer text-[.85rem] {filtre === "all" ? 'bg-teal-700 text-white' : 'bg-teal-600'}" onclick={() => filtreDegistir("all")}>Hepsi</button>
+  <button class="px-[.9rem] py-[.4rem] border-none rounded-md cursor-pointer text-[.85rem] {filtre === "pending" ? 'bg-teal-700 text-white' : 'bg-teal-600'}" onclick={() => filtreDegistir("pending")}>Bekleyen</button>
+  <button class="px-[.9rem] py-[.4rem] border-none rounded-md cursor-pointer text-[.85rem] {filtre === "approved" ? 'bg-teal-700 text-white' : 'bg-teal-600'}" onclick={() => filtreDegistir("approved")}>Onaylanan</button>
+  <button class="px-[.9rem] py-[.4rem] border-none rounded-md cursor-pointer text-[.85rem] {filtre === "rejected" ? 'bg-teal-700 text-white' : 'bg-teal-600'}" onclick={() => filtreDegistir("rejected")}>Reddedilen</button>
 </div>
 
 {#if requests.length}
-  <div class="tablo-cerceve">
-    <table>
-      <thead>
+  <div class="min-h-[530px] overflow-auto border border-white rounded-lg">
+    <table class="w-full border-collapse">
+      <thead class="bg-coral-500 font-semibold">
         <tr>
-          <th>Bayi</th><th>Ürün</th><th>Eski Fiyat</th><th>Yeni Fiyat</th>
-          <th>Aralık</th><th>Tarih</th><th>Durum</th><th>İşlem</th>
+          <th class="p-2 border border-slate-100">Bayi</th><th class="p-2 border border-slate-100">Ürün</th><th class="p-2 border border-slate-100">Eski Fiyat</th><th class="p-2 border border-slate-100">Yeni Fiyat</th>
+          <th class="p-2 border border-slate-100">Aralık</th><th class="p-2 border border-slate-100">Tarih</th><th class="p-2 border border-slate-100">Durum</th><th class="p-2 border border-slate-100">İşlem</th>
         </tr>
       </thead>
       <tbody>
         {#each sayfala(requests, "istekler") as r}
-          <tr>
-            <td>{r.bayi}</td>
-            <td>{r.urun}</td>
-            <td>{fiyatKolon(r.old_price)}</td>
-            <td><strong>{fiyatKolon(r.new_price)}</strong></td>
-            <td class="kucuk">{fiyatKolon(r.alt_sinir)} - {fiyatKolon(r.ust_sinir)}</td>
-            <td class="kucuk">{new Date(r.created_at).toLocaleString("tr-TR")}</td>
-            <td>
+          <tr class="even:bg-yellow-100">
+            <td class="p-2 border border-slate-100 text-center">{r.bayi}</td>
+            <td class="p-2 border border-slate-100 text-center">{r.urun}</td>
+            <td class="p-2 border border-slate-100 text-center">{fiyatKolon(r.old_price)}</td>
+            <td class="p-2 border border-slate-100 text-center"><strong>{fiyatKolon(r.new_price)}</strong></td>
+            <td class="p-2 border border-slate-100 text-center text-xs text-gray-500">{fiyatKolon(r.alt_sinir)} - {fiyatKolon(r.ust_sinir)}</td>
+            <td class="p-2 border border-slate-100 text-center text-xs text-gray-500">{new Date(r.created_at).toLocaleString("tr-TR")}</td>
+            <td class="p-2 border border-slate-100 text-center">
               {#if r.status === "pending"}
-                <span class="durum bekliyor">Bekliyor</span>
+                <span class="inline-block px-[.6rem] py-[.2rem] rounded-xl text-xs font-semibold bg-pink-100 text-orange-900">Bekliyor</span>
               {:else if r.status === "approved"}
-                <span class="durum onayli">Onaylandı</span>
+                <span class="inline-block px-[.6rem] py-[.2rem] rounded-xl text-xs font-semibold bg-pink-100 text-green-600">Onaylandı</span>
               {:else if r.status === "rejected"}
-                <span class="durum redli">Reddedildi</span>
+                <span class="inline-block px-[.6rem] py-[.2rem] rounded-xl text-xs font-semibold bg-pink-100 text-red-800">Reddedildi</span>
               {:else}
-                <span class="durum">{r.status}</span>
+                <span class="inline-block px-[.6rem] py-[.2rem] rounded-xl text-xs font-semibold">{r.status}</span>
               {/if}
-              {#if r.admin_note}<div class="kucuk">{r.admin_note}</div>{/if}
+              {#if r.admin_note}<div class="text-xs text-gray-500">{r.admin_note}</div>{/if}
             </td>
-            <td>
+            <td class="p-2 border border-slate-100 text-center">
               {#if r.status === "pending"}
-                <button class="onay-btn" onclick={() => talepKarar(r.id, "approve")}>Onayla</button>
-                <button class="red-btn" onclick={() => { redTalepId = r.id; redModalAcik = true; }}>Reddet</button>
+                <button class="px-[1.1rem] py-[.55rem] rounded-lg bg-red-700 text-white border-none cursor-pointer" onclick={() => talepKarar(r.id, "approve")}>Onayla</button>
+                <button class="bg-red-600 text-white border-none px-[.7rem] py-[.35rem] rounded-md cursor-pointer" onclick={() => { redTalepId = r.id; redModalAcik = true; }}>Reddet</button>
               {:else}
-                <span class="kucuk">-</span>
+                <span class="text-xs text-gray-500">-</span>
               {/if}
             </td>
           </tr>
@@ -95,11 +95,13 @@
       </tbody>
     </table>
   </div>
-  <div class="pagination">
-    <button onclick={() => sayfaGit("istekler", -1)}
+  <div class="flex items-center gap-4 mt-4">
+    <button class="px-4 py-2 bg-teal-600 text-slate-100 rounded-md disabled:bg-gray-500 disabled:opacity-40"
+            onclick={() => sayfaGit("istekler", -1)}
             disabled={(sayfalar.istekler ?? 1) === 1}>Önceki</button>
     <span>Sayfa {sayfalar.istekler ?? 1} / {toplamSayfa(requests)}</span>
-    <button onclick={() => sayfaGit("istekler", 1)}
+    <button class="px-4 py-2 bg-teal-600 text-slate-100 rounded-md disabled:bg-gray-500 disabled:opacity-40"
+            onclick={() => sayfaGit("istekler", 1)}
             disabled={(sayfalar.istekler ?? 1) === toplamSayfa(requests)}>Sonraki</button>
   </div>
 {:else}

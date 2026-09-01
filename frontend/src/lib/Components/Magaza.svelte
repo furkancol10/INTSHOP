@@ -82,10 +82,17 @@
 
 <SepetWidget />
 
-<h2>Mağaza</h2>
-<div class="filtre-cubuk">
-  <input bind:value={arama} placeholder="Ürün ara..." />
-  <select bind:value={secilenKategori}>
+<h2 class="text-2xl font-semibold mb-4">Mağaza</h2>
+<div class="flex gap-3 items-center">
+  <input
+    bind:value={arama}
+    placeholder="Ürün ara..."
+    class="flex-1 max-w-[320px] py-[0.55rem] px-[0.8rem] mb-2 border border-slate-100 rounded-lg text-[0.95rem] bg-white focus:outline-none focus:border-teal-600 focus:shadow-[0_0_0_3px_rgba(43,179,163,0.15)]"
+  />
+  <select
+    bind:value={secilenKategori}
+    class="py-[0.55rem] px-[0.8rem] mb-2 border border-slate-100 rounded-lg text-[0.95rem] bg-white focus:outline-none focus:border-teal-600 focus:shadow-[0_0_0_3px_rgba(43,179,163,0.15)]"
+  >
     <option value="">Tüm kategoriler</option>
     {#each veri.categories.filter((k) => !k.parent_id) as ust}
     <optgroup label={ust.name}>
@@ -99,30 +106,33 @@
 </div>
 
 {#if shopData.length}
-  <div class="urun-kartlari">
+  <div class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-6">
     {#each shopData as urun}
-      <button class="urun-kart" onclick={() => detayaGit(urun.product_id)}>
+      <button
+        class="border border-slate-100 rounded-[18px] p-4 flex flex-col gap-2 bg-white [font:inherit] text-left cursor-pointer transition-[box-shadow,transform,border-color] duration-150 hover:border-teal-600 hover:shadow-[0_4px_14px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 active:scale-[0.98]"
+        onclick={() => detayaGit(urun.product_id)}
+      >
         {#if urun.image_url}
           <img
             src={urun.image_url}
             alt={urun.name}
-            class="kart-resim"
+            class="w-full h-40 object-contain rounded-lg"
             onerror={(e) => (e.currentTarget.src = "/images/placeholder.png")}
           />
         {/if}
-        <h3>{urun.name}</h3>
-        <p class="kart-satici">
+        <h3 class="m-0">{urun.name}</h3>
+        <p class="m-0 text-[0.9rem] text-orange-600">
           En uygun: <strong>{urun.dealer_name}</strong>
           {#if urun.bayi_sayisi > 1}
-            <span class="kart-bayi-sayisi">+{urun.bayi_sayisi - 1} bayi daha</span>
+            <span class="block text-xs text-slate-600 font-normal">+{urun.bayi_sayisi - 1} bayi daha</span>
           {/if}
         </p>
-        <p class="kart-fiyat">{fiyatKolon(urun.price)}</p>
+        <p class="text-[1.3rem] font-bold text-blue-950 m-0">{fiyatKolon(urun.price)}</p>
       </button>
     {/each}
   </div>
   {#if !hepsiYuklendi}
-    <div bind:this={sentinel} class="sentinel">
+    <div bind:this={sentinel} class="h-[60px] flex items-center justify-center">
       {#if yukleniyor}<div class="spinner"></div>{/if}
     </div>
   {/if}

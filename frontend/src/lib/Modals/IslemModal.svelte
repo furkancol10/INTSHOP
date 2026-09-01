@@ -99,14 +99,14 @@
 </script>
 
 {#if acik}
-  <div class="modal-arkaplan" onclick={kapat}
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]" onclick={kapat}
        onkeydown={(e) => e.key === "Escape" && kapat()}
        role="button" tabindex="0">
-    <div class="modal" onclick={(e) => e.stopPropagation()} role="presentation">
-      <h3>Stok-Fiyat Güncelle</h3>
+    <div class="bg-white p-8 rounded-xl w-80 flex flex-col gap-[.8rem] shadow-[0_8px_32px_rgba(255,255,255,0.2)]" onclick={(e) => e.stopPropagation()} role="presentation">
+      <h3 class="m-0 mb-2">Stok-Fiyat Güncelle</h3>
 
-      <label>Ürün
-        <select bind:value={secilenId}>
+      <label class="flex flex-col gap-[.3rem] font-semibold text-gray-400">Ürün
+        <select class="font-normal p-[.6rem] border border-gray-300 rounded-md text-[.8rem]" bind:value={secilenId}>
           <option value="">Ürün Seçiniz</option>
           {#each veri.myStock as p}
             <option value={p.product_id}>{p.name}</option>
@@ -114,8 +114,8 @@
         </select>
       </label>
 
-      <label>İşlem Türü
-        <select class="islem-secim" bind:value={islemTuru}>
+      <label class="flex flex-col gap-[.3rem] font-semibold text-gray-400">İşlem Türü
+        <select class="font-normal p-[.6rem] border border-gray-300 rounded-md text-[.8rem]" bind:value={islemTuru}>
           <option value="">İşlem türü seçiniz</option>
           <option value="giris">Giriş</option>
           <option value="cikis">Çıkış</option>
@@ -124,34 +124,34 @@
       </label>
 
       {#if secilenUrun && (islemTuru === "giris" || islemTuru === "cikis")}
-        <p class="modal-bilgi">Mevcut stok: <strong>{secilenUrun.stock}</strong></p>
-        <label>Miktar
-          <input type="number" min="1" bind:value={miktar} placeholder="0" />
+        <p class="m-0 text-sm bg-slate-100 text-gray-500 text-left">Mevcut stok: <strong>{secilenUrun.stock}</strong></p>
+        <label class="flex flex-col gap-[.3rem] font-semibold text-gray-400">Miktar
+          <input class="font-normal" type="number" min="1" bind:value={miktar} placeholder="0" />
         </label>
 
       {:else if secilenUrun && islemTuru === "fiyat"}
-        <p class="modal-bilgi">
+        <p class="m-0 text-sm bg-slate-100 text-gray-500 text-left">
           Mevcut fiyat: <strong>{fiyatKolon(secilenUrun.benim_fiyatim)}</strong>
         </p>
-        <label>Yeni Fiyat
+        <label class="flex flex-col gap-[.3rem] font-semibold text-gray-400">Yeni Fiyat
           <input type="number" step="0.01" bind:value={yeniFiyat}
                  placeholder={secilenUrun.onerilen}
-                 class="fiyat-input {fiyatDurum ?? ''}" />
+                 class="font-normal p-[.4rem] border-2 rounded-md {fiyatDurum === 'iyi' ? 'border-green-600' : fiyatDurum === 'sinirda' ? 'border-orange-500' : fiyatDurum === 'disarida' ? 'border-red-600' : 'border-slate-100'}" />
         </label>
-        <p class="fiyat-ipucu">
+        <p class="text-xs text-gray-500 mt-[.3rem]">
           Aralık: {fiyatKolon(secilenUrun.alt_sinir)} - {fiyatKolon(secilenUrun.ust_sinir)}
-          · <button type="button" class="oneri-btn"
+          · <button type="button"
                     onclick={() => (yeniFiyat = secilenUrun.onerilen)}>
               Önerilen: {fiyatKolon(secilenUrun.onerilen)}
             </button>
         </p>
       {/if}
 
-      {#if hata}<p class="error">{hata}</p>{/if}
+      {#if hata}<p class="text-red-700 text-[.85rem] m-0">{hata}</p>{/if}
 
-      <div class="modal-butonlar">
-        <button class="iptal-btn" onclick={kapat}>İptal</button>
-        <button class="ekle-btn" onclick={kaydet}>Kaydet</button>
+      <div class="flex gap-2 justify-end mt-2">
+        <button class="bg-white border-0 px-4 py-2 rounded-md cursor-pointer" onclick={kapat}>İptal</button>
+        <button class="bg-teal-600 text-white border-0 px-4 py-2 mb-[.6rem] rounded-md cursor-pointer" onclick={kaydet}>Kaydet</button>
       </div>
     </div>
   </div>

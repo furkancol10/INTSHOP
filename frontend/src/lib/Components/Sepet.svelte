@@ -95,77 +95,80 @@
     });
 </script>
 
-<div class="sepet-baslik">
-    <h2>Sepetim <span class="sepet-sayi">({sepet.adet} ürün)</span></h2>
+<div class="flex justify-between items-center pb-4 border-b border-slate-100 mb-5">
+    <h2 class="text-2xl font-semibold">Sepetim <span class="text-[0.95rem] text-gray-500 font-normal">({sepet.adet} ürün)</span></h2>
     {#if sepet.satirlar.length}
-        <button class="sepet-bosalt" onclick={() => (onayAcik = true)}
+        <button class="bg-orange-600 border-none text-white cursor-pointer text-[0.9rem] rounded-[7px]" onclick={() => (onayAcik = true)}
             >Sepeti Temizle</button
         >
     {/if}
 </div>
 
 {#if sepet.satirlar.length}
-    <div class="sepet-duzen">
-        <div class="sepet-sol">
+    <div class="grid grid-cols-1 md:grid-cols-[1fr_300px] gap-5 items-start">
+        <div>
             {#each gruplar as g}
-                <div class="bayi-karti">
-                    <div class="bayi-basligi">
+                <div class="bg-slate-100 border border-orange-300 rounded-[10px] mb-4 overflow-hidden">
+                    <div class="flex justify-between px-4 py-[0.8rem] bg-slate-100 border-b border-slate-100 text-[0.9rem]">
                         <span>Satıcı: <strong>{g.bayi}</strong></span>
-                        <span class="ara-toplam">{fiyatKolon(g.araToplam)}</span
+                        <span class="text-orange-600 font-semibold">{fiyatKolon(g.araToplam)}</span
                         >
                     </div>
 
                     {#each g.satirlar as s}
-                        <div class="sepet-satir">
-                            <div class="satir-gorsel">
+                        <div class="grid grid-cols-[60px_1fr] md:grid-cols-[70px_1fr_auto_auto] gap-x-4 gap-y-[0.6rem] md:gap-4 items-center p-4 border-b border-slate-100 last:border-b-0">
+                            <div>
                                 {#if s.image_url}
                                     <img
                                         src={s.image_url}
                                         alt={s.urun}
+                                        class="w-[70px] object-contain border border-slate-100 rounded-md"
                                         onerror={(e) =>
                                             (e.currentTarget.src =
                                                 "/images/placeholder.png")}
                                     />
                                 {:else}
-                                    <div class="gorsel-yok">-</div>
+                                    <div class="w-[70px] h-[70px] grid place-items-center bg-slate-100 rounded-md text-slate-100">-</div>
                                 {/if}
                             </div>
 
-                            <div class="satir-bilgi">
-                                <span class="satir-ad">{s.urun}</span>
-                                <span class="satir-birim"
+                            <div class="flex flex-col gap-1">
+                                <span class="text-[0.95rem]">{s.urun}</span>
+                                <span class="text-[0.82rem] text-gray-500"
                                     >{fiyatKolon(s.price)} / adet</span
                                 >
                                 {#if s.quantity > s.stock}
-                                    <span class="stok-uyari"
+                                    <span class="text-[0.78rem] text-red-600"
                                         >Stok {s.stock} adete düştü</span
                                     >
                                 {/if}
                             </div>
 
-                            <div class="adet-kontrol">
+                            <div class="inline-flex items-center gap-[0.4rem] border border-slate-100 rounded-[20px] px-[0.35rem] py-[0.2rem]">
                                 {#if s.quantity <= 1}
                                     <button
-                                        class="adet-sil"
+                                        class="w-[26px] h-[26px] border-none bg-transparent cursor-pointer text-orange-600 text-base rounded-full enabled:hover:bg-slate-100 disabled:opacity-30 disabled:cursor-default"
                                         onclick={() => satirSil(s.id)}
                                         title="Kaldır">🗑</button
                                     >
                                 {:else}
                                     <button
+                                        class="w-[26px] h-[26px] border-none bg-transparent cursor-pointer text-orange-600 text-base rounded-full enabled:hover:bg-slate-100 disabled:opacity-30 disabled:cursor-default"
                                         onclick={() =>
                                             adetDegistir(s.id, s.quantity - 1)}
                                         >-</button
                                     >
                                 {/if}
-                                <span class="adet-sayi">{s.quantity}</span>
+                                <span class="min-w-[20px] text-center text-[0.9rem]">{s.quantity}</span>
                                 <button
+                                    class="w-[26px] h-[26px] border-none bg-transparent cursor-pointer text-orange-600 text-base rounded-full enabled:hover:bg-slate-100 disabled:opacity-30 disabled:cursor-default"
                                     onclick={() =>
                                         adetDegistir(s.id, s.quantity + 1)}
                                     disabled={s.quantity >= s.stock}>+</button
                                 >
                             </div>
 
-                            <div class="satir-tutar">
+                            <div class="font-semibold whitespace-nowrap">
                                 {fiyatKolon(s.satir_tutar)}
                             </div>
                         </div>
@@ -174,40 +177,40 @@
             {/each}
         </div>
 
-        <aside class="sepet-ozet">
-            <span class="ozet-etiket">SEÇİLEN ÜRÜNLER ({sepet.adet})</span>
-            <span class="ozet-tutar">{fiyatKolon(sepet.toplam)}</span>
+        <aside class="bg-white border border-teal-600 rounded-[10px] p-5 flex flex-col gap-[0.6rem] static md:sticky md:top-4">
+            <span class="text-[0.75rem] tracking-[0.04rem] text-orange-600">SEÇİLEN ÜRÜNLER ({sepet.adet})</span>
+            <span class="text-[1.6rem] font-bold">{fiyatKolon(sepet.toplam)}</span>
             <!--                            Sipariş Sistemi HENÜZ Yok                           -->
 
-            <button class="ozet-btn" disabled>Alışverişi Tamamla</button>
-            <p class="ozet-not">Sipariş oluşturma geliştirme aşamasında!</p>
+            <button class="p-[0.8rem] border-none rounded-lg bg-orange-600 text-white text-[0.95rem] cursor-pointer disabled:bg-slate-100 disabled:text-gray-500 disabled:cursor-not-allowed" disabled>Alışverişi Tamamla</button>
+            <p class="text-[0.78rem] text-gray-500 text-center m-0">Sipariş oluşturma geliştirme aşamasında!</p>
         </aside>
     </div>
 {:else}
-    <div class="sepet-bos">
+    <div class="p-12 text-center text-gray-500">
         <p>Sepetiniz boş.</p>
     </div>
 {/if}
 
 {#if oneriler.length}
-    <div class="oneri-bolum">
-        <h3>Önerilen Ürünler</h3>
-        <div class="urun-kartlari">
+    <div class="mt-10 pt-6 border-t border-slate-100">
+        <h3 class="m-0 mb-4">Önerilen Ürünler</h3>
+        <div class="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-6">
             {#each oneriler as urun}
-                <button class="urun-kart" onclick={() => urunAc(urun.product_id)}>
+                <button class="border border-slate-100 rounded-[18px] p-4 flex flex-col gap-2 bg-white text-left cursor-pointer transition hover:border-teal-600 hover:shadow-[0_4px_14px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 active:scale-[0.98]" onclick={() => urunAc(urun.product_id)}>
                     {#if urun.image_url}
                         <img
                             src={urun.image_url}
                             alt={urun.name}
-                            class="kart-resim"
+                            class="w-full h-40 object-contain rounded-lg"
                             onerror={(e) => (e.currentTarget.src = "/images/placeholder.png")}
                         />
                     {/if}
-                    <h3>{urun.name}</h3>
-                    <p class="kart-satici">
+                    <h3 class="m-0 mb-4">{urun.name}</h3>
+                    <p class="m-0 text-sm text-orange-600">
                         En uygun: <strong>{urun.dealer_name}</strong>
                     </p>
-                    <p class="kart-fiyat">{fiyatKolon(urun.price)}</p>
+                    <p class="text-[1.3rem] font-bold text-blue-950 m-0">{fiyatKolon(urun.price)}</p>
                 </button>
             {/each}
         </div>

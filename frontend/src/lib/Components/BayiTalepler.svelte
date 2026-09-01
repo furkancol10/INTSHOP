@@ -44,46 +44,47 @@
     onMount(loadTalepler);
 </script>
 
-<h2>Taleplerim</h2>
+<h2 class="text-2xl font-semibold mb-4">Taleplerim</h2>
 {#if talepler.length}
-    <table>
-        <thead>
-            <tr>
-                <th>Ürün</th>
-                <th>Eski Fiyat</th>
-                <th>Yeni Fiyat</th>
-                <th>Durum</th>
-                <th>Admin Notu</th>
-                <th>Tarih</th>
-                <th>İşlem</th>
-            </tr>
-        </thead>
-        <tbody>
-            {#each talepler as t}
+        <table class="w-full border-collapse">
+            <thead class="bg-coral-500 font-semibold">
                 <tr>
-                    <td>{t.urun}</td>
-                    <td>{fiyatKolon(t.old_price)}</td>
-                    <td>{fiyatKolon(t.new_price)}</td>
-                    <td
-                        ><span class="rozet {t.status}"
-                            >{durumYazi(t.status)}</span
-                        ></td
-                    >
-                    <td>{t.admin_note || "-"}</td>
-                    <td>{new Date(t.created_at).toLocaleString("tr-TR")}</td
-                    >
-                    <td>
-                        {#if t.status === "pending"}
-                            <button
-                                class="sil-btn"
-                                onclick={() => iptalEt(t.id)}>İptal</button
-                            >
-                        {/if}
-                    </td>
+                    <th class="p-2 border border-slate-100">Ürün</th>
+                    <th class="p-2 border border-slate-100">Eski Fiyat</th>
+                    <th class="p-2 border border-slate-100">Yeni Fiyat</th>
+                    <th class="p-2 border border-slate-100">Durum</th>
+                    <th class="p-2 border border-slate-100">Admin Notu</th>
+                    <th class="p-2 border border-slate-100">Tarih</th>
+                    <th class="p-2 border border-slate-100">İşlem</th>
                 </tr>
-            {/each}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                {#each talepler as t}
+                    <tr class="even:bg-yellow-100">
+                        <td class="p-2 border border-slate-100 text-center">{t.urun}</td>
+                        <td class="p-2 border border-slate-100 text-center">{fiyatKolon(t.old_price)}</td>
+                        <td class="p-2 border border-slate-100 text-center">{fiyatKolon(t.new_price)}</td>
+                        <td class="p-2 border border-slate-100 text-center"
+                            ><span
+                                class="px-[.6rem] py-[.25rem] rounded-full text-[.8rem] whitespace-nowrap {t.status === 'pending' ? 'bg-amber-100 text-amber-800' : t.status === 'approved' ? 'bg-green-100 text-green-800' : t.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-gray-200 text-gray-700'}"
+                                >{durumYazi(t.status)}</span
+                            ></td
+                        >
+                        <td class="p-2 border border-slate-100 text-center">{t.admin_note || "-"}</td>
+                        <td class="p-2 border border-slate-100 text-center">{new Date(t.created_at).toLocaleString("tr-TR")}</td
+                        >
+                        <td class="p-2 border border-slate-100 text-center">
+                            {#if t.status === "pending"}
+                                <button
+                                    class="bg-orange-600 rounded-md w-[30px] text-right"
+                                    onclick={() => iptalEt(t.id)}>İptal</button
+                                >
+                            {/if}
+                        </td>
+                    </tr>
+                {/each}
+            </tbody>
+        </table>
 {:else}
     <p>Henüz talebiniz yok.</p>
 {/if}

@@ -7,3 +7,6 @@ dist/
 # Tam kod dump'i — kod tabaninin bayat kopyasi, repoya girmemeli
 TUM_KODLAR.txt
 *.yedek
+
+# Local Netlify folder
+.netlify

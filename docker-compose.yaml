@@ -24,6 +24,7 @@ services:
     environment:
       ASPNETCORE_URLS: "http://+:8080"
       ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB:-stokdb};Username=${POSTGRES_USER:-stok};Password=${POSTGRES_PASSWORD:-1111}"
+      CORS_ALLOWED_ORIGINS: "${CORS_ALLOWED_ORIGINS:-http://localhost:5173}"
     depends_on:
       db:
         condition: service_healthy

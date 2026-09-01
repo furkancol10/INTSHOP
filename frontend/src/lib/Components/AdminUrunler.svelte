@@ -42,44 +42,44 @@
   }
 </script>
 
-<h2>Ürünler</h2>
-<button class="ekle-btn" onclick={ekleAc}>+ Yeni Ürün</button>
+<h2 class="text-2xl font-semibold mb-4">Ürünler</h2>
+<button class="bg-teal-600 text-white border-none px-4 py-2 mb-[.6rem] rounded-md cursor-pointer" onclick={ekleAc}>+ Yeni Ürün</button>
 
 {#if veri.products.length}
-  <div class="tablo-cerceve">
-    <table>
-      <thead>
+  <div class="min-h-[530px] overflow-auto border border-white rounded-lg">
+    <table class="w-full border-collapse">
+      <thead class="bg-coral-500 font-semibold">
         <tr>
-          <th>ID</th><th>Resim</th><th>Ürün</th><th>Kategori</th>
-          <th>Özellikler</th>
-          <th>Toplam Stok</th><th>Fiyat</th><th>Aralık</th><th></th>
+          <th class="p-2 border border-slate-100">ID</th><th class="p-2 border border-slate-100">Resim</th><th class="p-2 border border-slate-100">Ürün</th><th class="p-2 border border-slate-100">Kategori</th>
+          <th class="p-2 border border-slate-100">Özellikler</th>
+          <th class="p-2 border border-slate-100">Toplam Stok</th><th class="p-2 border border-slate-100">Fiyat</th><th class="p-2 border border-slate-100">Aralık</th><th class="p-2 border border-slate-100"></th>
         </tr>
       </thead>
       <tbody>
         {#each sayfala(veri.products, "urunler") as p}
-          <tr>
-            <td>{p.id}</td>
-            <td>{#if p.image_url}<img src={p.image_url} alt={p.name} />{/if}</td>
-            <td>{p.name}</td>
-            <td>{p.parent_category ? `${p.parent_category} › ${p.category}` : p.category}</td>
-            <td class="kucuk ozellik-hucre">{ozellikOzeti(p)}</td>
-            <td>{p.toplam_stok}</td>
-            <td>{fiyatKolon(p.price)}</td>
-            <td class="kucuk">{fiyatKolon(p.alt_sinir)} - {fiyatKolon(p.ust_sinir)}</td>
-            <td>
-              <button class="duzenle-btn" onclick={() => duzenleAc(p)}>Düzenle</button>
-              <button class="sil" onclick={() => sil(p.id)}>Sil</button>
+          <tr class="even:bg-yellow-100">
+            <td class="p-2 border border-slate-100 text-center">{p.id}</td>
+            <td class="p-2 border border-slate-100 text-center">{#if p.image_url}<img src={p.image_url} alt={p.name} class="w-8 h-8 object-cover rounded block" />{/if}</td>
+            <td class="p-2 border border-slate-100 text-center">{p.name}</td>
+            <td class="p-2 border border-slate-100 text-center">{p.parent_category ? `${p.parent_category} › ${p.category}` : p.category}</td>
+            <td class="text-xs text-gray-500 max-w-[220px] truncate p-2 border border-slate-100">{ozellikOzeti(p)}</td>
+            <td class="p-2 border border-slate-100 text-center">{p.toplam_stok}</td>
+            <td class="p-2 border border-slate-100 text-center">{fiyatKolon(p.price)}</td>
+            <td class="text-xs text-gray-500 p-2 border border-slate-100 text-center">{fiyatKolon(p.alt_sinir)} - {fiyatKolon(p.ust_sinir)}</td>
+            <td class="p-2 border border-slate-100 text-center">
+              <button class="bg-amber-500 text-white border-none px-[.7rem] py-[.3rem] rounded mr-[.3rem] cursor-pointer" onclick={() => duzenleAc(p)}>Düzenle</button>
+              <button class="bg-orange-600 w-[30px] rounded-md text-right" onclick={() => sil(p.id)}>Sil</button>
             </td>
           </tr>
         {/each}
       </tbody>
     </table>
   </div>
-  <div class="pagination">
-    <button onclick={() => sayfaGit("urunler", -1)}
+  <div class="flex items-center gap-4 mt-4">
+    <button class="px-4 py-2 bg-teal-600 text-slate-100 rounded-md disabled:bg-gray-500 disabled:opacity-40" onclick={() => sayfaGit("urunler", -1)}
             disabled={(sayfalar.urunler ?? 1) === 1}>Önceki</button>
     <span>Sayfa {sayfalar.urunler ?? 1} / {toplamSayfa(veri.products)}</span>
-    <button onclick={() => sayfaGit("urunler", 1)}
+    <button class="px-4 py-2 bg-teal-600 text-slate-100 rounded-md disabled:bg-gray-500 disabled:opacity-40" onclick={() => sayfaGit("urunler", 1)}
             disabled={(sayfalar.urunler ?? 1) === toplamSayfa(veri.products)}>Sonraki</button>
   </div>
 {/if}

@@ -17,30 +17,32 @@
   onMount(loadDealers);
 </script>
 
-<h2>Bayiler</h2>
+<h2 class="text-2xl font-semibold mb-4">Bayiler</h2>
 {#if dealers.length}
-  <div class="tablo-cerceve">
-    <table>
-      <thead>
-        <tr><th>ID</th><th>Bayi Adı</th><th>Adres</th><th>Telefon</th></tr>
+  <div class="min-h-[530px] overflow-auto border border-white rounded-lg">
+    <table class="w-full border-collapse">
+      <thead class="bg-coral-500 font-semibold">
+        <tr><th class="p-2 border border-slate-100">ID</th><th class="p-2 border border-slate-100">Bayi Adı</th><th class="p-2 border border-slate-100">Adres</th><th class="p-2 border border-slate-100">Telefon</th></tr>
       </thead>
       <tbody>
         {#each sayfala(dealers, "dealers") as d}
-          <tr>
-            <td>{d.id}</td>
-            <td>{d.username}</td>
-            <td>{d.address ?? "-"}</td>
-            <td>{d.phone ?? "-"}</td>
+          <tr class="even:bg-yellow-100">
+            <td class="p-2 border border-slate-100 text-center">{d.id}</td>
+            <td class="p-2 border border-slate-100 text-center">{d.username}</td>
+            <td class="p-2 border border-slate-100 text-center">{d.address ?? "-"}</td>
+            <td class="p-2 border border-slate-100 text-center">{d.phone ?? "-"}</td>
           </tr>
         {/each}
       </tbody>
     </table>
   </div>
-  <div class="pagination">
-    <button onclick={() => sayfaGit("dealers", -1)}
+  <div class="flex items-center gap-4 mt-4">
+    <button class="px-4 py-2 bg-teal-600 text-slate-100 rounded-md disabled:bg-gray-500 disabled:opacity-40" 
+            onclick={() => sayfaGit("dealers", -1)}
             disabled={(sayfalar.dealers ?? 1) === 1}>Önceki</button>
     <span>Sayfa {sayfalar.dealers ?? 1} / {toplamSayfa(dealers)}</span>
-    <button onclick={() => sayfaGit("dealers", 1)}
+    <button class="px-4 py-2 bg-teal-600 text-slate-100 rounded-md disabled:bg-gray-500 disabled:opacity-40" 
+            onclick={() => sayfaGit("dealers", 1)}
             disabled={(sayfalar.dealers ?? 1) === toplamSayfa(dealers)}>Sonraki</button>
   </div>
 {:else}
