@@ -13,7 +13,34 @@ var allowedOrigins = (builder.Configuration["CORS_ALLOWED_ORIGINS"] ?? "http://l
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
 p.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
 
-builder.Services.AddScoped<IDbConnection>(_ => new NpgsqlConnection(builder.Configuration.GetConnectionString("Default")));
+// Render/Heroku gibi platformlar baglanti dizesini URI formatinda verir
+// (postgresql://kullanici:parola@host:5432/db). Npgsql key-value formati bekledigi
+// icin URI gelirse cevirilir; zaten key-value ise oldugu gibi kullanilir.
+static string PostgresBaglantiDizesi(string? ham)
+{
+    if (string.IsNullOrWhiteSpace(ham)) return ham ?? "";
+    if (!ham.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) &&
+        !ham.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+        return ham;
+
+    var uri = new Uri(ham);
+    var kimlik = uri.UserInfo.Split(':', 2);
+    var csb = new NpgsqlConnectionStringBuilder
+    {
+        Host = uri.Host,
+        Port = uri.Port > 0 ? uri.Port : 5432,
+        Database = uri.AbsolutePath.Trim('/'),
+        Username = Uri.UnescapeDataString(kimlik[0]),
+        Password = kimlik.Length > 1 ? Uri.UnescapeDataString(kimlik[1]) : ""
+    };
+    // Render ic aglarda TLS istemez, dis baglantilarda zorunlu kilar; Prefer ikisini de karsilar.
+    csb["SSL Mode"] = "Prefer";
+    csb["Trust Server Certificate"] = true;
+    return csb.ConnectionString;
+}
+
+var postgresBaglanti = PostgresBaglantiDizesi(builder.Configuration.GetConnectionString("Default"));
+builder.Services.AddScoped<IDbConnection>(_ => new NpgsqlConnection(postgresBaglanti));
 
 // Giris/kayit denemelerinde brute-force'u zorlastirmak icin IP basina hiz siniri
 builder.Services.AddRateLimiter(options =>
