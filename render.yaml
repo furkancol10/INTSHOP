@@ -19,8 +19,9 @@ services:
         fromDatabase:
           name: stok-panel-db
           property: connectionString
-      # Netlify'a deploy ettikten sonra frontend URL'ini buraya gir
-      # (virgülle birden fazla origin eklenebilir), sonra bu servisi
-      # Render panelinden "Manual Deploy" ile yeniden başlat.
+      # Host filtresi: canli hostname olmadan ASP.NET tum istekleri 400 ile reddeder
+      - key: AllowedHosts
+        value: stok-panel-api.onrender.com;localhost;127.0.0.1
+      # Frontend'in canli adresleri (virgulle birden fazla origin eklenebilir)
       - key: CORS_ALLOWED_ORIGINS
-        value: http://localhost:5173
+        value: https://stok-panel-three.vercel.app,https://stok-panel-furkancol10s-projects.vercel.app,http://localhost:5173
