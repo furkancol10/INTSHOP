@@ -5,7 +5,6 @@ yönetir, bayiler kendi stok ve fiyatlarını belirler, müşteriler mağazadan 
 
 > Bu proje bir yaz stajı kapsamında geliştirilmiştir.
 
-<!-- TODO: Ana ekranın görselini buraya koy -->
 ![Mağaza ekranı](docs/img/magaza.png)
 
 ---
@@ -15,6 +14,7 @@ yönetir, bayiler kendi stok ve fiyatlarını belirler, müşteriler mağazadan 
 - [Özellikler](#özellikler)
 - [Teknoloji Yığını](#teknoloji-yığını)
 - [Kurulum](#kurulum)
+- [Yayın (Deploy)](#yayın-deploy)
 - [Demo Hesapları](#demo-hesapları)
 - [Roller ve Yetkiler](#roller-ve-yetkiler)
 - [Ekran Görüntüleri](#ekran-görüntüleri)
@@ -52,11 +52,17 @@ yönetir, bayiler kendi stok ve fiyatlarını belirler, müşteriler mağazadan 
 
 | Katman | Teknoloji |
 |---|---|
-| Backend | .NET 8 Web API, Dapper |
-| Frontend | Svelte 5 (runes), Vite |
+| Backend | .NET 8 Web API, Dapper, Npgsql |
+| Frontend | Svelte 5 (runes), Vite 8 |
+| Stil | Tailwind CSS 4 (yardımcı sınıflar, bileşen içi) |
 | Veritabanı | PostgreSQL 18 |
 | Çalışma ortamı | Docker Compose |
 | Grafikler | Chart.js |
+| Yayın | Frontend: Vercel · API + DB: Render |
+
+Arayüz stilleri tamamen Tailwind yardımcı sınıflarıyla, bileşenlerin içinde yazılır.
+`src/app.css` yalnızca global temel stilleri ve yardımcı sınıfla ifade edilemeyen
+keyframe animasyonlarını (giriş ekranı lav arkaplanı, spinner, sepet açılış efekti) barındırır.
 
 ---
 
@@ -114,6 +120,39 @@ düzenleme için Vite dev server ile çalışır. Üretimde:
 
 ---
 
+## Yayın (Deploy)
+
+Proje iki ayrı serviste yayınlanır: statik frontend Vercel'de, API + veritabanı Render'da.
+
+| Parça | Platform | Yapılandırma |
+|---|---|---|
+| Frontend | Vercel | [`vercel.json`](vercel.json) — build `frontend/` altında çalışır, çıktı `frontend/dist` |
+| API + PostgreSQL | Render | [`render.yaml`](render.yaml) — Blueprint; Docker servisi + yönetilen Postgres |
+
+### Ortam değişkenleri
+
+| Değişken | Nerede | Örnek / Açıklama |
+|---|---|---|
+| `VITE_API_URL` | Frontend (build anında) | `https://<api-adresi>` — [`frontend/.env.production`](frontend/.env.production) içinde tutulur |
+| `ConnectionStrings__Default` | API | Render'ın ürettiği bağlantı dizesi. URI (`postgresql://…`) ve key-value biçimlerinin ikisi de kabul edilir |
+| `AllowedHosts` | API | ASP.NET host filtresi. Canlı hostname burada yoksa **tüm istekler 400 döner** |
+| `CORS_ALLOWED_ORIGINS` | API | Virgülle ayrılmış frontend origin listesi |
+| `PORT` / `ASPNETCORE_URLS` | API | Render'ın dinlediği port (8080) |
+
+### Veritabanı kurulumu
+
+Render'ın yönetilen Postgres'i `docker-entrypoint-initdb.d` çalıştırmaz; şema tek seferlik
+elle yüklenir:
+
+```bash
+psql "<EXTERNAL_DATABASE_URL>" -f db/init/01-schema.sql
+```
+
+> Render ücretsiz katmanında servis, kullanılmadığında uykuya geçer; ilk istek
+> 30–60 saniye sürebilir.
+
+---
+
 ## Demo Hesapları
 
 Kurulum seed'i aşağıdaki demo hesaplarını oluşturur.
@@ -148,22 +187,58 @@ kullanıcı kimliği token'dan, fiyat bilgisi veritabanından okunur.
 
 ## Ekran Görüntüleri
 
-<!-- TODO: docs/img/ klasörüne görselleri koy, aşağıdaki yolları güncelle -->
+### Giriş
 
-### Mağaza
-![Mağaza](docs/img/magaza.png)
+Cam efektli giriş kartı, arka planda animasyonlu lav blobları; kayıt formu 3B kart
+çevirme animasyonuyla açılır.
 
-### Sepet
-![Sepet](docs/img/sepet.png)
+![Giriş ekranı](docs/img/login.png)
 
-### Bayi stok yönetimi
-![Bayi stok](docs/img/bayi-stok.png)
+### Müşteri
 
-### Admin — talep onayı
-![Admin istekler](docs/img/admin-istekler.png)
+| Mağaza | Ürün detayı |
+|---|---|
+| ![Mağaza](docs/img/magaza.png) | ![Ürün detayı](docs/img/urun-detay.png) |
 
-### Admin — giriş logları
-![Loglar](docs/img/loglar.png)
+Mağazada sonsuz kaydırma, kategori ve isim filtresi, kart üzerinde bayi sayısı rozeti
+ve görsel yakınlaştırma efekti vardır.
+
+| Sepet | Sepet önizleme (widget) |
+|---|---|
+| ![Sepet](docs/img/sepet.png) | ![Sepet widget](docs/img/sepet-widget.png) |
+
+Sepet satıcı bazında gruplanır; her bayi için ara toplam ayrı gösterilir.
+
+![Profil](docs/img/profil.png)
+
+### Bayi
+
+| Stok yönetimi | Raporlar |
+|---|---|
+| ![Bayi stok](docs/img/bayi-stok.png) | ![Bayi raporlar](docs/img/bayi-raporlar.png) |
+
+Stok tablosunda depo doluluğu renkli bar ile gösterilir (boş / kritik / az / normal / bol).
+Raporlar sekmesi giriş-çıkış geçmişini tablo ve Chart.js grafiğiyle sunar.
+
+![Bayi talepleri](docs/img/bayi-talepler.png)
+
+### Admin
+
+| Ürünler | Kategoriler |
+|---|---|
+| ![Admin ürünler](docs/img/admin-urunler.png) | ![Admin kategoriler](docs/img/admin-kategoriler.png) |
+
+| Fiyat talepleri | Kullanıcılar |
+|---|---|
+| ![Admin istekler](docs/img/admin-istekler.png) | ![Admin kullanıcılar](docs/img/admin-kullanicilar.png) |
+
+| Bayiler | Stok hareketleri |
+|---|---|
+| ![Admin bayiler](docs/img/admin-bayiler.png) | ![Admin hareketler](docs/img/admin-hareketler.png) |
+
+| Giriş / çıkış logları | Denetim kaydı |
+|---|---|
+| ![Loglar](docs/img/admin-loglar.png) | ![Denetim](docs/img/admin-denetim.png) |
 
 ---
 
@@ -258,29 +333,44 @@ erDiagram
 
 ## API Uçları
 
-<!-- TODO: Aşağıdaki listeyi controller dosyalarıyla karşılaştırıp doğrula.
-     Eksik veya fazla uç varsa düzelt. -->
-
 ### Kimlik doğrulama
 
 | Metot | Yol | Rol | Açıklama |
 |---|---|---|---|
-| POST | `/api/login` | — | Giriş yapar, token döndürür |
+| POST | `/api/login` | — | Giriş yapar, token döndürür (kullanıcı adı bazlı brute-force kilidi vardır) |
+| POST | `/api/signup` | — | Müşteri hesabı oluşturur |
+| POST | `/api/register` | Admin | Admin'in kullanıcı / bayi oluşturması |
 | POST | `/api/logout` | Herkes | Token'ı geçersiz kılar, log kaydı düşer |
+| POST | `/api/change-password` | Herkes | Parola değiştirir (ilk girişte zorunlu) |
+
+### Profil
+
+| Metot | Yol | Rol | Açıklama |
+|---|---|---|---|
 | GET | `/api/profile` | Herkes | Oturum sahibinin bilgileri |
+| PUT | `/api/profile` | Herkes | Adres, telefon, avatar günceller |
 
 ### Katalog
 
 | Metot | Yol | Rol | Açıklama |
 |---|---|---|---|
-| GET | `/api/products` | — | Ürün listesi |
-| GET | `/api/categories` | — | Kategori listesi |
+| GET | `/api/products` | Herkes | Ürün listesi |
+| POST | `/api/products` | Admin | Ürün ekler |
+| PUT | `/api/products/{id}` | Admin | Ürün günceller |
+| DELETE | `/api/products/{id}` | Admin | Ürün siler |
+| GET | `/api/categories` | Herkes | Kategori listesi (üst / alt) |
+| POST | `/api/categories` | Admin | Kategori ekler |
+| DELETE | `/api/categories/{id}` | Admin | Kategori siler |
 
 ### Bayi
 
 | Metot | Yol | Rol | Açıklama |
 |---|---|---|---|
 | GET | `/api/my-stock` | Bayi | Bayinin kendi stok ve fiyatları |
+| POST | `/api/my-stock/movement` | Bayi | Stok giriş / çıkış hareketi kaydeder |
+| GET | `/api/my-stock/movements` | Bayi | Bayinin hareket listesi |
+| GET | `/api/my-stock/history` | Bayi | Grafik için tarih bazlı özet |
+| PUT | `/api/my-stock/price` | Bayi | Fiyat değişikliği (aralık dışıysa talep açılır) |
 | GET | `/api/requests/mine` | Bayi | Bayinin kendi talepleri |
 | PUT | `/api/requests/{id}/cancel` | Bayi | Bekleyen talebi iptal eder |
 
@@ -289,17 +379,20 @@ erDiagram
 | Metot | Yol | Rol | Açıklama |
 |---|---|---|---|
 | GET | `/api/requests` | Admin | Tüm talepler |
-| PUT | `/api/requests/{id}/approve` | Admin | Talebi onaylar |
+| PUT | `/api/requests/{id}/approve` | Admin | Talebi onaylar (fiyat aralığı onayda yeniden doğrulanır) |
 | PUT | `/api/requests/{id}/reject` | Admin | Talebi reddeder |
 | GET | `/api/users` | Admin | Kullanıcı listesi |
-| GET | `/api/movements` | Admin | Stok hareketleri |
-| GET | `/api/logs` | Admin | Giriş / çıkış logları (son 100 kayıt) |
+| GET | `/api/dealers` | Admin | Bayi listesi |
+| GET | `/api/movements` | Admin | Tüm stok hareketleri |
+| GET | `/api/logs` | Admin | Giriş / çıkış logları |
+| GET | `/api/audit` | Admin | Denetim kaydı (fiyat / stok değişiklikleri) |
 
 ### Mağaza ve sepet
 
 | Metot | Yol | Rol | Açıklama |
 |---|---|---|---|
 | GET | `/api/shop` | Müşteri | Mağaza listesi. Parametreler: `limit`, `offset`, `kategori`, `arama` |
+| GET | `/api/shop/{id}` | Müşteri | Ürün detayı ve o ürünü satan bayilerin teklifleri |
 | GET | `/api/cart` | Müşteri | Sepet içeriği ve toplam tutar |
 | POST | `/api/cart` | Müşteri | Sepete ürün ekler (varsa adedi artırır) |
 | PUT | `/api/cart/{id}` | Müşteri | Satır adedini günceller |
@@ -312,29 +405,35 @@ erDiagram
 
 ```
 stok-panel/
-├── api/                       # .NET 8 Web API
+├── backend/                   # .NET 8 Web API
 │   ├── Controllers/
 │   │   ├── AuthController.cs
 │   │   ├── CartController.cs
-│   │   ├── LogsController.cs
+│   │   ├── LogsControllers.cs
 │   │   ├── RequestsController.cs
 │   │   ├── ShopController.cs
 │   │   └── ...
-│   ├── Program.cs
+│   ├── Program.cs             # CORS, host filtresi, rate limit, DB bağlantısı
 │   └── Dockerfile
 ├── db/
 │   └── init/
 │       └── 01-schema.sql      # Şema + örnek veri (ilk açılışta çalışır)
-├── frontend/                  # Svelte 5 + Vite
+├── frontend/                  # Svelte 5 + Vite + Tailwind
 │   ├── src/
 │   │   ├── lib/
 │   │   │   ├── Components/    # Sayfa bileşenleri
 │   │   │   ├── Modals/        # Modal pencereler
 │   │   │   └── store.svelte.js
 │   │   ├── App.svelte
-│   │   └── app.css
+│   │   └── app.css            # Tailwind girişi + global stiller ve keyframe'ler
+│   ├── tailwind.config.js
+│   ├── postcss.config.js
+│   ├── .env.production        # Canlı API adresi (VITE_API_URL)
 │   └── Dockerfile
+├── docs/img/                  # README ekran görüntüleri
 ├── docker-compose.yaml
+├── vercel.json                # Frontend yayın ayarları
+├── render.yaml                # API + PostgreSQL Blueprint
 └── .env
 ```
 
@@ -359,7 +458,14 @@ tarafı filtreleme yalnızca yüklenmiş ürünleri süzerdi. Filtreler SQL'de
 içinde çeker. Merkezi bir store yalnızca oturum, ortak durum ve sepet için
 kullanılır.
 
-<!-- TODO: Eklemek istediğin başka kararlar varsa buraya yaz -->
+**Stiller bileşenin içinde.** Proje monolitik bir `app.css` (1600+ satır, anlamsal
+sınıflar) yerine Tailwind yardımcı sınıflarına taşındı. Bir bileşeni okurken stilini
+görmek için başka dosyaya bakmak gerekmiyor; kullanılmayan CSS de kendiliğinden
+ölmüyor, çünkü sınıf yalnızca kullanıldığı yerde var oluyor. `app.css`'te sadece
+yardımcı sınıfla ifade edilemeyen keyframe animasyonları kaldı.
+
+**Host filtresi ve CORS yapılandırılabilir.** `AllowedHosts` ve `CORS_ALLOWED_ORIGINS`
+ortam değişkeninden okunur; böylece aynı imaj yerelde ve canlıda kod değişmeden çalışır.
 
 ---
 
@@ -371,7 +477,6 @@ kullanılır.
 - **Gerçek sayfalama** — log ve hareket listelerinde istemci tarafı sayfalama
   yerine `LIMIT/OFFSET` ile sunucu tarafı sayfalama
 - **Kargo takibi ve bildirimler**
-- **Tailwind CSS'e geçiş** — mevcut özel CSS yerine yardımcı sınıf tabanlı sistem
 - **Servis katmanı** — controller'lar büyüdükçe iş mantığının `Services/` altına
   taşınması
 - **Ürün özellikleri için JSONB** — kategoriye göre değişen özniteliklerin
