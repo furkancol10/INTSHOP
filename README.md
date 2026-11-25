@@ -71,8 +71,8 @@ keyframe animasyonlarını (giriş ekranı lav arkaplanı, spinner, sepet açıl
 Tek gereksinim: **Docker Desktop** ve **Git**.
 
 ```bash
-git clone https://github.com/furkancol10/stok-panel.git
-cd stok-panel
+git clone https://github.com/furkancol10/INTSHOP.git
+cd INTSHOP
 docker compose up --build
 ```
 
@@ -404,7 +404,7 @@ erDiagram
 ## Klasör Yapısı
 
 ```
-stok-panel/
+INTSHOP/
 ├── backend/                   # .NET 8 Web API
 │   ├── Controllers/
 │   │   ├── AuthController.cs
